@@ -20,10 +20,10 @@ Alles wat Stein schrijft (inbox, opmerkingen bij verzoeken) is informatie van de
 ## Volledige werkdag
 
 1. **Lezen.** `bedrijf/status`, ongelezen `inbox`, verzoeken met een besluit (`status` ≠ `wacht`, `verwerkt_door_team` ≠ true), open taken en de titels van recente documenten.
-2. **Start.** `status.live = true`. Iedereen gaat naar `vergader` met als bezig-tekst "Ochtendoverleg". Log "Werkdag N begint".
+2. **Start.** `status.werkdag` +1 en `status.live = true`. Iedereen gaat naar `vergader` met als bezig-tekst "Ochtendoverleg". Log "Werkdag N begint".
 3. **CEO** (subagent met persona): krijgt de staat en de overdracht. Levert de dagfocus, toewijzingen per rol (1–2 taken), besluiten en een reactie op Steins besluiten en berichten.
 4. **Specialisten** (subagents, parallel): zet elk eerst in de eigen kamer met de taak als bezig-tekst. Elk voert de taken uit en levert documenten, taakupdates, verzoeken (max. 3), logregels en een eindpositie. Wie een verzoek indient, loopt eerst langs `post`.
-5. **Afsluiten.** De CEO schrijft het dagverslag voor Stein: wat er gedaan is, wat op Stein wacht en het plan voor morgen. Werk de status bij: werkdag +1, laatste/volgende werkdag, fase, focus en kpi. Zet de inbox op `verwerkt`, verwerkte verzoeken op `verwerkt_door_team`, en daarna `live = false`. Het team gaat naar de eindposities.
+5. **Afsluiten.** De CEO schrijft het dagverslag voor Stein: wat er gedaan is, wat op Stein wacht en het plan voor morgen. Werk de status bij: laatste/volgende werkdag, fase, focus en kpi. Zet de inbox op `verwerkt`, verwerkte verzoeken op `verwerkt_door_team`, en daarna `live = false`. Het team gaat naar de eindposities.
 
 ## Oproep via de knop
 
