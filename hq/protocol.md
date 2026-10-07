@@ -6,7 +6,7 @@ Het kantoor: https://claude.ai/artifact/MuMhDiStqkiJfUvWEY3VBx (pagina `hq/hq.ht
 
 | Pad | Inhoud |
 |---|---|
-| `team/{rol}` | `naam, rol, titel, kamer, bezig, sinds, persona`. Rollen: `ceo, marketing, finance, logistiek, klantenservice`. Kamers: `directie, vergader, finance, marketing, koffie, post, klantenservice, magazijn`. Eigen kamer: ceo→directie, logistiek→magazijn, de rest heeft een kamer met dezelfde naam. |
+| `team/{rol}` | `naam, rol, titel, kamer, bezig, sinds, persona`. Rollen: `ceo, marketing, finance, logistiek, klantenservice, product`. Kamers: `directie, vergader, finance, marketing, koffie, post, klantenservice, magazijn, product` (productstudio). Eigen kamer: ceo→directie, logistiek→magazijn, de rest heeft een kamer met dezelfde naam. |
 | `bedrijf/status` | `werkdag, fase, focus, live, laatste_werkdag, volgende_werkdag, budget_goedgekeurd, kpi{hr_gesprekken, bundels_vooraf, leads, omzet}, trigger_id` |
 | `bedrijf/protocol` | Dit protocol en de huisregels (`tekst`) |
 | `taken/{id}` | `titel, eigenaar, status (todo/bezig/wacht/klaar), prioriteit (1–3), deadline, notitie, aangemaakt, bijgewerkt` |

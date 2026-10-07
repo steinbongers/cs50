@@ -10,7 +10,7 @@
   --floor:#E3DFD4; --tile:#D3CEC1; --wall:#38413C; --desk:#C9BB9E; --desk-2:#A7B6AB; --screen:#93A7BC; --screen-on:#6CC8FF;
   --plant:#4C8A5D; --kraft:#B88C57; --laser:#E0402F;
   --ok:#2B7549; --warn:#9C6210; --bad:#AC3D36;
-  --c-ceo:#2B4C8C; --c-marketing:#A83570; --c-finance:#2A7651; --c-logistiek:#B55C15; --c-klantenservice:#18798A;
+  --c-ceo:#2B4C8C; --c-marketing:#A83570; --c-finance:#2A7651; --c-logistiek:#B55C15; --c-klantenservice:#18798A; --c-product:#6447A8;
   --f-pixel:"Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace;
   --f-body:"Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --r:10px;
@@ -22,7 +22,7 @@
     --floor:#1E2421; --tile:#262D29; --wall:#060807; --desk:#4A4436; --desk-2:#34443B; --screen:#3A4A5A; --screen-on:#59C2FF;
     --plant:#5FA373; --kraft:#9C774A; --laser:#FF5A47;
     --ok:#58B87F; --warn:#E0A64A; --bad:#E2766D;
-    --c-ceo:#7397DB; --c-marketing:#E173AB; --c-finance:#5DBA8A; --c-logistiek:#E9944E; --c-klantenservice:#4DBDCD;
+    --c-ceo:#7397DB; --c-marketing:#E173AB; --c-finance:#5DBA8A; --c-logistiek:#E9944E; --c-klantenservice:#4DBDCD; --c-product:#A98DEB;
     color-scheme:dark;
   }
 }
@@ -32,7 +32,7 @@
   --floor:#1E2421; --tile:#262D29; --wall:#060807; --desk:#4A4436; --desk-2:#34443B; --screen:#3A4A5A; --screen-on:#59C2FF;
   --plant:#5FA373; --kraft:#9C774A; --laser:#FF5A47;
   --ok:#58B87F; --warn:#E0A64A; --bad:#E2766D;
-  --c-ceo:#7397DB; --c-marketing:#E173AB; --c-finance:#5DBA8A; --c-logistiek:#E9944E; --c-klantenservice:#4DBDCD;
+  --c-ceo:#7397DB; --c-marketing:#E173AB; --c-finance:#5DBA8A; --c-logistiek:#E9944E; --c-klantenservice:#4DBDCD; --c-product:#A98DEB;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -100,14 +100,15 @@ button{font:inherit;cursor:pointer}
 @media (max-width:640px){.kantoor-noot{max-width:calc(100% - 20px);font-size:11px}}
 
 /* wie doet wat */
-.team{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.team{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
 .lid{display:flex;flex-direction:column;gap:6px;text-align:left;padding:12px;border:1px solid var(--line);border-top:4px solid var(--c);border-radius:var(--r);background:var(--surface);color:var(--ink);min-width:0}
 .lid:hover{border-color:var(--c)}
 .lid .naam{font-weight:700}
 .lid .rol{font-family:var(--f-pixel);font-size:.75rem;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
 .lid .bezig{font-size:.88rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .lid .waar{font-size:.78rem;color:var(--muted)}
-@media (max-width:900px){.team{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:1000px){.team{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:640px){.team{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:340px){.team{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:640px){.statusbalk{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.statusbalk .sep{display:none}.balk{width:56px}}
 
@@ -293,6 +294,7 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
             <option value="finance">Robin (Finance)</option>
             <option value="logistiek">Sam (Logistiek)</option>
             <option value="klantenservice">Lou (Klantenservice)</option>
+            <option value="product">Mika (Product owner)</option>
           </select>
           <button class="btn primair" type="submit" id="bericht-knop">Stuur naar het team</button>
         </div>
@@ -318,13 +320,14 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
   const $ = (s, el) => (el || document).querySelector(s);
   const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
-  const ROLLEN = ['ceo','marketing','finance','logistiek','klantenservice'];
+  const ROLLEN = ['ceo','marketing','finance','logistiek','klantenservice','product'];
   const ROL = {
     ceo:{titel:'CEO', kleur:'var(--c-ceo)', home:'directie', naam:'Noor'},
     marketing:{titel:'Marketing', kleur:'var(--c-marketing)', home:'marketing', naam:'Kai'},
     finance:{titel:'Finance', kleur:'var(--c-finance)', home:'finance', naam:'Robin'},
     logistiek:{titel:'Logistiek', kleur:'var(--c-logistiek)', home:'magazijn', naam:'Sam'},
-    klantenservice:{titel:'Klantenservice', kleur:'var(--c-klantenservice)', home:'klantenservice', naam:'Lou'}
+    klantenservice:{titel:'Klantenservice', kleur:'var(--c-klantenservice)', home:'klantenservice', naam:'Lou'},
+    product:{titel:'Product owner', kleur:'var(--c-product)', home:'product', naam:'Mika'}
   };
   const kleurVan = r => (ROL[r] ? ROL[r].kleur : 'var(--brass-bright)');
   const naamVan = r => (team[r] && team[r].naam) || (ROL[r] ? ROL[r].naam : (r === 'stein' ? 'Stein' : (r || 'Team')));
@@ -346,17 +349,18 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
     directie:{x:0,y:0,w:250,h:230,label:'Directie',door:{x:200,y:200},free:{x:40,y:130,w:190,h:70}},
     vergader:{x:250,y:0,w:430,h:230,label:'Vergaderruimte',door:{x:465,y:200},free:{x:280,y:196,w:360,h:16}},
     finance:{x:680,y:0,w:320,h:230,label:'Finance',door:{x:760,y:200},free:{x:705,y:130,w:220,h:70}},
-    marketing:{x:0,y:300,w:280,h:320,label:'Marketing',door:{x:200,y:330},free:{x:35,y:450,w:200,h:120}},
+    marketing:{x:0,y:300,w:280,h:160,label:'Marketing',door:{x:200,y:330},free:{x:30,y:424,w:130,h:24}},
+    product:{x:0,y:460,w:280,h:160,label:'Productstudio',door:{x:200,y:330},via:[{x:200,y:488}],free:{x:30,y:578,w:110,h:20}},
     koffie:{x:280,y:300,w:200,h:160,label:'Koffiehoek',door:{x:380,y:330},free:{x:300,y:350,w:150,h:90}},
     post:{x:280,y:460,w:200,h:160,label:'Postkamer',door:{x:380,y:330},via:[{x:380,y:488}],free:{x:300,y:495,w:100,h:50}},
     klantenservice:{x:480,y:300,w:250,h:320,label:'Klantenservice',door:{x:560,y:330},free:{x:505,y:450,w:180,h:120}},
     magazijn:{x:730,y:300,w:270,h:320,label:'Magazijn & laser',door:{x:800,y:330},free:{x:752,y:430,w:180,h:75}}
   };
   const GANG_Y = 265;
-  const DESK = {ceo:{x:126,y:122}, marketing:{x:120,y:442}, finance:{x:850,y:122}, logistiek:{x:880,y:445}, klantenservice:{x:612,y:442}};
-  const SEATS = {ceo:{x:465,y:50}, marketing:{x:393,y:52}, finance:{x:537,y:52}, logistiek:{x:418,y:174}, klantenservice:{x:510,y:174}};
-  const KOFFIE = [{x:340,y:378},{x:360,y:425},{x:430,y:372},{x:438,y:422},{x:395,y:352}];
-  const POST = [{x:318,y:515},{x:345,y:540},{x:388,y:515},{x:330,y:590},{x:392,y:590}];
+  const DESK = {ceo:{x:126,y:122}, marketing:{x:120,y:442}, finance:{x:850,y:122}, logistiek:{x:880,y:445}, klantenservice:{x:612,y:442}, product:{x:75,y:548}};
+  const SEATS = {ceo:{x:465,y:50}, marketing:{x:393,y:52}, finance:{x:537,y:52}, logistiek:{x:395,y:174}, product:{x:465,y:176}, klantenservice:{x:535,y:174}};
+  const KOFFIE = [{x:340,y:378},{x:360,y:425},{x:430,y:372},{x:438,y:422},{x:395,y:352},{x:320,y:430}];
+  const POST = [{x:318,y:515},{x:345,y:540},{x:388,y:515},{x:330,y:590},{x:392,y:590},{x:362,y:568}];
   const KIJK = {vergader:{x:465,y:112}, koffie:{x:395,y:400}, post:{x:442,y:520}};
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rand = (a,b) => a + Math.random()*(b-a);
@@ -396,7 +400,7 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
   function maakKantoor(){
     const host = $('#kantoor'), labels = $('#labels');
     const noop = () => {};
-    const api = {ok:false, goTo:noop, setNaam:noop, setBubble:noop, praat:noop, setLive:noop, setPost:noop, vier:noop, volg:noop};
+    const api = {ok:false, setAanwezig:noop, goTo:noop, setNaam:noop, setBubble:noop, praat:noop, setLive:noop, setPost:noop, vier:noop, volg:noop};
     const T = window.THREE;
     const fail = t => { host.classList.add('geen-3d'); $('#kantoor-noot').textContent = t; $('#k-knoppen').hidden = true; return api; };
     if (!T) return fail('Het 3D-kantoor kon niet laden. Hieronder zie je wie wat doet.');
@@ -452,7 +456,7 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
     /* grond, vloeren, tegels */
     vlak(140, 140, mat(['--bg','--ink',0.06]), 0, 0, 0);
     vlak(20.3, 12.7, mat('--floor'), 0, 0.006, 0);
-    const VLOER = {directie:['--floor','--c-ceo',0.24], vergader:['--floor','--ink',0.08], finance:['--floor','--c-finance',0.24], marketing:['--floor','--c-marketing',0.22], koffie:['--floor','--kraft',0.34], post:['--floor','--brass-bright',0.34], klantenservice:['--floor','--c-klantenservice',0.24], magazijn:['--floor','--c-logistiek',0.24]};
+    const VLOER = {directie:['--floor','--c-ceo',0.24], vergader:['--floor','--ink',0.08], finance:['--floor','--c-finance',0.24], marketing:['--floor','--c-marketing',0.22], koffie:['--floor','--kraft',0.34], post:['--floor','--brass-bright',0.34], klantenservice:['--floor','--c-klantenservice',0.24], magazijn:['--floor','--c-logistiek',0.24], product:['--floor','--c-product',0.2]};
     Object.keys(ROOMS).forEach(k => { const r = ROOMS[k]; vlak(r.w/50, r.h/50, mat(VLOER[k]), W(r.x + r.w/2), 0.016, Z(r.y + r.h/2)); });
     const tc = document.createElement('canvas'); tc.width = tc.height = 64; const tctx = tc.getContext('2d');
     const tegelTex = new T.CanvasTexture(tc); tegelTex.wrapS = tegelTex.wrapT = T.RepeatWrapping; tegelTex.repeat.set(20/0.8, 12.4/0.8);
@@ -465,7 +469,7 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
     const MUREN = [[0,0,1000,0],[0,620,330,620],[430,620,1000,620],[0,0,0,620],[1000,0,1000,620],
       [0,230,172,230],[228,230,437,230],[493,230,732,230],[788,230,1000,230],[250,0,250,230],[680,0,680,230],
       [0,300,172,300],[228,300,352,300],[408,300,532,300],[588,300,772,300],[828,300,1000,300],
-      [280,300,280,620],[480,300,480,620],[730,300,730,620],[280,460,352,460],[408,460,480,460]];
+      [280,300,280,620],[480,300,480,620],[730,300,730,620],[280,460,352,460],[408,460,480,460],[0,460,172,460],[228,460,280,460]];
     MUREN.forEach(([x1,y1,x2,y2]) => {
       const voor = y1 === 620 && y2 === 620; const H = voor ? 0.32 : 0.85, D = 0.14;
       const len = Math.hypot(x2-x1, y2-y1)/50 + D; const hor = y1 === y2;
@@ -529,7 +533,7 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
     const tafel = new T.Mesh(new T.CylinderGeometry(1, 1, 0.06, 32), deskM); tafel.scale.set(2.4, 1, 0.72); tafel.position.set(W(465), 0.44, Z(112)); tafel.castShadow = tafel.receiveShadow = true; scene.add(tafel);
     cil(0.12, 0.2, 0.42, desk2M, W(415), 0.21, Z(112)); cil(0.12, 0.2, 0.42, desk2M, W(515), 0.21, Z(112));
     ['ceo','marketing','finance'].forEach(r => stoel(SEATS[r].x, SEATS[r].y, 0));
-    ['logistiek','klantenservice'].forEach(r => stoel(SEATS[r].x, SEATS[r].y, NOORD));
+    ['logistiek','klantenservice','product'].forEach(r => stoel(SEATS[r].x, SEATS[r].y, NOORD));
     blok(3.2, 0.62, 0.04, witM, W(465), 0.5, Z(0) + 0.1);
     ['--c-ceo','--c-marketing','--c-finance','--c-logistiek','--c-klantenservice','--brass-bright'].forEach((c, i) => blok(0.2, 0.2, 0.02, mat(c), W(465) - 1.2 + i*0.45 + (i%2)*0.08, 0.6 - (i%2)*0.2, Z(0) + 0.13, false));
     plant(655, 200);
@@ -542,7 +546,17 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
     bureau(72, 378, 96, 36, 1); stoel(DESK.marketing.x, DESK.marketing.y, NOORD);
     blok(2.2, 0.56, 0.04, witM, W(85), 0.5, Z(300) + 0.1);
     ['--c-marketing','--brass-bright','--c-ceo','--kraft','--c-klantenservice'].forEach((c, i) => blok(0.3, 0.22 + (i%2)*0.1, 0.02, mat(c), W(85) - 0.8 + i*0.4, 0.52, Z(300) + 0.13, false));
-    plant(250, 590);
+    plant(258, 600);
+    // productstudio: bureau, monstertafel met het pakket, kernwaardenbord
+    bureau(28, 478, 94, 34, 1); stoel(DESK.product.x, DESK.product.y, NOORD);
+    pblok(150, 520, 104, 52, 0.45, deskM);
+    pblok(160, 528, 34, 26, 0.16, kraftM, 0.45);
+    cil(0.07, 0.07, 0.36, mat('--c-product'), W(212), 0.63, Z(538), 14);
+    cil(0.05, 0.06, 0.03, donkerM, W(212), 0.825, Z(538), 14);
+    const boek = pblok(222, 528, 20, 28, 0.05, mat(['--wall','--ink',0.3]), 0.45); boek.rotation.y = 0.25;
+    const pen = cil(0.012, 0.012, 0.3, mat('--brass-bright'), W(205), 0.47, Z(562), 6); pen.rotation.z = Math.PI/2; pen.rotation.y = 0.4;
+    blok(0.04, 0.5, 1.9, witM, W(0) + 0.1, 0.5, Z(565));
+    ['--c-product','--brass-bright','--c-finance','--c-klantenservice'].forEach((c, i) => blok(0.02, 0.26, 0.36, mat(c), W(0) + 0.13, 0.5, Z(565) - 0.66 + i*0.44, false));
     // koffiehoek
     pblok(292, 310, 176, 24, 0.5, desk2M);
     const machine = pblok(300, 312, 28, 20, 0.42, donkerM, 0.5);
@@ -601,8 +615,8 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
     const envelop = blok(0.26, 0.02, 0.18, witM, 0, -5, 0); envelop.visible = false; let envAnim = null;
 
     /* personen */
-    const HUID = ['#E6B892','#8D5A3B','#F1CCA8','#C58B5C','#D9A27A'];
-    const HAAR = ['#2B1E16','#141414','#C9A36A','#5A3A22','#8C3B2A'];
+    const HUID = ['#E6B892','#8D5A3B','#F1CCA8','#C58B5C','#D9A27A','#A8714A'];
+    const HAAR = ['#2B1E16','#141414','#C9A36A','#5A3A22','#8C3B2A','#3B2A55'];
     const agents = {};
     function persoon(rol, i){
       const g = new T.Group();
@@ -626,6 +640,7 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
       if (rol === 'finance'){ const bril = new T.Mesh(new T.BoxGeometry(0.22, 0.035, 0.02), oogM); bril.position.set(0, 0.015, 0.16); hoofd.add(bril); }
       if (rol === 'logistiek'){ const pet = new T.Mesh(new T.CylinderGeometry(0.17, 0.17, 0.06, 16), kled); pet.position.y = 0.13; hoofd.add(pet); const klep = new T.Mesh(new T.BoxGeometry(0.22, 0.02, 0.14), kled); klep.position.set(0, 0.11, 0.17); hoofd.add(klep); }
       if (rol === 'klantenservice'){ const set = new T.Mesh(new T.TorusGeometry(0.175, 0.016, 6, 18, Math.PI), donkerM); set.position.y = 0.02; hoofd.add(set); const mic = new T.Mesh(new T.BoxGeometry(0.02, 0.02, 0.12), donkerM); mic.position.set(0.16, -0.06, 0.07); hoofd.add(mic); }
+      if (rol === 'product'){ const klem = new T.Mesh(new T.BoxGeometry(0.03, 0.2, 0.15), mat('--surface')); klem.position.set(0, -0.36, 0.06); aL.add(klem); const bril = new T.Mesh(new T.TorusGeometry(0.04, 0.008, 6, 14), oogM); bril.position.set(-0.055, 0.01, 0.155); hoofd.add(bril); const bril2 = bril.clone(); bril2.position.x = 0.055; hoofd.add(bril2); }
       if (rol === 'marketing'){ const muts = new T.Mesh(new T.SphereGeometry(0.17, 12, 6, 0, Math.PI*2, 0, Math.PI*0.42), acc); muts.position.y = 0.04; hoofd.add(muts); const bol = new T.Mesh(new T.SphereGeometry(0.045, 8, 6), acc); bol.position.y = 0.2; hoofd.add(bol); }
       g.traverse(o => { o.userData.rol = rol; });
       scene.add(g);
@@ -698,6 +713,7 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
       a.path = route({x: a.x, y: a.y}, room, t);
     };
     api.setNaam = (rol, naam) => { const a = agents[rol]; if (a) a.plate.textContent = naam; };
+    api.setAanwezig = (rol, ja) => { const a = agents[rol]; if (!a) return; a.g.visible = ja; a.weg = !ja; if (!ja) a.tag.hidden = true; };
     api.setBubble = (rol, tekst) => { const a = agents[rol]; if (!a) return false; if (a.bubble.textContent === tekst) return false; a.bubble.textContent = tekst; return true; };
     api.praat = (rol, ms) => {
       const a = agents[rol]; if (!a || !a.bubble.textContent) return;
@@ -857,7 +873,7 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
       ROLLEN.forEach(r => {
         const a = agents[r];
         v3.set(W(a.x), 1.2 + a.lijf.position.y, Z(a.y)).project(camera);
-        if (v3.z > 1 || Math.abs(v3.x) > 1.2 || Math.abs(v3.y) > 1.2){ a.tag.hidden = true; return; }
+        if (a.weg || v3.z > 1 || Math.abs(v3.x) > 1.2 || Math.abs(v3.y) > 1.2){ a.tag.hidden = true; return; }
         a.tag.hidden = false;
         a.tag.style.transform = 'translate(' + ((v3.x*0.5 + 0.5)*bw).toFixed(1) + 'px,' + ((-v3.y*0.5 + 0.5)*bh).toFixed(1) + 'px) translate(-50%,-100%)';
         a.tag.style.zIndex = String(10 + Math.round((1 - v3.z)*1000));
@@ -887,9 +903,16 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
   /* ---------- team ---------- */
   function kort(t, n){ t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; }
   let teamGeladen = false, verzoekenGeladen = false;
+  const bekend = {};
   function renderTeam(eerste){
     const box = $('#team'); box.replaceChildren();
     ROLLEN.forEach(rol => {
+      if (teamGeladen || eerste === 'intro'){
+        const er = !!team[rol]; K.setAanwezig(rol, er);
+        if (!er){ bekend[rol] = false; return; }
+        if (bekend[rol] === false && !eerste){ bekend[rol] = true; const m0 = team[rol]; K.setNaam(rol, m0.naam || ROL[rol].naam); K.setBubble(rol, kort(m0.bezig || '', 90)); K.goTo(rol, m0.kamer || ROL[rol].home, 'intro'); }
+        bekend[rol] = true;
+      }
       const m = team[rol] || {};
       const naam = m.naam || ROL[rol].naam;
       K.setNaam(rol, naam);
