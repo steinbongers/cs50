@@ -1,5 +1,8 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
+import { INVITE_COOKIE } from "@/lib/invites/cookie";
+import { consumeInviteCode, inviteCodesEnabled, normalizeInviteCode } from "@/lib/invites/codes";
 import { createClient } from "@/lib/supabase/server";
 
 const OTP_TYPES: readonly EmailOtpType[] = ["signup", "magiclink", "recovery", "invite", "email", "email_change"];
@@ -22,16 +25,35 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient();
 
+  let ok = false;
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    ok = !error;
   } else if (tokenHash && typeParam && (OTP_TYPES as readonly string[]).includes(typeParam)) {
-    const { error } = await supabase.auth.verifyOtp({
-      type: typeParam as EmailOtpType,
-      token_hash: tokenHash,
-    });
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    const { error } = await supabase.auth.verifyOtp({ type: typeParam as EmailOtpType, token_hash: tokenHash });
+    ok = !error;
+  }
+  if (!ok) return NextResponse.redirect(`${origin}/login?error=link`);
+
+  // Gesloten pilot: een account zonder uitnodigingscode (bijvoorbeeld via Apple) moet er alsnog een hebben.
+  if (inviteCodesEnabled()) {
+    const { data } = await supabase.auth.getClaims();
+    const userId = data?.claims.sub;
+    if (userId) {
+      const { data: profile } = await supabase.from("profiles").select("invite_code").eq("id", userId).maybeSingle();
+      if (!profile?.invite_code) {
+        const cookieStore = await cookies();
+        const pending = normalizeInviteCode(cookieStore.get(INVITE_COOKIE)?.value);
+        cookieStore.delete(INVITE_COOKIE);
+        const accepted = pending ? await consumeInviteCode(pending) : false;
+        if (!accepted) {
+          await supabase.auth.signOut();
+          return NextResponse.redirect(`${origin}/registreren?error=code`);
+        }
+        await supabase.from("profiles").upsert({ id: userId, invite_code: pending }, { onConflict: "id" });
+      }
+    }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=link`);
+  return NextResponse.redirect(`${origin}${next}`);
 }

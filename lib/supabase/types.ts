@@ -22,6 +22,16 @@ export type ProfileRow = {
   coach_step: number;
   month_review_seen_for: string | null;
   last_push_at: string | null;
+  invite_code: string | null;
+};
+
+export type InviteCodeRow = {
+  code: string;
+  note: string | null;
+  max_uses: number;
+  uses: number;
+  created_at: string;
+  expires_at: string | null;
 };
 
 export type CategoryRow = {
@@ -155,6 +165,7 @@ export type Database = {
           | "coach_step"
           | "month_review_seen_for"
           | "last_push_at"
+          | "invite_code"
         >
       >;
       categories: Table<
@@ -234,6 +245,7 @@ export type Database = {
       >;
       category_rules: Table<CategoryRuleRow, WithOptional<CategoryRuleRow, "id" | "created_at">>;
       events: Table<EventRow, WithOptional<EventRow, "id" | "payload" | "created_at">>;
+      invite_codes: Table<InviteCodeRow, WithOptional<InviteCodeRow, "note" | "max_uses" | "uses" | "created_at" | "expires_at">>;
       push_subscriptions: Table<
         PushSubscriptionRow,
         WithOptional<PushSubscriptionRow, "id" | "user_agent" | "created_at" | "last_used_at">

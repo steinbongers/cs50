@@ -25,7 +25,15 @@ export default async function PotjesPage() {
 
   return (
     <>
-      <PageHeader title="Potjes" subtitle={period.label.charAt(0).toUpperCase() + period.label.slice(1)} />
+      <PageHeader
+        title="Potjes"
+        subtitle={period.label.charAt(0).toUpperCase() + period.label.slice(1)}
+        action={
+          <Link href="/potjes/beheren" className="flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-primary hover:bg-primary-soft">
+            Beheren
+          </Link>
+        }
+      />
       <div className="flex flex-col gap-4 px-4">
         {potjes.length === 0 ? (
           <EmptyState icon={<IconJar size={28} />} title="Nog geen potjes" description="Kies je potjes in de onboarding." />

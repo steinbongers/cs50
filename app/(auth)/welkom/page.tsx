@@ -4,9 +4,16 @@ import { APP_DESCRIPTION, APP_NAME } from "@/config/app";
 
 export const metadata: Metadata = { title: "Welkom" };
 
-export default function WelkomPage() {
+export default async function WelkomPage({ searchParams }: PageProps<"/welkom">) {
+  const params = await searchParams;
+  const removed = params.verwijderd === "1";
   return (
     <div className="flex flex-col gap-10">
+      {removed && (
+        <p className="rounded-control bg-positive-soft px-4 py-3 text-sm text-positive" role="status">
+          Je account is verwijderd. Alles is weg, zoals beloofd. Bedankt dat je meedeed.
+        </p>
+      )}
       <div className="flex flex-col gap-4">
         <div
           className="flex size-16 items-center justify-center rounded-card bg-primary-soft text-3xl"

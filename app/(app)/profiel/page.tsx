@@ -8,6 +8,7 @@ import { IconBank, IconChevronRight, IconJar, IconLogout } from "@/components/ui
 import { PageHeader } from "@/components/ui/page-header";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { APP_NAME } from "@/config/app";
+import { ProfileSettings } from "./profile-settings";
 import { ensureProfile, requireUser } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Profiel" };
@@ -53,10 +54,13 @@ export default async function ProfielPage() {
           </div>
         </Card>
 
-        <Card className="flex flex-col gap-1">
-          <p className="font-medium">Privacy en data</p>
-          <p className="text-sm text-text-muted">Data exporteren en account verwijderen volgen in fase 5.</p>
-        </Card>
+        <ProfileSettings displayName={profile.display_name ?? ""} salaryDay={profile.salary_day} />
+
+        <p className="px-1 text-sm text-text-muted">
+          <Link href="/privacy" className="font-medium text-primary">
+            Hoe we met je gegevens omgaan
+          </Link>
+        </p>
 
         <form action={signOut}>
           <SubmitButton variant="ghost" fullWidth>

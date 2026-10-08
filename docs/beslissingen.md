@@ -122,7 +122,21 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 - **Pilot:** start volgende week; eerst moet de app helemaal af zijn.
 - Supabase-project mag door Claude worden aangemaakt.
 
+## Gebouwd in fase 5
+
+- Registreren met **uitnodigingscode** (tabel `invite_codes`, beheer op `/admin`); ook bij Apple-login.
+- **Inloggen met Apple** naast e-mail en wachtwoord (Supabase Apple-provider nodig).
+- **Privacytekst** op `/privacy`, **CSV-export** via `/api/export`, **account verwijderen** direct en
+  definitief (service role verwijdert de gebruiker; alles hangt eraan met on delete cascade).
+- **Adminpagina** met alleen geaggregeerde cijfers: actieve gebruikers per week, retentie per cohort
+  (week 1, 2, 4, 8, 12), gelabeld binnen 7 dagen, tijd per swipe, undo's, bankkoppelingen.
+- **PWA**: manifest en iconen (placeholder-potje in het hoofdblauw tot er een logo is).
+- Potjes herschikken en gearchiveerde potjes terugzetten op `/potjes/beheren`.
+- Meting `app_open` één keer per browsersessie.
+
 ## Nog open
 
 - GitHub-toegang voor pushen (Stein installeert de Claude GitHub App).
 - Appnaam en de naam van de hoofdactie (Stein denkt na).
+- Supabase-project: in de Pro-organisatie (~$10 per maand) of in een nieuwe Free-organisatie.
+- Echt logo en app-icoon zodra de naam er is.

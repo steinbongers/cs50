@@ -120,3 +120,37 @@ export async function archiveCategory(categoryId: string): Promise<Result> {
   if (error) return { ok: false, error: GENERIC };
   redirect("/potjes");
 }
+
+/** Nieuwe vaste volgorde van de potjes (de tegels op het hoofdscherm volgen deze). */
+export async function reorderCategories(orderedIds: string[]): Promise<Result> {
+  const user = await requireUser();
+  if (!Array.isArray(orderedIds) || !orderedIds.every(isUuid) || orderedIds.length > 100) return { ok: false, error: GENERIC };
+  const supabase = await createClient();
+  for (let index = 0; index < orderedIds.length; index++) {
+    const { error } = await supabase
+      .from("categories")
+      .update({ sort_order: index })
+      .eq("id", orderedIds[index])
+      .eq("user_id", user.id)
+      .is("system_key", null);
+    if (error) return { ok: false, error: GENERIC };
+  }
+  refresh();
+  return { ok: true };
+}
+
+/** Gearchiveerd potje terugzetten. */
+export async function restoreCategory(categoryId: string): Promise<Result> {
+  const user = await requireUser();
+  if (!isUuid(categoryId)) return { ok: false, error: GENERIC };
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("categories")
+    .update({ archived: false })
+    .eq("id", categoryId)
+    .eq("user_id", user.id)
+    .is("system_key", null);
+  if (error) return { ok: false, error: GENERIC };
+  refresh();
+  return { ok: true };
+}

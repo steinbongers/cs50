@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { sendMagicLink, signInWithPassword, type AuthFormState } from "@/app/auth/actions";
+import { AppleButton } from "@/components/auth/apple-button";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { Field, Input } from "@/components/ui/input";
 import { IconMail } from "@/components/ui/icons";
@@ -88,6 +89,7 @@ export function LoginForm({ next }: { next: string }) {
       <SubmitButton size="lg" fullWidth>
         Inloggen
       </SubmitButton>
+      <AppleButton next={next} label="Inloggen met Apple" />
       <button
         type="button"
         onClick={() => setMode("magic")}

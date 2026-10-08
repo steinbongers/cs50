@@ -1,7 +1,9 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { consumeInviteCode, inviteCodesEnabled, isInviteCodeValid, normalizeInviteCode } from "@/lib/invites/codes";
+import { INVITE_COOKIE } from "@/lib/invites/cookie";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthFormState = {
@@ -10,6 +12,7 @@ export type AuthFormState = {
   /** Ingevulde waarden, zodat het formulier na een fout niet leeg is. */
   email?: string;
   displayName?: string;
+  inviteCode?: string;
 };
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -76,10 +79,21 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
   const displayName = readString(formData, "display_name").slice(0, 60);
   const email = readString(formData, "email");
   const password = readString(formData, "password");
+  const inviteRaw = readString(formData, "invite_code");
+  const state = { email, displayName, inviteCode: inviteRaw };
 
-  if (!isValidEmail(email)) return { error: "Vul een geldig e-mailadres in.", email, displayName };
+  if (!isValidEmail(email)) return { error: "Vul een geldig e-mailadres in.", ...state };
   if (password.length < MIN_PASSWORD_LENGTH)
-    return { error: `Kies een wachtwoord van minimaal ${MIN_PASSWORD_LENGTH} tekens.`, email, displayName };
+    return { error: `Kies een wachtwoord van minimaal ${MIN_PASSWORD_LENGTH} tekens.`, ...state };
+
+  let inviteCode: string | null = null;
+  if (inviteCodesEnabled()) {
+    inviteCode = normalizeInviteCode(inviteRaw);
+    if (!inviteCode) return { error: "Vul je uitnodigingscode in.", ...state };
+    if (!(await isInviteCodeValid(inviteCode))) {
+      return { error: "Deze uitnodigingscode is niet geldig of al gebruikt.", ...state };
+    }
+  }
 
   const origin = await getOrigin();
   const supabase = await createClient();
@@ -88,20 +102,58 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
     password,
     options: {
       emailRedirectTo: `${origin}/auth/callback?next=/onboarding`,
-      data: displayName ? { display_name: displayName } : undefined,
+      data: {
+        ...(displayName ? { display_name: displayName } : {}),
+        ...(inviteCode ? { invite_code: inviteCode } : {}),
+      },
     },
   });
 
-  if (error) return { error: translateAuthError(error.message), email, displayName };
+  if (error) return { error: translateAuthError(error.message), ...state };
 
   // Bestaand account met bevestigingsmail aan: Supabase geeft dan een user zonder identities terug.
   if (data.user && data.user.identities && data.user.identities.length === 0) {
-    return { error: "Er bestaat al een account met dit e-mailadres. Log in.", email, displayName };
+    return { error: "Er bestaat al een account met dit e-mailadres. Log in.", ...state };
   }
+
+  if (inviteCode) await consumeInviteCode(inviteCode);
 
   if (data.session) redirect("/onboarding");
 
   return { success: "confirm-email", email };
+}
+
+/**
+ * Inloggen met Apple. Bij registreren gaat de uitnodigingscode mee in een
+ * cookie; de callback controleert hem voor nieuwe accounts.
+ */
+export async function startAppleSignIn(
+  next: string,
+  inviteRaw?: string,
+): Promise<{ url: string } | { error: string }> {
+  const safeNext = await safeNextPath(next);
+  const origin = await getOrigin();
+
+  if (inviteRaw !== undefined && inviteCodesEnabled()) {
+    const code = normalizeInviteCode(inviteRaw);
+    if (!code) return { error: "Vul je uitnodigingscode in." };
+    if (!(await isInviteCodeValid(code))) return { error: "Deze uitnodigingscode is niet geldig of al gebruikt." };
+    (await cookies()).set(INVITE_COOKIE, code, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: origin.startsWith("https"),
+      path: "/",
+      maxAge: 15 * 60,
+    });
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "apple",
+    options: { redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNext)}`, skipBrowserRedirect: true },
+  });
+  if (error || !data.url) return { error: "Inloggen met Apple is nu niet beschikbaar." };
+  return { url: data.url };
 }
 
 export async function sendMagicLink(

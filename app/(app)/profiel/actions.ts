@@ -2,7 +2,11 @@
 
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { getPrimaryConnection } from "@/lib/bank/connections";
+import { deleteSession } from "@/lib/enablebanking/client";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 type Result = { ok: true } | { ok: false; error: string };
@@ -69,6 +73,58 @@ export async function removePushSubscription(endpoint: string | null): Promise<R
   }
   refresh();
   return { ok: true };
+}
+
+/** Naam en salarisdag aanpassen. */
+export async function updateProfileSettings(input: { displayName: string; salaryDay: number | null }): Promise<Result> {
+  const user = await requireUser();
+  const displayName = typeof input.displayName === "string" ? input.displayName.trim().slice(0, 60) : "";
+  const salaryDay = input.salaryDay;
+  if (salaryDay !== null && (!Number.isInteger(salaryDay) || salaryDay < 1 || salaryDay > 31)) {
+    return { ok: false, error: "Kies een dag tussen 1 en 31." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ display_name: displayName || null, salary_day: salaryDay })
+    .eq("id", user.id);
+  if (error) return { ok: false, error: "Opslaan lukte niet. Probeer het nog eens." };
+  refresh();
+  return { ok: true };
+}
+
+/**
+ * Account verwijderen: direct en definitief. De banktoestemming wordt
+ * ingetrokken, daarna verwijdert de service role de gebruiker; alle tabellen
+ * hangen met on delete cascade aan auth.users.
+ */
+export async function deleteAccount(confirmation: string): Promise<Result> {
+  const user = await requireUser();
+  if (confirmation.trim().toUpperCase() !== "VERWIJDER") {
+    return { ok: false, error: "Typ VERWIJDER om te bevestigen." };
+  }
+
+  const supabase = await createClient();
+  const connection = await getPrimaryConnection(supabase, user.id);
+  if (connection?.session_id) {
+    try {
+      await deleteSession(connection.session_id);
+    } catch {
+      // toestemming kan al verlopen zijn
+    }
+  }
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return { ok: false, error: "Verwijderen is op deze server niet ingesteld." };
+  }
+  const { error } = await admin.auth.admin.deleteUser(user.id);
+  if (error) return { ok: false, error: "Verwijderen lukte niet. Probeer het nog eens of mail ons." };
+
+  await supabase.auth.signOut();
+  redirect("/welkom?verwijderd=1");
 }
 
 /** Meldingen helemaal uit, op alle apparaten. */

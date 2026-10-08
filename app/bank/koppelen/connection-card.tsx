@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DisconnectButton } from "./disconnect-button";
 import { Card } from "@/components/ui/card";
 import { IconBank } from "@/components/ui/icons";
 import type { ConnectionStatus } from "@/lib/supabase/types";
@@ -55,6 +56,7 @@ export function ConnectionCard({ aspspName, status, daysLeft, lastSyncedAt, last
         </div>
       </div>
       {lastError && <p className="text-sm text-negative">{lastError}</p>}
+      {status !== "revoked" && <DisconnectButton />}
       {showReconnect && (
         <Link
           href={`/bank/koppelen?reconnect=1&next=${encodeURIComponent(next)}`}
