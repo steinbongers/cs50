@@ -31,6 +31,11 @@ test("retentie per cohort: alleen afgeronde weken, percentage actief", () => {
   assert.equal(cohort.retention[2], 50);
   assert.equal(cohort.retention[4], 0);
   assert.equal(cohort.retention[8], null); // 8 weken nog niet voorbij
+
+  // Weken die vóór het eventvenster beginnen zijn onbekend, niet 'niet actief'.
+  const [windowed] = cohortRetention(profiles, events, today, [], Date.parse("2026-09-05T00:00:00Z"));
+  assert.equal(windowed.retention[1], null);
+  assert.equal(windowed.retention[2], 50);
 });
 
 test("binnen 7 dagen gelabeld", () => {

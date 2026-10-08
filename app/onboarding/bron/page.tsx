@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Koppel je bank" };
 
 const TRUST: ReadonlyArray<{ icon: LucideIcon; text: string }> = [
   { icon: Eye, text: "Alleen meekijken" },
-  { icon: Lock, text: "Wij kunnen niets overmaken" },
+  { icon: Lock, text: "Wij kunnen nooit geld overmaken" },
   { icon: RefreshCw, text: "Af en toe vraagt je bank opnieuw om toestemming. Wij laten het je op tijd weten." },
 ];
 
@@ -21,7 +21,7 @@ export default function OnboardingBronPage() {
   return (
     <div className="flex flex-1 flex-col">
       <StepHeader title="Koppel je bank">
-        Je logt in bij je eigen bank en geeft toestemming om mee te lezen. Wij kunnen nooit geld overmaken.
+        Je logt in bij je eigen bank en geeft toestemming om mee te kijken.
       </StepHeader>
 
       <ul className="flex flex-col gap-4 px-5 pt-2" role="list">
@@ -39,11 +39,11 @@ export default function OnboardingBronPage() {
         </ButtonLink>
         <Link
           href="/onboarding/klaar"
-          className="mt-1 flex min-h-11 items-center justify-center text-sm font-medium text-text-muted"
+          className="mt-1 flex min-h-11 items-center justify-center text-[13px] leading-[18px] font-medium text-text-muted"
         >
           Later doen
         </Link>
-        <p className="text-center text-[13px] leading-[18px] text-text-muted">Kan later ook, via Instellingen.</p>
+        <p className="text-center text-[13px] leading-[18px] text-text-muted">Koppelen kan ook via Instellingen.</p>
       </StepFooter>
     </div>
   );

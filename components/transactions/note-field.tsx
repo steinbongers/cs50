@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { Check } from "lucide-react";
+import { useEffect, useId, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { saveNote } from "@/lib/transactions/actions";
@@ -9,6 +10,8 @@ import { cn } from "@/lib/utils";
 export const NOTE_MAX = 140;
 /** Vanaf hier tonen we hoeveel tekens je nog hebt. */
 const NOTE_COUNTER_FROM = 120;
+/** Zo lang staat "Bewaard" onder het veld na opslaan. */
+const SAVED_MS = 1500;
 
 interface NoteFieldProps {
   transactionId: string;
@@ -27,7 +30,14 @@ export function NoteField({ transactionId, initialNote, onSaved }: NoteFieldProp
   const [value, setValue] = useState(initialNote ?? "");
   const [saved, setSaved] = useState(initialNote ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!justSaved) return;
+    const timer = setTimeout(() => setJustSaved(false), SAVED_MS);
+    return () => clearTimeout(timer);
+  }, [justSaved]);
 
   // Codepoints, zodat een emoji als één teken telt.
   const length = [...value].length;
@@ -46,6 +56,7 @@ export function NoteField({ transactionId, initialNote, onSaved }: NoteFieldProp
       }
       setSaved(note);
       setValue(note);
+      setJustSaved(true);
       onSaved?.(transactionId, note === "" ? null : note);
     });
   }
@@ -70,7 +81,10 @@ export function NoteField({ transactionId, initialNote, onSaved }: NoteFieldProp
         enterKeyHint="done"
         aria-describedby={length >= NOTE_COUNTER_FROM ? counterId : undefined}
         aria-invalid={tooLong || undefined}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value);
+          setJustSaved(false);
+        }}
       />
       <div className="flex min-h-[18px] items-start justify-between gap-3 text-[13px] leading-[18px]">
         {error ? (
@@ -78,7 +92,14 @@ export function NoteField({ transactionId, initialNote, onSaved }: NoteFieldProp
             {error}
           </p>
         ) : (
-          <span />
+          <p className="flex items-center gap-1 text-positive" role="status">
+            {justSaved && (
+              <>
+                <Check size={14} strokeWidth={2.5} aria-hidden />
+                Bewaard
+              </>
+            )}
+          </p>
         )}
         {length >= NOTE_COUNTER_FROM && (
           <p id={counterId} className={cn("shrink-0 tabular-nums", tooLong ? "text-negative" : "text-text-muted")}>
@@ -86,7 +107,15 @@ export function NoteField({ transactionId, initialNote, onSaved }: NoteFieldProp
           </p>
         )}
       </div>
-      <Button type="submit" variant="secondary" fullWidth disabled={!changed || tooLong} loading={isPending}>
+      <Button
+        type="submit"
+        variant="secondary"
+        fullWidth
+        disabled={!changed || tooLong}
+        loading={isPending}
+        // Uitgeschakeld: rustig grijs in plaats van een bleke blauwe knop die kapot lijkt.
+        className="disabled:bg-surface-muted disabled:text-text-muted"
+      >
         {value.trim() === "" && saved !== "" ? "Notitie wissen" : "Notitie bewaren"}
       </Button>
     </form>

@@ -241,9 +241,12 @@ test("opvaller: drempels voor bedrag, aandeel, periodes en dagen", () => {
   assert.equal(pickStandout([less], 14), less);
 });
 
-test("opvaller: gemiddelde 0 met een vorige periode is een opvaller vanaf € 25", () => {
-  const fresh = dev({ current: 30, average: 0, diff: 30, periodsUsed: 1 });
-  assert.equal(pickStandout([fresh], 10), fresh);
+test("opvaller: zonder eigen gemiddelde (nieuw of eerder leeg potje) is er geen opvaller", () => {
+  const fresh = dev({ current: 40, average: 0, diff: 40, periodsUsed: 1 });
+  assert.equal(pickStandout([fresh], 10), null);
+  // Het volgende potje met wél een gemiddelde kan dan nog steeds opvallen.
+  const known = dev({ categoryId: "b", current: 150, average: 100, diff: 50 });
+  assert.equal(pickStandout([fresh, known], 10), known);
 });
 
 test("opvaller: neemt het eerste item dat aan alle drempels voldoet", () => {

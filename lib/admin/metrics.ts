@@ -180,7 +180,14 @@ export interface CohortRetention {
  * niet actief in weken die begonnen nadat het account weg was. Weken waarin ze er
  * nog waren kennen we niet meer (hun events zijn weg); die slaan we voor hen over.
  */
-export function cohortRetention(profiles: ProfileLite[], events: EventLite[], today: Date, churn: ChurnLite[] = []): CohortRetention[] {
+export function cohortRetention(
+  profiles: ProfileLite[],
+  events: EventLite[],
+  today: Date,
+  churn: ChurnLite[] = [],
+  /** Begin van het geladen eventvenster (ms). Weken die eerder beginnen tellen niet mee: daar ontbreken swipes. */
+  eventsSince: number = Number.NEGATIVE_INFINITY,
+): CohortRetention[] {
   const swipesByUser = new Map<string, number[]>();
   for (const e of events) {
     if (e.type !== "swipe") continue;
@@ -222,6 +229,7 @@ export function cohortRetention(profiles: ProfileLite[], events: EventLite[], to
           const from = member.signup + (week - 1) * WEEK_MS;
           const to = member.signup + week * WEEK_MS;
           if (now < to) continue; // week nog niet voorbij
+          if (from < eventsSince) continue; // buiten het eventvenster: onbekend, niet 'niet actief'
           if (member.deletedAt !== null) {
             if (member.deletedAt > from) continue; // toen nog aanwezig: onbekend
             eligible++;

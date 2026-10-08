@@ -11,17 +11,19 @@ interface UndoToastProps {
   onUndo: () => void;
   /** Foutmelding: verschijnt in dezelfde pil, in rood, zonder knop. */
   error?: string | null;
+  /** Hint (een keuze die nog ontbreekt, geen fout): dezelfde pil, rustig in amber. */
+  hint?: string | null;
 }
 
 const pillClasses =
-  "pointer-events-auto relative flex h-10 w-full items-center justify-between gap-3 overflow-hidden rounded-full px-4 text-[13px] shadow-float";
+  "pointer-events-auto relative flex h-11 w-full items-center justify-between gap-3 overflow-hidden rounded-full px-4 text-[13px] shadow-float";
 
 /**
  * Pil onderin, boven de tabbalk: vier seconden "Ongedaan maken" na elke keuze,
  * met een streep van 2 px die leegloopt. Fouten verschijnen in dezelfde vorm,
  * zodat de layout nooit verspringt.
  */
-export function UndoToast({ id, text, onUndo, error }: UndoToastProps) {
+export function UndoToast({ id, text, onUndo, error, hint }: UndoToastProps) {
   const reduce = useReducedMotion();
   const enter = reduce ? { opacity: 0 } : { y: 12, opacity: 0 };
   const leave = reduce ? { opacity: 0 } : { y: 8, opacity: 0 };
@@ -41,6 +43,18 @@ export function UndoToast({ id, text, onUndo, error }: UndoToastProps) {
             className={`${pillClasses} bg-negative text-on-primary`}
           >
             <span className="min-w-0 truncate font-medium">{error}</span>
+          </motion.div>
+        ) : hint ? (
+          <motion.div
+            key={`hint-${hint}`}
+            role="status"
+            initial={enter}
+            animate={{ y: 0, opacity: 1 }}
+            exit={leave}
+            transition={transition}
+            className={`${pillClasses} bg-accent-soft text-accent-strong ring-1 ring-accent/40 ring-inset`}
+          >
+            <span className="min-w-0 truncate font-medium">{hint}</span>
           </motion.div>
         ) : id ? (
           <motion.div

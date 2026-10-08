@@ -47,7 +47,7 @@ export function AnchorRow({ href, icon: Icon, iconClass, label, hint, value, dow
         <Icon size={18} strokeWidth={2} />
       </span>
       <span className="flex min-h-[52px] min-w-0 flex-1 items-center gap-3 self-stretch border-b border-border pr-3 group-last/row:border-b-0">
-        <span className="min-w-0 flex-1 text-[16px] text-text">
+        <span className="min-w-0 flex-1 text-[15px] leading-5 text-text">
           <RowLabel label={label} hint={hint} />
         </span>
         {value && <span className="max-w-[45%] truncate text-[15px] text-text-muted">{value}</span>}

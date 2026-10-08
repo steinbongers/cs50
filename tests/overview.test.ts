@@ -60,10 +60,11 @@ test("vergelijkingsregel en kaartjestekst", () => {
   assert.equal(compareLine({ daysElapsed: 2, periodsUsed: 2, average: 100, current: 50 }), null);
   assert.equal(compareLine({ daysElapsed: 5, periodsUsed: 0, average: null, current: 50 })?.kind, "note");
   const near = compareLine({ daysElapsed: 5, periodsUsed: 3, average: 100, current: 105 });
-  assert.deepEqual(near, { kind: "chip", tone: "neutral", text: "Precies rond je gemiddelde" });
+  assert.deepEqual(near, { kind: "chip", tone: "neutral", text: "Precies rond je gemiddelde", basis: null });
   const less = compareLine({ daysElapsed: 5, periodsUsed: 1, average: 100, current: 50 });
   assert.equal(less?.kind === "chip" && less.tone, "positive");
-  assert.match(less?.text ?? "", /minder dan je gemiddelde tot nu toe · op basis van 1 maand$/);
+  assert.match(less?.text ?? "", /minder dan je gemiddelde tot nu toe$/);
+  assert.equal(less?.kind === "chip" && less.basis, "Op basis van 1 maand");
   assert.equal(openCardsText(1), "1 kaartje wacht");
   assert.equal(openCardsText(9), "9 kaartjes wachten");
 });

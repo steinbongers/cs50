@@ -133,22 +133,11 @@ export async function saveOnboardingCategories(
   redirect("/onboarding/salarisdag");
 }
 
-/** Slaat de salarisdag op (null = wisselt of onbekend: dan geldt de kalendermaand). */
-export async function saveSalaryDay(day: number | null): Promise<{ error: string } | undefined> {
-  const user = await requireUser();
-  if (day !== null && (!Number.isInteger(day) || day < 1 || day > 31)) {
-    return { error: "Kies een dag tussen 1 en 31." };
-  }
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("profiles")
-    .upsert({ id: user.id, salary_day: day }, { onConflict: "id" });
-  if (error) return { error: "Opslaan lukte niet. Probeer het opnieuw." };
-  redirect("/onboarding/bron");
-}
-
-/** Rondt de onboarding af; het startscherm (/) kiest zelf Swipen of Overzicht. */
-export async function finishOnboarding(): Promise<void> {
+/**
+ * Rondt de onboarding af; het startscherm (/) kiest zelf Swipen of Overzicht.
+ * Met `next=bank` (zonder koppeling op het klaar-scherm) gaat het meteen door naar de bank.
+ */
+export async function finishOnboarding(formData?: FormData): Promise<void> {
   const user = await requireUser();
   const supabase = await createClient();
 
@@ -158,5 +147,5 @@ export async function finishOnboarding(): Promise<void> {
 
   if (error) throw new Error("Onboarding kon niet worden afgerond.");
 
-  redirect("/");
+  redirect(formData?.get("next") === "bank" ? "/bank/koppelen?next=/overzicht" : "/");
 }

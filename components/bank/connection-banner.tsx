@@ -30,11 +30,11 @@ export function ConnectionBanner({ connection }: { connection: BankConnectionRow
       href="/bank/koppelen?reconnect=1&next=/overzicht"
       className={cn(
         "flex min-h-14 items-center gap-3 rounded-card px-4 py-3 transition-[opacity,transform] duration-150 active:scale-[0.98]",
-        expiring ? "bg-accent-soft text-accent" : "bg-negative-soft text-negative",
+        expiring ? "bg-accent-soft text-accent-strong" : "bg-negative-soft text-negative",
       )}
     >
       <IconBank size={22} className="shrink-0" aria-hidden />
-      <span className="flex-1 text-sm">
+      <span className="flex-1 text-[13px] leading-[18px]">
         <span className="font-semibold">{text}</span>
         <span className="block text-text">Tik om opnieuw te koppelen.</span>
       </span>

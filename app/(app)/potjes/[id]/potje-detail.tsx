@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { IconChevronLeft, IconPencil } from "@/components/ui/icons";
 import { Sheet } from "@/components/ui/sheet";
+import { isSavingsPot } from "@/lib/categories/display";
 import { categoryColorClasses } from "@/lib/categories/palette";
 import type { CategoryDraft } from "@/lib/categories/types";
 import { formatDay, formatDayShort, formatEuro, formatEuroWhole, formatSignedEuro } from "@/lib/format";
@@ -26,9 +27,12 @@ export interface DetailTransaction {
   bookingDate: string;
   amount: number;
   ownShare: number | null;
+  /** Opgeschoonde tegenpartij (lijst en sheettitel). */
   counterparty: string;
-  /** Volledige banktekst (ruwe tegenpartij en omschrijving). */
-  bankText: string;
+  /** Tegenpartij en omschrijving zoals de bank ze stuurde (voor de sheet). */
+  rawCounterparty: string;
+  rawDescription: string | null;
+  bookingTime: string | null;
   note: string | null;
   inPeriod: boolean;
 }
@@ -78,6 +82,12 @@ export function PotjeDetail({
   const goal = category.goalAmount;
   const canTrack = !category.isIncome;
   const monthLabel = periodLabel.charAt(0).toUpperCase() + periodLabel.slice(1);
+  // Inkomen komt binnen, een spaarpotje vul je, een gewoon potje geef je uit.
+  const amountLabel = category.isIncome
+    ? "Binnengekomen"
+    : isSavingsPot(category)
+      ? "Deze maand erin"
+      : "Uitgegeven deze maand";
 
   const budgetState = canTrack && budget !== null && budget > 0 ? budgetStatus(spent, budget) : null;
   const goalState = canTrack && budgetState === null && goal !== null && goal > 0 ? goalStatus(saved ?? 0, goal) : null;
@@ -136,7 +146,7 @@ export function PotjeDetail({
 
   return (
     <>
-      <header className="safe-top flex items-center gap-3 px-4 pt-6 pb-4">
+      <header className="safe-top-2 flex min-h-11 items-center gap-3 px-4 pb-4">
         <Link
           href="/overzicht"
           aria-label="Terug"
@@ -144,8 +154,8 @@ export function PotjeDetail({
         >
           <IconChevronLeft />
         </Link>
-        <CategoryBadge icon={category.icon} color={category.color} size="header" />
-        <h1 className="min-w-0 flex-1 truncate text-[28px] leading-[34px] font-semibold tracking-[-0.02em]">{category.name}</h1>
+        <CategoryBadge icon={category.icon} color={category.color} size="row" />
+        <h1 className="line-clamp-2 min-w-0 flex-1 text-[22px] leading-7 font-semibold tracking-[-0.01em] break-words">{category.name}</h1>
         <button
           type="button"
           onClick={() =>
@@ -162,7 +172,7 @@ export function PotjeDetail({
         <Card className="flex flex-col gap-4">
           <div>
             <p className="text-[13px] leading-[18px] text-text-muted">
-              {category.isIncome ? "Binnengekomen" : "Uitgegeven"} · {monthLabel}
+              {amountLabel} · {monthLabel}
             </p>
             <p className="text-[28px] leading-[34px] font-semibold tabular-nums tracking-[-0.02em]">{formatEuroWhole(spent)}</p>
           </div>
@@ -174,7 +184,7 @@ export function PotjeDetail({
                 <p
                   className={cn(
                     "text-[13px] leading-[18px] tabular-nums",
-                    budgetState.state === "over" ? "font-medium text-accent" : "text-text-muted",
+                    budgetState.state === "over" ? "font-medium text-accent-strong" : "text-text-muted",
                   )}
                 >
                   {budgetState.state === "over"

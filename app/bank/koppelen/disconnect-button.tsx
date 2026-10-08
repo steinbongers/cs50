@@ -25,11 +25,11 @@ export function DisconnectButton() {
         type="button"
         onClick={() => setConfirmOpen(true)}
         disabled={isPending}
-        className="min-h-11 text-sm font-medium text-negative disabled:opacity-60"
+        className="min-h-11 text-[13px] leading-[18px] font-medium text-negative disabled:opacity-60"
       >
         Bank ontkoppelen
       </button>
-      {error && <p className="text-sm text-negative">{error}</p>}
+      {error && <p className="text-[13px] leading-[18px] text-negative">{error}</p>}
 
       <Sheet
         open={confirmOpen}

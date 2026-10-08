@@ -59,7 +59,7 @@ export function ConnectionCard({
         <span
           className={cn(
             "flex size-12 shrink-0 items-center justify-center rounded-xl",
-            status === "active" ? "bg-positive-soft text-positive" : "bg-accent-soft text-accent",
+            status === "active" ? "bg-positive-soft text-positive" : "bg-accent-soft text-accent-strong",
           )}
           aria-hidden
         >
@@ -67,16 +67,16 @@ export function ConnectionCard({
         </span>
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{aspspName}</p>
-          <p className="text-sm text-text-muted">
+          <p className="text-[13px] leading-[18px] text-text-muted">
             {STATUS_TEXT[status]}
             {detail && ` · ${detail}`}
           </p>
-          {lastSyncedAt && <p className="text-xs text-text-muted">Bijgewerkt {formatDateTime(lastSyncedAt)}</p>}
+          {lastSyncedAt && <p className="text-[13px] leading-[18px] text-text-muted">Bijgewerkt {formatDateTime(lastSyncedAt)}</p>}
         </div>
       </div>
       {/* De opgeslagen fout kan banktekst bevatten; we tonen een vaste zin. */}
       {lastError && status !== "revoked" && (
-        <p className="text-sm text-text-muted">De laatste keer verversen lukte niet. We proberen het vanzelf opnieuw.</p>
+        <p className="text-[13px] leading-[18px] text-text-muted">De laatste keer verversen lukte niet. We proberen het vanzelf opnieuw.</p>
       )}
       {status !== "revoked" && <DisconnectButton />}
       {showReconnect && (

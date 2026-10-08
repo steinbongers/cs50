@@ -35,7 +35,7 @@ export function RefreshButton({ lastSyncedAt }: { lastSyncedAt: string | null })
   const synced = lastSyncedAt ? formatDateTime(lastSyncedAt) : null;
 
   return (
-    <div className="flex items-center justify-between gap-3 px-1 text-xs text-text-muted">
+    <div className="flex items-center justify-between gap-3 px-1 text-[13px] leading-[18px] text-text-muted">
       <span className="min-w-0 truncate" role="status">
         {message ?? (synced ? `Bijgewerkt ${synced}` : "Nog niet bijgewerkt")}
       </span>

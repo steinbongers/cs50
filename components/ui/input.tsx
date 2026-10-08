@@ -28,16 +28,16 @@ interface FieldProps {
 export function Field({ label, htmlFor, hint, error, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-medium text-text">
+      <label htmlFor={htmlFor} className="text-[13px] leading-[18px] font-medium text-text">
         {label}
       </label>
       {children}
       {error ? (
-        <p className="text-sm text-negative" role="alert">
+        <p className="text-[13px] leading-[18px] text-negative" role="alert">
           {error}
         </p>
       ) : hint ? (
-        <p className="text-sm text-text-muted">{hint}</p>
+        <p className="text-[13px] leading-[18px] text-text-muted">{hint}</p>
       ) : null}
     </div>
   );

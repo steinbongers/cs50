@@ -21,7 +21,10 @@ Zonder `SUPABASE_SECRET_KEY` staat de uitnodigingscode-controle uit, zodat je lo
 
 - `npm run typecheck` — TypeScript
 - `npm run lint` — ESLint
-- `npm test` — unittests (tekst opschonen, salarisperiode, verdeling, bankmapping, inzichten, pilotcijfers)
+- `npm test` — unittests in `tests/`: tekst opschonen, salarisperiode, verdeling, bankmapping, inzichten
+  (gemiddelde, opvallend potje), budget en spaardoel (`budget`), standaardpotjes en tegelnamen (`categories`),
+  overzichtsteksten (`overview`), zoekfilter (`search`), routekeuze van het startscherm (`start-route`) en
+  pilotcijfers met mediaan en retentie (`metrics`)
 - `npm run build` — productiebuild
 
 ## Deploy naar Vercel
@@ -48,6 +51,26 @@ Zonder `SUPABASE_SECRET_KEY` staat de uitnodigingscode-controle uit, zodat je lo
    Zet in Vercel onder Project Settings → Functions de regio op Frankfurt (`fra1`), dicht bij Supabase.
 5. Registreer jezelf met een adres uit `ADMIN_EMAILS`; die adressen hebben geen uitnodigingscode nodig.
    Maak daarna via `/admin` uitnodigingscodes en deel ze als `/registreren?code=PILOT-XXXX`.
+
+## Wat de app doet (kort)
+
+- `/` is het slimme startscherm: onboarding als die niet af is, anders `/swipen` als er kaartjes liggen en
+  `/overzicht` als de stapel leeg is (redirect op de server, `lib/start-route.ts`).
+- `/swipen` — één kaartje bovenin, alle potjes als tegels (4 per rij), Later, Ongedaan maken, "Ik krijg geld
+  terug" en de tegel Terugbetaling bij inkomend geld.
+- `/overzicht` — de maand als ring en lijst, budgetstand, vergelijking met je gemiddelde, één opvallend potje,
+  "Nog te krijgen" per persoon, en bladeren tot drie maanden terug.
+- `/potjes/[id]` — potje-detail met budget of spaardoel, kaartjes verplaatsen en notities.
+- `/transacties` — "Alle kaartjes": zoeken op tegenpartij, omschrijving en notitie, chips voor maand en potje.
+- `/instellingen` — account, salarisdag, potjes beheren, bank, meldingen, thema, export en account verwijderen.
+- `/admin` — alleen geaggregeerde pilotcijfers (noordsterren, trechter, retentie, churn).
+- `/api/events/push-opened` meet welke melding geopend is (alleen de tag, via `public/sw.js`).
+
+## Database
+
+Migraties staan in `supabase/migrations/` en zijn additief, met RLS op `(select auth.uid())`. De laatste is
+`20261014000000_afwerkronde.sql` (notitie per kaartje, spaardoel per potje, `churn_log` zonder user_id).
+`supabase/pilot-setup.sql` bevat alle migraties in één bestand voor een nieuw project.
 
 ## Bankkoppeling (Enable Banking)
 

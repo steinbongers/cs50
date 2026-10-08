@@ -87,7 +87,7 @@ export function RegisterForm({ requireInvite, prefillCode }: { requireInvite: bo
         Account aanmaken
       </SubmitButton>
       <AppleButton next="/onboarding" inviteCode={requireInvite ? inviteCode : undefined} label="Registreren met Apple" />
-      <p className="text-center text-sm text-text-muted">
+      <p className="text-center text-[13px] leading-[18px] text-text-muted">
         Al een account?{" "}
         <Link href="/login" className="inline-flex min-h-11 items-center font-medium text-primary">
           Inloggen

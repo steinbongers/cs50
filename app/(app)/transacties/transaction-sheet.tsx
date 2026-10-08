@@ -1,14 +1,13 @@
 "use client";
 
-import { NoteField } from "@/components/transactions/note-field";
 import { useId, useState, useTransition } from "react";
 import { CategoryPickerGrid } from "@/components/categories/category-picker-grid";
+import { KaartjeDetails } from "@/components/transactions/kaartje-details";
+import { NoteField } from "@/components/transactions/note-field";
 import { ButtonLink } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { ACTION_LABEL } from "@/config/app";
-import { formatEuro, formatLongDay, formatSignedEuro } from "@/lib/format";
 import type { SearchResult } from "@/lib/transactions/search";
-import { cn } from "@/lib/utils";
 import { moveTransaction } from "../potjes/actions";
 import type { ListCategory } from "./transaction-list";
 
@@ -39,36 +38,21 @@ function SheetBody({ transaction, categories }: { transaction: SearchResult; cat
 
   return (
     <div className="flex flex-col gap-6">
-      <dl className="flex flex-col gap-4 text-[15px] leading-5">
+      <KaartjeDetails
+        transaction={{
+          bookingDate: transaction.bookingDate,
+          bookingTime: transaction.bookingTime,
+          amount: transaction.amount,
+          ownShare: transaction.ownShare,
+          counterparty: transaction.rawCounterparty ?? transaction.counterparty,
+          description: transaction.rawDescription ?? transaction.description,
+        }}
+      >
         <div>
-          <dt className="text-[13px] text-text-muted">Datum</dt>
-          <dd className="font-medium">
-            {formatLongDay(transaction.bookingDate)}
-            {transaction.bookingTime && ` · ${transaction.bookingTime}`}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-[13px] text-text-muted">Bedrag</dt>
-          <dd className={cn("font-semibold tabular-nums", transaction.amount > 0 && "text-positive")}>
-            {formatSignedEuro(transaction.amount)}
-            {transaction.ownShare !== null && (
-              <span className="font-normal text-text-muted"> · jouw deel {formatEuro(transaction.ownShare)}</span>
-            )}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-[13px] text-text-muted">Tegenpartij</dt>
-          <dd className="font-medium break-words">{transaction.rawCounterparty ?? transaction.counterparty}</dd>
-        </div>
-        <div>
-          <dt className="text-[13px] text-text-muted">Zoals de bank het stuurde</dt>
-          <dd className="break-words">{transaction.rawDescription ?? transaction.description ?? "Geen omschrijving"}</dd>
-        </div>
-        <div>
-          <dt className="text-[13px] text-text-muted">Potje</dt>
+          <dt className="text-[13px] leading-[18px] text-text-muted">Potje</dt>
           <dd className="font-medium">{current ? current.name : "Nog op de stapel"}</dd>
         </div>
-      </dl>
+      </KaartjeDetails>
 
       <NoteField key={transaction.id} transactionId={transaction.id} initialNote={transaction.note} />
 
@@ -119,7 +103,7 @@ function MoveSection({ transaction, categories }: { transaction: SearchResult; c
 
   return (
     <section className="flex flex-col gap-3" aria-labelledby={headingId}>
-      <h3 id={headingId} className="text-[13px] font-medium text-text">
+      <h3 id={headingId} className="text-[13px] leading-[18px] font-medium text-text-muted">
         Naar ander potje
       </h3>
       <CategoryPickerGrid

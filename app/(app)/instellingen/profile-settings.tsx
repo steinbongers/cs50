@@ -74,7 +74,7 @@ export function ProfileCard({ displayName, email }: { displayName: string; email
             />
           </Field>
           {error && (
-            <p className="text-sm text-negative" role="alert">
+            <p className="text-[13px] leading-[18px] text-negative" role="alert">
               {error}
             </p>
           )}
@@ -161,7 +161,7 @@ export function SalaryDayRow({ salaryDay }: { salaryDay: number | null }) {
             <p className="text-[13px] text-text-muted">Valt die dag in het weekend? Dan tellen we vanaf de vrijdag ervoor.</p>
           </div>
           {error && (
-            <p className="text-sm text-negative" role="alert">
+            <p className="text-[13px] leading-[18px] text-negative" role="alert">
               {error}
             </p>
           )}
@@ -199,7 +199,7 @@ export function DeleteAccountRow() {
         type="button"
         onClick={openSheet}
         className={cn(
-          "flex min-h-[52px] w-full items-center justify-center px-4 text-[16px] text-negative",
+          "flex min-h-[52px] w-full items-center justify-center px-4 text-[15px] leading-5 text-negative",
           "transition-colors duration-150 active:bg-surface-muted",
           ROW_FOCUS,
         )}
@@ -217,7 +217,7 @@ export function DeleteAccountRow() {
       >
         <div className="flex flex-col gap-2 pt-2">
           {error && (
-            <p className="pb-2 text-sm text-negative" role="alert">
+            <p className="pb-2 text-[13px] leading-[18px] text-negative" role="alert">
               {error}
             </p>
           )}

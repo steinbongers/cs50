@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { settlePersonShares } from "@/app/(app)/overzicht/actions";
 import { groupSharesByPerson, shareAgeLabel } from "@/components/overview/share-groups";
-import { formatDayShort, formatEuro, formatEuroWhole } from "@/lib/format";
+import { formatDayShort, formatEuro } from "@/lib/format";
 import type { OpenShare } from "@/lib/transactions/queries";
 import { cn } from "@/lib/utils";
 import { updateShareStatus } from "./actions";
@@ -21,7 +21,7 @@ const smallButton =
 /**
  * Openstaande delen in Voorgeschoten, per persoon (zoals Splitwise). Tik op een persoon
  * om de losse delen te zien; per deel "Betaald" of "Anders geregeld", per persoon
- * "Alles van Sanne ontvangen". Delen zonder naam staan samen onder "Zonder naam".
+ * "Alles van Sanne ontvangen" (alleen bij meer dan één deel). Delen zonder naam staan samen onder "Zonder naam".
  */
 export function SharesList({ shares, onAllSettled }: SharesListProps) {
   const [hidden, setHidden] = useState<Set<string>>(() => new Set());
@@ -105,7 +105,7 @@ export function SharesList({ shares, onAllSettled }: SharesListProps) {
               >
                 <span
                   aria-hidden
-                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-semibold text-accent"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[13px] leading-[18px] font-semibold text-accent-strong"
                 >
                   {group.name ? group.name.charAt(0).toLocaleUpperCase("nl-NL") : "?"}
                 </span>
@@ -115,7 +115,7 @@ export function SharesList({ shares, onAllSettled }: SharesListProps) {
                     {group.shares.length} {group.shares.length === 1 ? "deel" : "delen"}
                   </span>
                 </span>
-                <span className="text-sm font-medium tabular-nums">{formatEuroWhole(group.total)}</span>
+                <span className="text-[13px] leading-[18px] font-medium tabular-nums">{formatEuro(group.total)}</span>
                 <ChevronDown
                   size={18}
                   aria-hidden
@@ -131,15 +131,15 @@ export function SharesList({ shares, onAllSettled }: SharesListProps) {
                       return (
                         <li key={share.id} className="flex flex-col gap-1 px-3 py-2">
                           <div className="flex items-baseline gap-2">
-                            <span className="min-w-0 flex-1 truncate text-sm">
+                            <span className="min-w-0 flex-1 truncate text-[13px] leading-[18px]">
                               {share.bookingDate && (
                                 <span className="text-text-muted">{formatDayShort(share.bookingDate)} · </span>
                               )}
                               {share.counterparty}
                             </span>
-                            <span className="text-sm font-medium tabular-nums">{formatEuro(share.amount)}</span>
+                            <span className="text-[13px] leading-[18px] font-medium tabular-nums">{formatEuro(share.amount)}</span>
                           </div>
-                          {age && <p className="text-[12px] text-accent">{age}</p>}
+                          {age && <p className="text-[13px] leading-[18px] text-accent-strong">{age}</p>}
                           <div className="flex justify-end gap-1">
                             <button
                               type="button"
@@ -162,12 +162,12 @@ export function SharesList({ shares, onAllSettled }: SharesListProps) {
                       );
                     })}
                   </ul>
-                  {group.name && (
+                  {group.name && group.shares.length > 1 && (
                     <button
                       type="button"
                       disabled={isPending}
                       onClick={() => markAll(group.shares.map((s) => s.id))}
-                      className={cn(smallButton, "mt-1 w-full bg-accent-soft text-accent hover:opacity-90")}
+                      className={cn(smallButton, "mt-1 w-full bg-accent-soft text-accent-strong hover:opacity-90")}
                     >
                       Alles van {group.name} ontvangen
                     </button>

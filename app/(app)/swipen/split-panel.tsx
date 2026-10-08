@@ -30,8 +30,8 @@ export const EMPTY_SPLIT: SplitState = {
 };
 
 const METHOD_OPTIONS = [
-  { value: "bank", label: "Via de bank" },
-  { value: "other", label: "Buiten de bank" },
+  { value: "bank", label: "Via bank" },
+  { value: "other", label: "Buiten bank" },
 ] as const;
 
 interface SplitRowProps {
@@ -105,7 +105,8 @@ export function SplitRow({ open, amountAbs, state, onChange, knownNames = [], me
                 onChange={(method) => onChange({ method })}
                 ariaLabel="Hoe krijg je het terug?"
                 className={cn(
-                  "min-w-0 flex-1 [&_button]:px-1 [&_button]:text-[12px] [&_button]:leading-[14px] [&_button]:whitespace-normal",
+                  // Korte labels op één regel, ook op 375 px: beide segmenten even breed (grid 1fr).
+                  "min-w-0 flex-1 [&_button]:px-0.5 [&_button]:text-[13px] [&_button]:tracking-[-0.01em]",
                   methodMissing && "ring-2 ring-accent ring-inset",
                 )}
               />
@@ -148,8 +149,6 @@ function NamesSheet({ open, onClose, amountAbs, state, onChange, knownNames }: N
   const namesListId = useId();
   const result = splitEqually(amountAbs, state.persons);
   const othersTotal = Math.round(result.otherShares.reduce((a, b) => a + b, 0) * 100) / 100;
-  const open_ = state.method === "bank" ? othersTotal : 0;
-  const settled = state.method === "other" ? othersTotal : 0;
 
   return (
     <Sheet
@@ -188,11 +187,16 @@ function NamesSheet({ open, onClose, amountAbs, state, onChange, knownNames }: N
           ))}
         </div>
 
-        <p className="text-[13px] leading-[18px] text-text-muted">Buiten de bank: WieBetaaltWat of contant</p>
-
-        <p className="text-[13px] leading-[18px] tabular-nums">
-          Nog te krijgen {formatEuro(open_)} · Al geregeld {formatEuro(settled)}
-        </p>
+        {/* Alleen het getal dat bij de gekozen weg hoort; zonder keuze geen getal. */}
+        {state.method === "bank" && (
+          <p className="text-[13px] leading-[18px] tabular-nums">Nog te krijgen {formatEuro(othersTotal)}</p>
+        )}
+        {state.method === "other" && (
+          <p className="text-[13px] leading-[18px] tabular-nums">
+            Al geregeld {formatEuro(othersTotal)}
+            <span className="text-text-muted"> · via WieBetaaltWat of contant</span>
+          </p>
+        )}
 
         <Button size="lg" fullWidth onClick={onClose}>
           Klaar

@@ -114,7 +114,7 @@ export function SearchClient({ initialQuery, q, maand, potje, monthChips, potjeC
         }}
       >
         <label htmlFor={inputId} className="sr-only">
-          Zoeken
+          Zoek op winkel, omschrijving of notitie
         </label>
         <div className="relative">
           <Search size={18} aria-hidden className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-text-muted" />
@@ -128,7 +128,7 @@ export function SearchClient({ initialQuery, q, maand, potje, monthChips, potjeC
             maxLength={100}
             value={value}
             onChange={(e) => onType(e.target.value)}
-            placeholder="Zoek op winkel, omschrijving of notitie"
+            placeholder="Zoek op naam of notitie"
             aria-busy={isPending || undefined}
             className={cn(
               "h-11 w-full rounded-control border bg-surface pr-11 pl-10 text-base text-text",
@@ -157,8 +157,12 @@ export function SearchClient({ initialQuery, q, maand, potje, monthChips, potjeC
         </div>
       </form>
 
+      {/* Loopt door tot de schermrand en vervaagt rechts, zodat het als scrollbaar oogt en niet als afgekapt. */}
       <div
-        className="flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          "flex scroll-px-4 gap-2 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "[mask-image:linear-gradient(to_right,black_calc(100%-24px),transparent)]",
+        )}
         role="group"
         aria-label="Filteren op maand en potje"
       >

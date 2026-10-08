@@ -24,11 +24,13 @@ interface SessionSummaryProps {
   remaining: number;
 }
 
-export function headline(count: number): string {
+/** Kop van het afrondmoment. "Stapel weg" alleen als de stapel echt leeg is. */
+export function headline(count: number, remaining: number): string {
   if (count === 0) return "Niets gekozen, wel gekeken";
-  if (count === 1) return "Eén kaartje, klein maar fijn";
+  if (count === 1) return remaining > 0 ? "Eén kaartje, klein maar fijn" : "Eén kaartje en de stapel is weg";
+  if (remaining > 0) return count < 5 ? "Dat ging vlot" : "Even pauze, goed bezig";
   if (count < 5) return "Dat ging vlot";
-  if (count <= 15) return "Stapel weg. Lekker bezig.";
+  if (count <= 15) return "Stapel weg. Lekker bezig";
   return "Zo, dat was een flinke stapel";
 }
 
@@ -84,15 +86,15 @@ export function SessionSummary({ decisions, skipped, remaining }: SessionSummary
         </motion.svg>
       </div>
 
-      <h2 className="text-[22px] leading-7 font-semibold tracking-[-0.02em]">{headline(decisions.length)}</h2>
+      <h2 className="text-[22px] leading-7 font-semibold tracking-[-0.02em]">{headline(decisions.length, remaining)}</h2>
 
       <div className="mt-4 flex w-full flex-col gap-2">
         {top && top.spent > 0 && colors && (
           <div className="flex items-center gap-3 rounded-card bg-surface p-4 text-left shadow-card">
             <CategoryBadge icon={top.category.icon} color={top.category.color} />
             <div className="min-w-0 flex-1">
-              <p className="text-sm text-text-muted">Grootste potje deze ronde</p>
-              <p className="truncate font-medium">
+              <p className="text-[13px] leading-[18px] text-text-muted">Grootste potje deze ronde</p>
+              <p className="truncate text-[15px] leading-5 font-medium">
                 <span className={cn("tabular-nums", colors.text)}>{formatEuroAbs(top.spent)}</span> naar{" "}
                 {top.category.name}
               </p>

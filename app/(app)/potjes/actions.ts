@@ -27,7 +27,9 @@ export async function updateShareStatus(shareId: string, status: ShareStatus): P
   if (!["open", "received", "settled_elsewhere"].includes(status)) return { ok: false, error: "Onbekende status." };
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  // Alleen echte overgangen: afvinken kan alleen vanuit 'open', terugzetten alleen naar 'open'.
+  // Zo overschrijft een dubbele tik of een oud tabblad geen received_at en logt hij niets dubbel.
+  const base = supabase
     .from("transaction_shares")
     .update({
       status,
@@ -35,8 +37,10 @@ export async function updateShareStatus(shareId: string, status: ShareStatus): P
       ...(status === "open" ? { received_transaction_id: null } : {}),
     })
     .eq("id", shareId)
-    .eq("user_id", user.id)
-    .select("created_at");
+    .eq("user_id", user.id);
+  const { data, error } = await (status === "open" ? base.neq("status", "open") : base.eq("status", "open")).select(
+    "created_at",
+  );
 
   if (error) return { ok: false, error: GENERIC };
   // Handmatig afgevinkt (Betaald / Anders geregeld): meetellen voor 'delen binnen 14 dagen'.
@@ -49,6 +53,12 @@ export async function updateShareStatus(shareId: string, status: ShareStatus): P
   }
   refresh();
   return { ok: true };
+}
+
+/** Meting: het potje-detail is bekeken. Eén keer per bezoek, vanaf de client (niet bij elke refresh). */
+export async function logCategoryDetailViewed(): Promise<void> {
+  await requireUser();
+  await logEvent("category_detail_viewed", {});
 }
 
 /** Verplaatst een transactie naar een ander potje (vanaf de detailpagina). */

@@ -56,6 +56,8 @@ export function isQuickSuggestionKey(value: unknown): value is QuickSuggestionKe
 
 /** Korte hulpregel per standaardpotje: wat er nog meer in hoort. */
 export const CATEGORY_HINTS: Record<string, string> = {
+  boodschappen: "Ook drogist en markt",
+  "uit-eten": "Ook koffie, lunch en bezorging",
   vervoer: "Ook auto, brandstof en parkeren",
   wonen: "Ook gemeentebelasting, internet en inboedel",
   zorg: "Ook zorgverzekering en andere verzekeringen",
@@ -63,7 +65,9 @@ export const CATEGORY_HINTS: Record<string, string> = {
   kleding: "Ook kapper en verzorging",
   uitgaan: "Ook film, hobby's en sport",
   cadeaus: "Ook donaties",
+  vakantie: "Ook reizen en weekendjes weg",
   sparen: "Naar je spaarrekening of beleggingen",
+  inkomen: "Salaris, toeslagen en ander geld dat binnenkomt",
   overig: "Voor alles wat nergens past",
 };
 

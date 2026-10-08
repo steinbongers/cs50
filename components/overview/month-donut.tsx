@@ -80,30 +80,77 @@ export function MonthDonut({ slices, unsorted, total, label }: MonthDonutProps) 
         width={SIZE}
         height={SIZE}
         viewBox={`0 0 ${SIZE} ${SIZE}`}
-        role="img"
+        role="group"
         aria-label={`Uitgegeven in ${label}: ${formatEuroWhole(total)}. ${summary}.`}
         className="-rotate-90"
       >
         {ringTotal <= 0 && (
           <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" stroke="var(--border)" strokeWidth={STROKE} />
         )}
-        {arcs.map(({ slice, dash, offset }) => (
-          <circle
-            key={slice.id}
-            cx={SIZE / 2}
-            cy={SIZE / 2}
-            r={RADIUS}
-            fill="none"
-            stroke={strokeFor(slice)}
-            strokeLinecap="butt"
-            strokeWidth={selected === slice.id ? STROKE + HIGHLIGHT : STROKE}
-            strokeDasharray={dash}
-            strokeDashoffset={offset}
-            opacity={selected && selected !== slice.id ? 0.35 : slice.id === OPEN_ID ? 0.45 : 1}
-            className="cursor-pointer transition-[opacity,stroke-width] duration-150"
-            onClick={() => setSelected((cur) => (cur === slice.id ? null : slice.id))}
-          />
-        ))}
+        {arcs.map(({ slice, dash, offset }) => {
+          const isSelected = selected === slice.id;
+          // Drie soorten grijs uit elkaar houden: Overig vol, 'Overige potjes' lichter,
+          // 'Nog in te delen' lichter én dunner.
+          const width = slice.id === OPEN_ID ? STROKE / 2 : STROKE;
+          const baseOpacity = slice.id === OPEN_ID ? 0.45 : slice.id === OTHER_ID ? 0.55 : 1;
+          const toggle = () => setSelected((cur) => (cur === slice.id ? null : slice.id));
+          return (
+            <g
+              key={slice.id}
+              role="button"
+              tabIndex={0}
+              aria-pressed={isSelected}
+              aria-label={`${slice.name} ${formatEuroWhole(slice.amount)}, ${percent(slice.amount, ringTotal)}`}
+              // SVG-groepen tekenen geen outline: de focusring is een eigen cirkel (zie hieronder).
+              className="group cursor-pointer outline-none"
+              onClick={toggle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggle();
+                }
+              }}
+            >
+              {/* Onzichtbaar, breder raakvlak: ook kleine segmenten zijn met een vinger te raken. */}
+              <circle
+                cx={SIZE / 2}
+                cy={SIZE / 2}
+                r={RADIUS}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={STROKE + 12}
+                strokeDasharray={dash}
+                strokeDashoffset={offset}
+              />
+              {/* Focusring voor het toetsenbord: een rand in primary rond het segment. */}
+              <circle
+                cx={SIZE / 2}
+                cy={SIZE / 2}
+                r={RADIUS}
+                fill="none"
+                stroke="var(--primary)"
+                strokeWidth={width + HIGHLIGHT + 4}
+                strokeDasharray={dash}
+                strokeDashoffset={offset}
+                className="opacity-0 group-focus-visible:opacity-100"
+                aria-hidden
+              />
+              <circle
+                cx={SIZE / 2}
+                cy={SIZE / 2}
+                r={RADIUS}
+                fill="none"
+                stroke={strokeFor(slice)}
+                strokeLinecap="butt"
+                strokeWidth={isSelected ? width + HIGHLIGHT : width}
+                strokeDasharray={dash}
+                strokeDashoffset={offset}
+                opacity={selected && !isSelected ? 0.35 : baseOpacity}
+                className="transition-[opacity,stroke-width] duration-150 motion-reduce:transition-none"
+              />
+            </g>
+          );
+        })}
       </svg>
       <div
         className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-9 text-center"

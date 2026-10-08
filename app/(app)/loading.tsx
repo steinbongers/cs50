@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export default function Loading() {
   return (
-    <div className="safe-top flex flex-col gap-6 px-4 pt-4" role="status" aria-label="Laden">
+    <div className="safe-top-4 flex flex-col gap-6 px-4" role="status" aria-label="Laden">
       <Skeleton className="h-8 w-40 rounded-full" />
       <Skeleton className="h-40 w-full" />
       <Skeleton className="h-24 w-full" />

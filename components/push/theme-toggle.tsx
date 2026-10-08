@@ -60,7 +60,7 @@ export function ThemeToggle() {
         <SunMoon size={18} strokeWidth={2} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2 border-b border-border pt-3.5 pr-4 pb-3 group-last/row:border-b-0">
-        <span aria-hidden className="text-[16px] text-text">
+        <span aria-hidden className="text-[15px] leading-5 text-text">
           Thema
         </span>
         <Segmented options={OPTIONS} value={theme} onChange={choose} ariaLabel="Thema" />

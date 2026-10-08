@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ensureProfile, requireUser } from "@/lib/auth";
-import { logEvent } from "@/lib/events";
 import { spendOf, spentPerCategory, weeklySeries, type CatLite } from "@/lib/insights/compute";
 import { loadInsightData } from "@/lib/insights/queries";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { createClient } from "@/lib/supabase/server";
+import { DetailViewed } from "./detail-viewed";
 import { PotjeDetail, type DetailTransaction } from "./potje-detail";
 
 export const metadata: Metadata = { title: "Potje" };
@@ -94,7 +94,7 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
 
   const { data: rows } = await supabase
     .from("transactions")
-    .select("id, booking_date, amount, own_share, counterparty, description, raw_counterparty, raw_description, note")
+    .select("id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note")
     .eq("category_id", category.id)
     .order("booking_date", { ascending: false })
     .limit(60);
@@ -105,9 +105,9 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
     amount: Number(t.amount),
     ownShare: t.own_share === null ? null : Number(t.own_share),
     counterparty: t.counterparty ?? "Onbekende tegenpartij",
-    bankText: [t.raw_counterparty ?? t.counterparty, t.raw_description ?? t.description]
-      .filter((part): part is string => typeof part === "string" && part.trim() !== "")
-      .join("\n"),
+    rawCounterparty: t.raw_counterparty ?? t.counterparty ?? "Onbekende tegenpartij",
+    rawDescription: t.raw_description ?? t.description,
+    bookingTime: t.booking_time ? t.booking_time.slice(0, 5) : null,
     note: t.note,
     inPeriod: t.booking_date >= period.startISO && t.booking_date < period.endISO,
   }));
@@ -116,26 +116,27 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
     .filter((c) => !c.systemKey)
     .map((c) => ({ id: c.id, name: c.name, icon: c.icon, color: c.color }));
 
-  // Alleen dat het detail bekeken is; geen bedragen of namen.
-  await logEvent("category_detail_viewed", {});
-
   return (
-    <PotjeDetail
-      category={{
-        id: category.id,
-        name: category.name,
-        icon: category.icon,
-        color: category.color,
-        isIncome: category.is_income,
-        monthlyBudget,
-        goalAmount,
-      }}
-      spent={spent}
-      saved={saved}
-      periodLabel={period.label}
-      series={series}
-      transactions={transactions}
-      pickableCategories={pickable}
-    />
+    <>
+      {/* Meting op de client: een refresh na een actie telt niet als nieuw bezoek. */}
+      <DetailViewed categoryId={category.id} />
+      <PotjeDetail
+        category={{
+          id: category.id,
+          name: category.name,
+          icon: category.icon,
+          color: category.color,
+          isIncome: category.is_income,
+          monthlyBudget,
+          goalAmount,
+        }}
+        spent={spent}
+        saved={saved}
+        periodLabel={period.label}
+        series={series}
+        transactions={transactions}
+        pickableCategories={pickable}
+      />
+    </>
   );
 }

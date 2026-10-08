@@ -78,7 +78,7 @@ export function Sheet({
       cancelAnimationFrame(raf);
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
-      opener?.focus();
+      opener?.focus({ preventScroll: true });
     };
   }, [open, onClose]);
 
@@ -116,13 +116,13 @@ export function Sheet({
             transition={transition}
           >
             <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-border sm:hidden" aria-hidden />
-            <div className="flex items-start justify-between gap-3 px-5 pt-3 pb-2">
+            <div className="flex items-start justify-between gap-3 px-4 pt-3 pb-2">
               <div className="min-w-0">
-                <h2 id={titleId} ref={titleRef} tabIndex={-1} className="text-lg font-semibold outline-none">
+                <h2 id={titleId} ref={titleRef} tabIndex={-1} className="text-[17px] leading-[22px] font-semibold outline-none">
                   {title}
                 </h2>
                 {description && (
-                  <p id={descId} className="mt-0.5 text-sm text-text-muted">
+                  <p id={descId} className="mt-0.5 text-[13px] leading-[18px] text-text-muted">
                     {description}
                   </p>
                 )}
@@ -136,7 +136,7 @@ export function Sheet({
                 <IconClose size={22} />
               </button>
             </div>
-            <div className={cn("safe-bottom overflow-y-auto px-5 pb-5", bodyClassName)}>{children}</div>
+            <div className={cn("safe-bottom-5 overflow-y-auto px-4", bodyClassName)}>{children}</div>
           </motion.div>
         </div>
       )}

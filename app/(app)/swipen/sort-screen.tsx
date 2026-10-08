@@ -2,10 +2,11 @@
 
 /*
  * Hoogterekensom voor 390 × 844 (iPhone 14/15, ±687 px tussen safe-area en tabbalk):
- *   header 48 + 12 + kaart 168 + 12 + actieregel 44 + 12 + tegels (4 × 80 + 3 × 6)
- *   = 48+12+168+12+44+12+(4×80+3×6) = 634 px.
- * Blijft 53 px over voor de Ongedaan-maken-pil (40). Compact (≤ 700 px hoog):
- * kaart 136 en tegels 64 zonder bedrag, ±518 px van 583.
+ *   header 52 + 12 + kaart 168 + 12 + actieregel 44 + 12 + tegels (4 × 80 + 3 × 6)
+ *   = 52+12+168+12+44+12+(4×80+3×6) = 638 px.
+ * Blijft 49 px over voor de Ongedaan-maken-pil (40). Compact (≤ 700 px hoog):
+ * kaart 136 en tegels 64 zonder bedrag, ±518 px van 583. Met de verdeelregel open (+52)
+ * worden de tegels 60, zodat ook 375 × 667 niet scrolt.
  */
 
 import { AnimatePresence } from "framer-motion";
@@ -99,6 +100,8 @@ export function SortScreen({
   const [undo, setUndo] = useState<Decision | null>(null);
   const [pulse, setPulse] = useState<{ id: string | null; key: number }>({ id: null, key: 0 });
   const [error, setError] = useState<string | null>(null);
+  // Een ontbrekende keuze is geen fout: die tonen we als rustige hint, niet in rood.
+  const [hint, setHint] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
   // Verdeling hoort bij één kaart: wisselt de kaart, dan begint hij schoon.
   const [splitFor, setSplitFor] = useState<{ id: string | null; state: SplitState }>({ id: null, state: EMPTY_SPLIT });
@@ -152,6 +155,12 @@ export function SortScreen({
     const timer = setTimeout(() => setError(null), ERROR_MS);
     return () => clearTimeout(timer);
   }, [error]);
+
+  useEffect(() => {
+    if (!hint) return;
+    const timer = setTimeout(() => setHint(null), ERROR_MS);
+    return () => clearTimeout(timer);
+  }, [hint]);
 
   useEffect(() => {
     if (!coachDone) return;
@@ -220,7 +229,8 @@ export function SortScreen({
         // We kiezen niet voor de gebruiker: eerst via of buiten de bank.
         warning();
         setMethodMissing(true);
-        setError(METHOD_MISSING);
+        setError(null);
+        setHint(METHOD_MISSING);
         return;
       }
       const method = split.method ?? "bank";
@@ -237,6 +247,7 @@ export function SortScreen({
           : -transaction.amount;
 
       setError(null);
+      setHint(null);
       setMethodMissing(false);
       setExitKind("assign");
       setQueue((q) => q.slice(1));
@@ -309,6 +320,7 @@ export function SortScreen({
     if (!current || queue.length < 2) return;
     const transaction = current;
     setError(null);
+    setHint(null);
     setExitKind("skip");
     setQueue((q) => [...q.slice(1), { ...transaction, skippedCount: transaction.skippedCount + 1 }]);
     setSkipped((s) => s + 1);
@@ -413,13 +425,14 @@ export function SortScreen({
       }
       onUndo={handleUndo}
       error={error}
+      hint={hint}
     />
   );
 
   if (finished) {
     return (
       <>
-        <SessionSummary decisions={decisions} skipped={skipped} remaining={remaining} />
+        <SessionSummary decisions={decisions} skipped={Math.min(skipped, remaining)} remaining={remaining} />
         {undoToast}
       </>
     );
@@ -438,7 +451,7 @@ export function SortScreen({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="safe-top px-4 pt-2">
+      <header className="safe-top-3 px-4">
         <div className="flex h-7 items-center justify-between gap-3">
           <h1 className="text-[17px] font-semibold">{ACTION_LABEL}</h1>
           <p className="text-[13px] text-text-muted tabular-nums">Nog {remaining}</p>
@@ -481,7 +494,10 @@ export function SortScreen({
 
           <div className="mt-3 flex h-11 gap-2">
             {isIncoming ? (
-              <div className="flex-1" aria-hidden />
+              // Geen schakelaar bij inkomend geld: de vraag zelf vult de plek (de h2 hieronder zegt hetzelfde voor schermlezers).
+              <p className="flex min-w-0 flex-1 items-center px-1 text-[15px] text-text-muted" aria-hidden>
+                Waar hoort dit geld bij?
+              </p>
             ) : (
               <label className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-control bg-surface px-3 text-[15px] font-medium shadow-card">
                 <span className="truncate" aria-hidden>
@@ -493,21 +509,27 @@ export function SortScreen({
                   checked={split.enabled}
                   onCheckedChange={(enabled) => {
                     setMethodMissing(false);
+                    setHint(null);
                     setSplitFor({ id: current.id, state: { ...split, enabled } });
                   }}
                 />
               </label>
             )}
-            <Button variant="ghost" onClick={skip} disabled={isLast} className="w-24 shrink-0">
-              {isLast ? (
-                "Laatste"
-              ) : (
-                <>
-                  Later
-                  <ArrowRight size={16} aria-hidden />
-                </>
-              )}
+            <Button
+              variant="ghost"
+              onClick={skip}
+              disabled={isLast}
+              aria-describedby={isLast ? "later-laatste" : undefined}
+              className="w-24 shrink-0"
+            >
+              Later
+              <ArrowRight size={16} aria-hidden />
             </Button>
+            {isLast && (
+              <span id="later-laatste" className="sr-only">
+                Dit is het laatste kaartje
+              </span>
+            )}
           </div>
 
           {!isIncoming && (
@@ -519,7 +541,10 @@ export function SortScreen({
               state={split}
               methodMissing={methodMissing && split.method === null}
               onChange={(patch) => {
-                if (patch.method) setMethodMissing(false);
+                if (patch.method) {
+                  setMethodMissing(false);
+                  setHint(null);
+                }
                 setSplitFor({ id: current.id, state: { ...split, ...patch } });
               }}
             />
@@ -541,6 +566,7 @@ export function SortScreen({
           pulseId={pulse.id}
           pulseKey={pulse.key}
           repayment={repayment}
+          tight={splitActive}
         />
       </section>
 

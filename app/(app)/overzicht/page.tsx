@@ -108,26 +108,26 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const canRefresh = connection !== null && ["active", "expiring"].includes(statusFor(connection));
   const monthName = periodMonthName(period);
   const subtitle = periodSubtitle(period, today, isCurrent, Boolean(profile.salary_day));
+  const showTopRow = streak.days > 0 || accounts.length > 0;
 
   return (
     <>
       <MonthViewed monthsBack={back} />
       {back === 1 && profile.month_review_seen_for !== current.startISO && <MonthSeen periodStartISO={current.startISO} />}
 
-      {/* Kopregel: streak links, zoeken en saldo rechts. */}
+      {/* Kopregel: streak links, saldo rechts. Alleen als er iets te tonen is; zoeken staat bij de maandtitel. */}
       <div className="safe-top">
-        <div className="mt-2 flex h-11 items-center justify-between px-4">
-          <StreakChip days={streak.days} />
-          <div className="ml-auto flex items-center gap-1">
-            <Link href="/transacties" aria-label="Zoeken in je transacties" className={roundIcon}>
-              <Search size={20} aria-hidden />
-            </Link>
-            <BalanceButton accounts={accounts} />
+        {showTopRow && (
+          <div className="mt-2 flex h-11 items-center justify-between px-4">
+            <StreakChip days={streak.days} />
+            <div className="ml-auto flex items-center gap-1">
+              <BalanceButton accounts={accounts} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      <div className="flex flex-col gap-6 px-4 pt-3">
+      <div className={cn("flex flex-col gap-6 px-4", showTopRow ? "pt-3" : "pt-4")}>
         {/* Maandtitel met bladeren. */}
         <header>
           <div className="flex items-start gap-2">
@@ -135,30 +135,35 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
               <h1 className="truncate text-[28px] leading-[34px] font-semibold tracking-[-0.02em]">{capitalize(monthName)}</h1>
               <p className="text-[13px] text-text-muted">{subtitle}</p>
             </div>
-            <nav aria-label="Maand kiezen" className="-mr-2 flex shrink-0 items-center">
-              {back < MAX_BACK ? (
-                <Link href={`/overzicht?maand=${back + 1}`} aria-label="Vorige maand" className={roundIcon}>
-                  <IconChevronLeft size={22} />
-                </Link>
-              ) : (
-                <span aria-hidden className={cn(roundIcon, "text-text-muted opacity-40 hover:bg-transparent")}>
-                  <IconChevronLeft size={22} />
-                </span>
-              )}
-              {back > 0 ? (
-                <Link
-                  href={back === 1 ? "/overzicht" : `/overzicht?maand=${back - 1}`}
-                  aria-label="Volgende maand"
-                  className={roundIcon}
-                >
-                  <IconChevronRight size={22} />
-                </Link>
-              ) : (
-                <span aria-hidden className={cn(roundIcon, "text-text-muted opacity-40 hover:bg-transparent")}>
-                  <IconChevronRight size={22} />
-                </span>
-              )}
-            </nav>
+            <div className="-mr-2 flex shrink-0 items-center">
+              <Link href="/transacties" aria-label="Zoeken in je kaartjes" className={roundIcon}>
+                <Search size={20} aria-hidden />
+              </Link>
+              <nav aria-label="Maand kiezen" className="flex items-center">
+                {back < MAX_BACK ? (
+                  <Link href={`/overzicht?maand=${back + 1}`} aria-label="Vorige maand" className={roundIcon}>
+                    <IconChevronLeft size={22} />
+                  </Link>
+                ) : (
+                  <span aria-hidden className={cn(roundIcon, "text-text-muted opacity-40 hover:bg-transparent")}>
+                    <IconChevronLeft size={22} />
+                  </span>
+                )}
+                {back > 0 ? (
+                  <Link
+                    href={back === 1 ? "/overzicht" : `/overzicht?maand=${back - 1}`}
+                    aria-label="Volgende maand"
+                    className={roundIcon}
+                  >
+                    <IconChevronRight size={22} />
+                  </Link>
+                ) : (
+                  <span aria-hidden className={cn(roundIcon, "text-text-muted opacity-40 hover:bg-transparent")}>
+                    <IconChevronRight size={22} />
+                  </span>
+                )}
+              </nav>
+            </div>
           </div>
           {isCurrent && !noBank && openCount === 0 && <p className="mt-2 text-[15px] text-text-muted">Alles zit in een potje.</p>}
         </header>
@@ -183,7 +188,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
                   Bank koppelen
                 </ButtonLink>
               }
-              footnote="Alleen lezen. Wij kunnen nooit geld overmaken."
+              footnote="Alleen meekijken. Wij kunnen nooit geld overmaken."
             />
           </Card>
         ) : (
@@ -192,11 +197,11 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
             {isCurrent && openCount > 0 && (
               <div className="flex items-center gap-3 rounded-card bg-primary-soft px-4 py-3">
                 <p className="flex-1 text-[15px] font-medium">{openCardsText(openCount)}</p>
-                <Link
-                  href="/swipen"
-                  className="inline-flex h-9 items-center rounded-full bg-primary px-4 text-sm font-semibold text-on-primary transition-transform duration-100 active:scale-[0.96]"
-                >
-                  {ACTION_LABEL}
+                {/* Tikvlak 44 px hoog; de pil zelf blijft 36 px. */}
+                <Link href="/swipen" className="group -my-1 flex h-11 shrink-0 items-center">
+                  <span className="inline-flex h-9 items-center rounded-full bg-primary px-4 text-[15px] font-semibold text-on-primary transition-transform duration-100 group-active:scale-[0.96]">
+                    {ACTION_LABEL}
+                  </span>
                 </Link>
               </div>
             )}
@@ -205,7 +210,9 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
               <Card padding="lg" className="text-center">
                 <p className="text-[15px] text-text-muted">
                   {isCurrent
-                    ? `Deze maand nog niets uitgegeven.${openCount > 0 ? " Of je hebt nog kaartjes liggen." : ""}`
+                    ? openCount > 0
+                      ? "Eerst je kaartjes indelen, dan zie je hier je maand."
+                      : "Deze maand nog niets uitgegeven."
                     : `In ${monthName} is niets in een potje gezet.`}
                 </p>
               </Card>
@@ -213,22 +220,26 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
               <section aria-label="Uitgaven deze maand" className="flex flex-col items-center gap-3">
                 <MonthDonut slices={slices} unsorted={unsorted} total={total} label={monthName} />
                 {compare?.kind === "chip" && (
-                  <p
-                    className={cn(
-                      "mx-auto inline-flex h-7 items-center rounded-full px-3 text-[13px] font-medium",
-                      compare.tone === "positive" && "bg-positive-soft text-positive",
-                      compare.tone === "accent" && "bg-accent-soft text-accent",
-                      compare.tone === "neutral" && "bg-surface-muted text-text",
-                    )}
-                  >
-                    {compare.text}
-                  </p>
+                  <div className="flex flex-col items-center gap-1">
+                    <p
+                      className={cn(
+                        "mx-auto inline-flex min-h-7 items-center rounded-[14px] px-3 py-1 text-center text-[13px] leading-[18px] font-medium",
+                        compare.tone === "positive" && "bg-positive-soft text-positive",
+                        compare.tone === "accent" && "bg-accent-soft text-accent-strong",
+                        compare.tone === "neutral" && "bg-surface-muted text-text",
+                      )}
+                    >
+                      {compare.text}
+                    </p>
+                    {compare.basis && <p className="text-center text-[13px] leading-[18px] text-text-muted">{compare.basis}</p>}
+                  </div>
                 )}
                 {compare?.kind === "note" && <p className="text-center text-[13px] text-text-muted">{compare.text}</p>}
               </section>
             )}
 
-            {standout && standoutCat && (
+            {/* Alleen als er al iets is ingedeeld: anders is het verschil loos. */}
+            {standout && standoutCat && slices.length > 0 && (
               <Link
                 href={`/potjes/${standoutCat.id}`}
                 className="-my-3 flex min-h-11 items-center gap-2 rounded-control px-1 text-[13px] transition-colors duration-150 hover:bg-surface-muted"
@@ -266,8 +277,8 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
                             {budget && (
                               <span
                                 className={cn(
-                                  "block text-[12px] tabular-nums",
-                                  budget.state === "over" ? "text-accent" : "text-text-muted",
+                                  "block text-[13px] leading-[18px] tabular-nums",
+                                  budget.state === "over" ? "text-accent-strong" : "text-text-muted",
                                 )}
                               >
                                 {budgetLabel(budget)}
@@ -288,7 +299,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
               href="/transacties"
               className="-my-3 flex min-h-11 items-center justify-between rounded-control px-1 text-[15px] font-medium text-primary transition-colors duration-150 hover:bg-surface-muted"
             >
-              Alle transacties
+              Alle kaartjes
               <IconChevronRight size={18} />
             </Link>
 

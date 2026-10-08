@@ -1,6 +1,7 @@
 "use client";
 
-import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { motion, useIsPresent, useReducedMotion, type Variants } from "framer-motion";
+import { useEffect, useRef } from "react";
 import { formatEuro, formatLongDay, formatSignedEuro } from "@/lib/format";
 import type { OpenTransaction } from "@/lib/transactions/queries";
 import { cn } from "@/lib/utils";
@@ -37,17 +38,26 @@ interface TransactionCardProps {
  */
 export function TransactionCard({ transaction, onOpenDetails, ownShare = null }: TransactionCardProps) {
   const reduce = useReducedMotion();
+  const ref = useRef<HTMLElement>(null);
+  const isPresent = useIsPresent();
+  // Na het sluiten van de banktekst-sheet krijgt de kaart de focus terug (met ring bij toetsenbord).
+  // Bij een kaartwissel laten we die focus los zodra deze kaart wegschuift, zodat de ring niet
+  // over de kaartwissel heen blijft hangen. Elke kaart is een eigen element (key = kaart-id).
+  useEffect(() => {
+    if (!isPresent && ref.current && ref.current === document.activeElement) ref.current.blur();
+  }, [isPresent]);
   const isIncoming = transaction.amount > 0;
   const footer =
     ownShare !== null ? `Jouw deel ${formatEuro(ownShare)}` : (transaction.note ?? transaction.description ?? "");
 
   return (
     <motion.article
+      ref={ref}
       variants={reduce ? reducedMotion : fullMotion}
       initial="enter"
       animate="center"
       exit="exit"
-      className="relative flex h-full cursor-pointer [grid-area:1/1] flex-col justify-between overflow-hidden rounded-card-lg bg-surface p-4 text-left shadow-float will-change-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      className="relative flex h-full cursor-pointer [grid-area:1/1] flex-col justify-between overflow-hidden rounded-card-lg bg-surface p-4 text-left shadow-float will-change-transform focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary/60"
       aria-label={`${transaction.counterparty}, ${formatSignedEuro(transaction.amount)}, ${formatLongDay(transaction.bookingDate)}. Tik voor de banktekst.`}
       role="button"
       tabIndex={0}

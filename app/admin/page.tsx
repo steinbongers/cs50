@@ -26,7 +26,7 @@ import {
   undoRate,
   weeklyActiveUsers,
 } from "@/lib/admin/metrics";
-import { loadAdminData } from "@/lib/admin/queries";
+import { loadAdminData, WINDOW_DAYS } from "@/lib/admin/queries";
 import { requireUser } from "@/lib/auth";
 import { QUICK_SUGGESTIONS } from "@/lib/categories/defaults";
 import { formatDayShort } from "@/lib/format";
@@ -55,7 +55,7 @@ export default async function AdminPage() {
 
   // Noordsterren
   const activated = activation(profiles, events, today);
-  const cohorts = cohortRetention(profiles, events, today, data.churn);
+  const cohorts = cohortRetention(profiles, events, today, data.churn, today.getTime() - WINDOW_DAYS * 864e5);
   const w4 = overallRetention(cohorts, 4);
   const labeled = labeledWithin7Days(data.txTimings, today);
   const labeledRatio = ratio(labeled.within, labeled.eligible, labeled.users);

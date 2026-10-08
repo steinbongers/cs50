@@ -36,21 +36,12 @@ function bankValue(connection: BankConnectionRow | null): { text: string; warn: 
 export default async function InstellingenPage() {
   const user = await requireUser();
   const supabase = await createClient();
-  const [profile, connection, potjes] = await Promise.all([
-    ensureProfile(user),
-    getPrimaryConnection(supabase, user.id),
-    supabase
-      .from("categories")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("archived", false)
-      .is("system_key", null),
-  ]);
+  const [profile, connection] = await Promise.all([ensureProfile(user), getPrimaryConnection(supabase, user.id)]);
   const bank = bankValue(connection);
 
   return (
-    <div className="safe-top flex flex-col gap-7 px-4 pt-6 pb-8">
-      <h1 className="text-[28px] leading-[34px] font-semibold tracking-[-0.02em]">Instellingen</h1>
+    <div className="safe-top-2 flex flex-col gap-6 px-4 pb-8">
+      <h1 className="flex min-h-11 items-center text-[28px] leading-[34px] font-semibold tracking-[-0.02em]">Instellingen</h1>
 
       <ProfileCard displayName={profile.display_name?.trim() ?? ""} email={user.email} />
 
@@ -60,7 +51,6 @@ export default async function InstellingenPage() {
           icon={LayoutGrid}
           iconClass="bg-primary-soft text-primary"
           label={<RowLabel label="Potjes beheren" hint="Volgorde en gearchiveerde potjes" />}
-          value={potjes.count ?? undefined}
           className={ROW_FOCUS}
         />
         <SalaryDayRow salaryDay={profile.salary_day} />
@@ -69,7 +59,7 @@ export default async function InstellingenPage() {
           icon={Landmark}
           iconClass="bg-cat-mint-soft text-cat-mint"
           label="Bank"
-          value={<span className={cn(bank.warn && "text-accent")}>{bank.text}</span>}
+          value={<span className={cn(bank.warn && "text-accent-strong")}>{bank.text}</span>}
           className={ROW_FOCUS}
         />
       </ListGroup>
@@ -120,7 +110,7 @@ export default async function InstellingenPage() {
           <button
             type="submit"
             className={cn(
-              "flex min-h-[52px] w-full items-center justify-center px-4 text-[16px] text-primary",
+              "flex min-h-[52px] w-full items-center justify-center px-4 text-[15px] leading-5 text-primary",
               "transition-colors duration-150 active:bg-surface-muted",
               ROW_FOCUS,
             )}

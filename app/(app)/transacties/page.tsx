@@ -12,7 +12,7 @@ import { groupByDay, sanitizeQuery, searchTransactions, SEARCH_LIMIT, type Searc
 import { SearchClient, type FilterChip } from "./search-client";
 import { TransactionList, type ListCategory } from "./transaction-list";
 
-export const metadata: Metadata = { title: "Alle transacties" };
+export const metadata: Metadata = { title: "Alle kaartjes" };
 
 /** Zoveel maanden terug (naast de lopende) kun je kiezen; gelijk aan Overzicht. */
 const MAX_BACK = 3;
@@ -84,7 +84,7 @@ export default async function TransactiesPage({ searchParams }: PageProps<"/tran
 
   return (
     <>
-      <header className="safe-top px-4 pt-2">
+      <header className="safe-top-2 px-4">
         <div className="flex items-center gap-1">
           <Link
             href="/overzicht"
@@ -93,7 +93,7 @@ export default async function TransactiesPage({ searchParams }: PageProps<"/tran
           >
             <IconChevronLeft size={22} />
           </Link>
-          <h1 className="truncate text-[22px] leading-7 font-semibold">Alle transacties</h1>
+          <h1 className="truncate text-[22px] leading-7 font-semibold">Alle kaartjes</h1>
         </div>
       </header>
 

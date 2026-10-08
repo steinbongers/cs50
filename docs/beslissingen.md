@@ -183,3 +183,19 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 - **Meting:** `bank_connect_failed` logt één keer in de bank-callback; handmatig afgevinkte delen loggen
   `share_settled {how: 'manual_check'}`; `month_viewed` blijft `{ months_back }`.
 
+
+## Afwerkronde, na QA (8 oktober 2026)
+
+Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze terugdraaien.
+
+- **'Kaartje', niet 'transactie', ook bij zoeken.** De vaste woordenlijst gaat voor de letterlijke tekst in F4:
+  de link op Overzicht en de kop van `/transacties` heten "Alle kaartjes". De route blijft `/transacties`.
+- **Terugbetaling staat achteraan het raster** (vóór '+'), niet vooraan. Zo staat elk potje altijd op dezelfde
+  plek, ook bij inkomend geld. Het blijft een tegel, zoals besloten.
+- **Een ontbrekende keuze is geen fout.** "Kies eerst: via de bank of buiten de bank." verschijnt in een amberkleurige
+  hint, niet in de rode foutpil. Rood blijft voor echte fouten.
+- **Opvallend potje alleen met een eigen gemiddelde.** Een potje dat in de vorige maanden leeg was (of nieuw is)
+  valt niet op; er is niets om mee te vergelijken. Op een lege maand staat er ook geen opvaller.
+- **Welkom:** "Beginnen" is de hoofdknop; de Apple-knop heet "Doorgaan met Apple" (werkt voor nieuw en bestaand).
+- **Klaar-scherm zonder bank:** "Klaar. Nog één stap" met "Bank koppelen" en "Eerst rondkijken", in plaats van de
+  belofte dat er kaartjes komen.

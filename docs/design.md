@@ -24,6 +24,13 @@ De waarden komen uit de live stylesheet van voorgeschoten.com (`:root`-variabele
 | `--shadow`    | zachte dubbele schaduw | `--shadow-elev`            |
 | lettertype    | Inter     | Inter via `next/font`              |
 
+Eigen aanvullingen (afwerkronde):
+
+| Token | Licht | Donker | Waarvoor |
+|-------|-------|--------|----------|
+| `--accent-strong` | `#8f5600` | `#e0a63c` | Kleine amberkleurige tekst en de badge op Swipen. `#b76e00` haalt op wit en op `--accent-soft` geen 4,5:1; dit wel. Grote vlakken en iconen blijven `--accent`. |
+| `--border-strong` | `#c9cdd6` | `#3a404c` | Lege keuzerondjes, het spoor van een uitgezette schakelaar en het spoor van de doelring. `--border` valt daar weg op wit. |
+
 Dark mode heeft dezelfde tokens met eigen waarden (systeemvoorkeur, of handmatig via
 `data-theme="dark|light"` op `<html>`, opgeslagen in `localStorage.theme`).
 
@@ -66,10 +73,26 @@ Dark mode heeft dezelfde tokens met eigen waarden (systeemvoorkeur, of handmatig
   zet bij `prefers-reduced-motion: reduce` alle CSS-overgangen op nul; Framer Motion-onderdelen
   lezen `useReducedMotion()` en vallen terug op een fade van 0,12 s (zie `Sheet`).
 
+## Safe area
+
+`safe-top` en `safe-bottom` zetten alleen de notch- en thuisbalkruimte. Wil je er vaste ruimte bij,
+gebruik dan `safe-top-2`, `safe-top-3` (en `safe-bottom-5`): dat is `env(safe-area-inset-top)` plus de
+Tailwind-stap in één `padding-top`. `safe-top pt-3` samen werkt niet betrouwbaar, want beide zetten
+`padding-top` en de volgorde in de CSS bepaalt wie wint. Paginakoppen beginnen op `safe-top-2` met een
+regel van `min-h-11` (Overzicht, Instellingen, potje-detail, `PageHeader`); Swipen op `safe-top-3`.
+
+## Potjesnamen op tegels
+
+Chromium heeft geen Nederlands afbreekwoordenboek, dus `hyphens-auto` breekt daar midden in een woord.
+Tegels tonen de naam via `tileName()` (`lib/categories/display.ts`), die zachte afbreekstreepjes in de
+lange woorden van de standaardset zet, met `hyphens-manual`. De naam heeft `shrink-0`, zodat flexbox
+een naam van twee regels nooit indrukt (optelsom tegel: 6 + 28 + 26 + 12 + 4 = 76 van 80 px).
+
 ## Compacte variant (lage schermen)
 
 `app/globals.css` definieert `@custom-variant compact (@media (max-height: 700px));`.
 Schrijf `compact:h-16` of `compact:hidden` voor schermen als de iPhone SE (375 × 667).
+Staat op Swipen de verdeelregel open (+52 px), dan zijn de tegels compact 60 px, zodat er niets scrolt.
 
 ## Gedeelde componenten (`components/ui/`)
 

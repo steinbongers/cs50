@@ -66,7 +66,7 @@ export function BottomNav({ openCount = 0 }: { openCount?: number }) {
                 aria-current={active ? "page" : undefined}
                 aria-label={showBadge ? `${label}, ${openCount} ${openCount === 1 ? "kaartje" : "kaartjes"}` : undefined}
                 className={cn(
-                  "flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium",
+                  "flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] leading-[13px] font-medium",
                   "transition-colors duration-150",
                   active ? "text-primary" : "text-text-muted hover:text-text",
                 )}
@@ -74,7 +74,7 @@ export function BottomNav({ openCount = 0 }: { openCount?: number }) {
                 {primary ? (
                   <span
                     className={cn(
-                      "relative flex size-11 shrink-0 items-center justify-center rounded-full shadow-card transition-transform duration-150 motion-reduce:transition-none",
+                      "relative flex size-10 shrink-0 items-center justify-center rounded-full shadow-card transition-transform duration-150 motion-reduce:transition-none",
                       active
                         ? "bg-primary text-on-primary"
                         : "bg-primary text-on-primary hover:scale-105 motion-reduce:hover:scale-100",
@@ -84,16 +84,19 @@ export function BottomNav({ openCount = 0 }: { openCount?: number }) {
                     {showBadge ? (
                       <span
                         aria-hidden
-                        className="absolute -top-1 -right-1 h-[18px] min-w-[18px] rounded-full bg-accent px-1 text-center text-[11px] font-semibold leading-[18px] text-on-primary tabular-nums ring-2 ring-surface"
+                        className="absolute -top-1 -right-1 h-[18px] min-w-[18px] rounded-full bg-accent-strong px-1 text-center text-[11px] font-semibold leading-[18px] text-on-primary tabular-nums ring-2 ring-surface"
                       >
                         {badgeText(openCount)}
                       </span>
                     ) : null}
                   </span>
                 ) : (
-                  <Icon size={22} />
+                  // Zelfde vak als de cirkel van de hoofdactie, zodat alle labels op één lijn staan.
+                  <span className="flex size-10 shrink-0 items-center justify-center">
+                    <Icon size={22} />
+                  </span>
                 )}
-                <span className={cn(primary && "text-[10px] leading-3")}>{label}</span>
+                <span>{label}</span>
               </Link>
             </li>
           );

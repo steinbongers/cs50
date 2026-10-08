@@ -107,7 +107,7 @@ export function ManageCategories({ active, archived }: { active: Item[]; archive
             {order.map((item, index) => (
               <li key={item.id} className="flex min-h-[52px] items-center gap-3 py-1 pr-2 pl-4">
                 <CategoryBadge icon={item.icon} color={item.color} size="sm" />
-                <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{item.name}</span>
+                <span className="line-clamp-2 min-w-0 flex-1 text-[15px] leading-5 font-medium">{item.name}</span>
                 <button
                   type="button"
                   onClick={() => move(index, -1)}
@@ -155,7 +155,7 @@ export function ManageCategories({ active, archived }: { active: Item[]; archive
               {archivedItems.map((item) => (
                 <li key={item.id} className="flex min-h-[52px] items-center gap-3 py-1 pr-2 pl-4">
                   <CategoryBadge icon={item.icon} color={item.color} size="sm" className="opacity-60" />
-                  <span className="min-w-0 flex-1 truncate text-[15px] text-text-muted">{item.name}</span>
+                  <span className="line-clamp-2 min-w-0 flex-1 text-[15px] leading-5 text-text-muted">{item.name}</span>
                   <button
                     type="button"
                     onClick={() => restore(item)}

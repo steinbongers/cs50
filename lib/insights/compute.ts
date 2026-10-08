@@ -212,13 +212,15 @@ export const STANDOUT_MIN_DAYS = 7;
 /**
  * Het ene potje dat het noemen waard is, of null. Eerste item (lijst is al op
  * grootste afwijking gesorteerd) met |diff| ≥ € 25 én ≥ 25% van het gemiddelde,
- * minstens één vorige periode, en minstens 7 dagen onderweg.
+ * minstens één vorige periode met een gemiddelde boven 0, en minstens 7 dagen onderweg.
  */
 export function pickStandout(deviations: CategoryDeviation[], daysElapsed: number): CategoryDeviation | null {
   if (daysElapsed < STANDOUT_MIN_DAYS) return null;
   for (const d of deviations) {
     const size = Math.abs(d.diff);
     if (d.periodsUsed < 1) continue;
+    // Zonder eigen gemiddelde (nieuw potje, of eerder leeg) is er niets om mee te vergelijken.
+    if (d.average <= 0) continue;
     if (size < STANDOUT_MIN_DIFF) continue;
     if (size < STANDOUT_MIN_RATIO * d.average) continue;
     return d;

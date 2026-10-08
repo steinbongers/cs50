@@ -13,7 +13,12 @@ const NEW_ACCOUNT_MS = 24 * 60 * 60 * 1000;
  * e-mailbevestiging of Apple) is /onboarding altijd de eerste pagina, dus hier
  * loggen we het, zonder app/auth aan te raken.
  */
-async function logSignupOnce(supabase: Supabase, userId: string, createdAt: string | null | undefined): Promise<void> {
+async function logSignupOnce(
+  supabase: Supabase,
+  userId: string,
+  createdAt: string | null | undefined,
+  hasInvite: boolean,
+): Promise<void> {
   try {
     if (!createdAt || Date.now() - new Date(createdAt).getTime() > NEW_ACCOUNT_MS) return;
     const { count } = await supabase
@@ -25,7 +30,7 @@ async function logSignupOnce(supabase: Supabase, userId: string, createdAt: stri
     const { data } = await supabase.auth.getClaims();
     const appMeta = data?.claims.app_metadata as { provider?: unknown } | undefined;
     const method = appMeta?.provider === "apple" ? "apple" : "password";
-    await logEvent("signup_completed", { method, has_invite: true });
+    await logEvent("signup_completed", { method, has_invite: hasInvite });
   } catch {
     // Een meting mag de onboarding nooit breken.
   }
@@ -38,7 +43,7 @@ export default async function OnboardingIndexPage() {
   if (profile.onboarding_done) redirect("/");
 
   const supabase = await createClient();
-  await logSignupOnce(supabase, user.id, profile.created_at);
+  await logSignupOnce(supabase, user.id, profile.created_at, Boolean(profile.invite_code));
 
   const { count } = await supabase
     .from("categories")

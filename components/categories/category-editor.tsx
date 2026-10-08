@@ -4,6 +4,7 @@ import { CategoryBadge } from "@/components/categories/category-badge";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   hintForName,
   MAX_CATEGORY_NAME_LENGTH,
@@ -77,7 +78,7 @@ export function CategoryEditor({
     <div className="flex flex-col gap-5">
       {isNew && (
         <section className="flex flex-col gap-1" aria-labelledby="category-suggestions">
-          <h3 id="category-suggestions" className="text-sm font-medium">
+          <h3 id="category-suggestions" className="text-[13px] leading-[18px] font-medium">
             Snel toevoegen
           </h3>
           <div className="flex flex-wrap gap-x-2">
@@ -94,7 +95,7 @@ export function CategoryEditor({
                 >
                   <span
                     className={cn(
-                      "flex h-9 items-center gap-1.5 rounded-full bg-surface-muted px-3 text-sm font-medium transition-colors duration-150 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-primary",
+                      "flex h-9 items-center gap-1.5 rounded-full bg-surface-muted px-3 text-[13px] leading-[18px] font-medium transition-colors duration-150 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-primary",
                       pressed && cn("ring-2 ring-inset", chipColors.ring),
                     )}
                   >
@@ -124,7 +125,7 @@ export function CategoryEditor({
             />
           </Field>
           {hint && (
-            <p id="category-name-hint" className="mt-1 text-xs text-text-muted">
+            <p id="category-name-hint" className="mt-1 text-[13px] leading-[18px] text-text-muted">
               {hint}
             </p>
           )}
@@ -132,7 +133,7 @@ export function CategoryEditor({
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium">Icoon</legend>
+        <legend className="text-[13px] leading-[18px] font-medium">Icoon</legend>
         <div className="grid grid-cols-6 gap-1.5">
           {CATEGORY_ICON_KEYS.map((key) => {
             const selected = draft.icon === key;
@@ -158,7 +159,7 @@ export function CategoryEditor({
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium">Kleur</legend>
+        <legend className="text-[13px] leading-[18px] font-medium">Kleur</legend>
         <div className="flex flex-wrap gap-2">
           {CATEGORY_COLORS.map((color: CategoryColor) => {
             const classes = categoryColorClasses(color);
@@ -184,20 +185,15 @@ export function CategoryEditor({
       </fieldset>
 
       <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
-        <span>
-          <span className="block font-medium">Inkomend geld</span>
-          <span className="block text-sm text-text-muted">Bijvoorbeeld salaris of toeslagen</span>
+        <span aria-hidden>
+          <span className="block text-[15px] leading-5 font-medium">Inkomend geld</span>
+          <span className="block text-[13px] leading-[18px] text-text-muted">Bijvoorbeeld salaris of toeslagen</span>
         </span>
-        <input
-          type="checkbox"
-          checked={draft.isIncome}
-          onChange={(e) => onChange({ isIncome: e.target.checked })}
-          className="size-5 accent-primary"
-        />
+        <Switch label="Inkomend geld" checked={draft.isIncome} onCheckedChange={(isIncome) => onChange({ isIncome })} />
       </label>
 
       {error && (
-        <p className="rounded-control bg-negative-soft px-4 py-3 text-sm text-negative" role="alert">
+        <p className="rounded-control bg-negative-soft px-4 py-3 text-[13px] leading-[18px] text-negative" role="alert">
           {error}
         </p>
       )}

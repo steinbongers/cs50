@@ -1,8 +1,9 @@
 "use client";
 
+import { KaartjeDetails } from "@/components/transactions/kaartje-details";
 import { NoteField } from "@/components/transactions/note-field";
 import { Sheet } from "@/components/ui/sheet";
-import { formatEuro, formatLongDay, formatSignedEuro } from "@/lib/format";
+import { formatEuro } from "@/lib/format";
 import type { OpenTransaction } from "@/lib/transactions/queries";
 
 interface RawSheetProps {
@@ -19,33 +20,23 @@ export function RawSheet({ open, onClose, transaction, onNoteSaved }: RawSheetPr
     <Sheet open={open} onClose={onClose} title="Zoals de bank het stuurde">
       {transaction && (
         <div className="flex flex-col gap-6">
-          <dl className="flex flex-col gap-4 text-[15px] leading-5">
-            <div>
-              <dt className="text-[13px] text-text-muted">Datum</dt>
-              <dd className="font-medium">
-                {formatLongDay(transaction.bookingDate)}
-                {transaction.bookingTime && ` · ${transaction.bookingTime}`}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[13px] text-text-muted">Bedrag</dt>
-              <dd className="font-medium tabular-nums">{formatSignedEuro(transaction.amount)}</dd>
-            </div>
-            <div>
-              <dt className="text-[13px] text-text-muted">Tegenpartij</dt>
-              <dd className="font-medium break-words">{transaction.rawCounterparty ?? transaction.counterparty}</dd>
-            </div>
-            <div>
-              <dt className="text-[13px] text-text-muted">Omschrijving</dt>
-              <dd className="break-words">{transaction.rawDescription ?? transaction.description ?? "Geen omschrijving"}</dd>
-            </div>
+          <KaartjeDetails
+            transaction={{
+              bookingDate: transaction.bookingDate,
+              bookingTime: transaction.bookingTime,
+              amount: transaction.amount,
+              ownShare: null,
+              counterparty: transaction.rawCounterparty ?? transaction.counterparty,
+              description: transaction.rawDescription ?? transaction.description,
+            }}
+          >
             {transaction.balanceAfter !== null && (
               <div>
-                <dt className="text-[13px] text-text-muted">Saldo daarna</dt>
+                <dt className="text-[13px] leading-[18px] text-text-muted">Saldo daarna</dt>
                 <dd className="font-medium tabular-nums">{formatEuro(transaction.balanceAfter)}</dd>
               </div>
             )}
-          </dl>
+          </KaartjeDetails>
 
           {/* Per kaart een vers formulier, zodat een half getypte notitie niet meeschuift. */}
           <NoteField key={transaction.id} transactionId={transaction.id} initialNote={transaction.note} onSaved={onNoteSaved} />

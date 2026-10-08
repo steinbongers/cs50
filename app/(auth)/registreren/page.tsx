@@ -23,7 +23,7 @@ export default async function RegistrerenPage({ searchParams }: PageProps<"/regi
           </p>
         </div>
         {codeError && (
-          <p className="rounded-control bg-negative-soft px-4 py-3 text-sm text-negative" role="alert">
+          <p className="rounded-control bg-negative-soft px-4 py-3 text-[13px] leading-[18px] text-negative" role="alert">
             Voor een nieuw account heb je een geldige code nodig. Vul hem hieronder in en probeer het nog een keer.
           </p>
         )}

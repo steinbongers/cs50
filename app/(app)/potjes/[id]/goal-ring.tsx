@@ -13,7 +13,7 @@ export function GoalRing({ ratio, colorClass }: { ratio: number; colorClass: str
   const safe = Number.isFinite(ratio) ? Math.min(1, Math.max(0, ratio)) : 0;
   return (
     <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden className="shrink-0 -rotate-90">
-      <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} className="stroke-surface-muted" />
+      <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} className="stroke-border-strong" />
       {safe > 0 && (
         <circle
           cx={SIZE / 2}

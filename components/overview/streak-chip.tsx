@@ -6,7 +6,7 @@ export function StreakChip({ days }: { days: number; todayDone?: boolean }) {
   const label = `${days} ${days === 1 ? "dag" : "dagen"} op rij alles in een potje`;
   return (
     <span
-      className="inline-flex h-8 items-center gap-1 rounded-full bg-accent-soft px-2.5 text-[13px] font-semibold tabular-nums text-accent"
+      className="inline-flex h-8 items-center gap-1 rounded-full bg-accent-soft px-2.5 text-[13px] font-semibold tabular-nums text-accent-strong"
       title={label}
     >
       <Flame size={14} aria-hidden />

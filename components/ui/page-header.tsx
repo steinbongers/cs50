@@ -11,7 +11,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, backHref, action }: PageHeaderProps) {
   return (
-    <header className="safe-top flex items-start gap-2 px-4 pt-6 pb-3">
+    <header className="safe-top-2 flex items-start gap-2 px-4 pb-3">
       {backHref && (
         <Link
           href={backHref}
@@ -21,11 +21,11 @@ export function PageHeader({ title, subtitle, backHref, action }: PageHeaderProp
           <IconChevronLeft />
         </Link>
       )}
-      <div className="min-w-0 flex-1 pt-1">
+      <div className="flex min-h-11 min-w-0 flex-1 flex-col justify-center">
         <h1 className="truncate text-[28px] leading-[34px] font-semibold tracking-[-0.02em]">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-text-muted">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 text-[13px] leading-[18px] text-text-muted">{subtitle}</p>}
       </div>
-      {action && <div className="shrink-0 pt-0.5">{action}</div>}
+      {action && <div className="shrink-0">{action}</div>}
     </header>
   );
 }

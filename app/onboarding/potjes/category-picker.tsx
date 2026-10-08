@@ -5,7 +5,7 @@ import { CategoryEditor } from "@/components/categories/category-editor";
 import { CategoryAddTile, CategoryPickerGrid } from "@/components/categories/category-picker-grid";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
-import { MAX_CATEGORIES, type QuickSuggestionKey } from "@/lib/categories/defaults";
+import { hintForName, MAX_CATEGORIES, type QuickSuggestionKey } from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON } from "@/lib/categories/icons";
 import { CATEGORY_COLORS } from "@/lib/categories/palette";
 import type { CategoryDraft } from "@/lib/categories/types";
@@ -27,6 +27,8 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
   );
   const [newDraft, setNewDraft] = useState<PickerDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Het laatst aangetikte potje: daarvan tonen we de hulpregel onder het raster.
+  const [lastKey, setLastKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const enabled = drafts.filter((d) => d.enabled);
@@ -40,7 +42,11 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
     [drafts],
   );
 
+  const lastDraft = drafts.find((d) => d.key === lastKey) ?? null;
+  const lastHint = lastDraft ? hintForName(lastDraft.name) : null;
+
   function toggle(key: string) {
+    setLastKey(key);
     setDrafts((prev) =>
       prev.map((d) => {
         if (d.key !== key) return d;
@@ -105,21 +111,28 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
           categories={tiles}
           onPick={toggle}
           toggledOff={toggledOff}
-          renderAddTile={<CategoryAddTile onClick={openNew} label="Eigen potje" disabled={atMax} />}
+          renderAddTile={<CategoryAddTile onClick={openNew} disabled={atMax} />}
         />
-        <p className="mt-4 px-1 text-sm text-text-muted">
+        <p className="mt-3 min-h-[18px] px-1 text-[13px] leading-[18px]" aria-live="polite">
+          {lastDraft && lastHint && (
+            <>
+              <span className="font-medium">{lastDraft.name}:</span> <span className="text-text-muted">{lastHint}</span>
+            </>
+          )}
+        </p>
+        <p className="mt-3 px-1 text-[13px] leading-[18px] text-text-muted">
           Voorgeschoten zit er altijd bij. Daar houden we bij wat je nog terugkrijgt.
         </p>
       </div>
 
       <div className="sticky bottom-0 mt-auto bg-bg/95 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur">
         {error && (
-          <p className="mb-3 rounded-control bg-negative-soft px-4 py-3 text-sm text-negative" role="alert">
+          <p className="mb-3 rounded-control bg-negative-soft px-4 py-3 text-[13px] leading-[18px] text-negative" role="alert">
             {error}
           </p>
         )}
         {!hasExpense && (
-          <p className="mb-3 text-center text-sm text-text-muted" role="status">
+          <p className="mb-3 text-center text-[13px] leading-[18px] text-text-muted" role="status">
             Zet minstens één potje voor je uitgaven aan.
           </p>
         )}
@@ -128,7 +141,7 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
         </Button>
       </div>
 
-      <Sheet open={newDraft !== null} onClose={() => setNewDraft(null)} title="Eigen potje">
+      <Sheet open={newDraft !== null} onClose={() => setNewDraft(null)} title="Nieuw potje">
         {newDraft && (
           <CategoryEditor
             isNew

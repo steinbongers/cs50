@@ -44,7 +44,7 @@ export function LoginForm({ next }: { next: string }) {
         Inloggen
       </SubmitButton>
       <AppleButton next={next} label="Inloggen met Apple" />
-      <p className="text-center text-sm text-text-muted">
+      <p className="text-center text-[13px] leading-[18px] text-text-muted">
         Nog geen account?{" "}
         <Link href="/registreren" className="inline-flex min-h-11 items-center font-medium text-primary">
           Account aanmaken

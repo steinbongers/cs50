@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { IconCheck, IconPlus } from "@/components/ui/icons";
+import { tileName } from "@/lib/categories/display";
 import { categoryColorClasses } from "@/lib/categories/palette";
 import { cn } from "@/lib/utils";
 
@@ -34,10 +35,10 @@ interface CategoryPickerGridProps {
 
 /** Basisklassen van een tegel; gedeeld met de '+'-tegel zodat ze precies even groot zijn. */
 export const pickerTileBase =
-  "relative flex h-20 w-full min-w-11 flex-col items-center gap-0.5 rounded-2xl px-1 pt-2 transition active:scale-[0.96] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40";
+  "relative flex h-20 w-full min-w-11 flex-col items-center justify-center rounded-2xl px-1 py-1 transition active:scale-[0.96] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40";
 
 const nameClasses =
-  "w-full text-center text-[11px] leading-[13px] font-medium line-clamp-2 hyphens-auto break-words";
+  "w-full shrink-0 text-center text-[11px] leading-[13px] font-medium line-clamp-2 hyphens-manual break-words max-[389px]:text-[10.5px] max-[389px]:tracking-[-0.01em]";
 
 /**
  * Het gedeelde raster van 4 kolommen om een potje te kiezen: in sheets (verplaatsen in het
@@ -86,7 +87,7 @@ export function CategoryPickerGrid({
                 <CategoryIcon icon={category.icon} size={16} strokeWidth={1.75} />
               </span>
               <span className={nameClasses} aria-hidden>
-                {category.name}
+                {tileName(category.name)}
               </span>
               {toggleMode && !isOff && (
                 <span
@@ -108,7 +109,7 @@ export function CategoryPickerGrid({
 /** De '+'-tegel om ter plekke een nieuw potje te maken. Past in `renderAddTile`. */
 export function CategoryAddTile({
   onClick,
-  label = "Eigen potje",
+  label = "Nieuw potje",
   disabled = false,
 }: {
   onClick: () => void;
@@ -120,7 +121,7 @@ export function CategoryAddTile({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-label={label}
+      aria-label={`${label} maken`}
       className={cn(pickerTileBase, "border border-dashed border-border text-text-muted hover:bg-surface-muted")}
     >
       <span className="flex size-7 shrink-0 items-center justify-center rounded-full" aria-hidden>

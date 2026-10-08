@@ -18,6 +18,7 @@
   --surface: #ffffff;
   --surface-muted: #eef0f4;
   --border: #ebedf1;
+  --border-strong: #c9cdd6; /* lege keuzerondjes en het spoor van een uitgezette schakelaar */
   --text: #131417;
   --text-muted: #6b7183; /* Voorgeschoten #7b8194, donkerder voor AA-contrast */
 
@@ -27,6 +28,7 @@
   --on-primary: #ffffff;
 
   --accent: #b76e00;
+  --accent-strong: #8f5600; /* kleine tekst en badges in amber: AA op wit en op accent-soft */
   --accent-soft: #fdf3e0;
 
   --positive: #00915a;
@@ -59,6 +61,7 @@
     --surface: #1a1d24;
     --surface-muted: #1f232b;
     --border: #262b34;
+    --border-strong: #3a404c;
     --text: #f2f3f5;
     --text-muted: #8a90a0;
 
@@ -68,6 +71,7 @@
     --on-primary: #0b1a33;
 
     --accent: #e0a63c;
+    --accent-strong: #e0a63c;
     --accent-soft: #332507;
 
     --positive: #3ccf8e;
@@ -101,6 +105,7 @@
   --surface: #1a1d24;
   --surface-muted: #1f232b;
   --border: #262b34;
+  --border-strong: #3a404c;
   --text: #f2f3f5;
   --text-muted: #8a90a0;
 
@@ -110,6 +115,7 @@
   --on-primary: #0b1a33;
 
   --accent: #e0a63c;
+  --accent-strong: #e0a63c;
   --accent-soft: #332507;
 
   --positive: #3ccf8e;
@@ -145,6 +151,7 @@
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
 
@@ -154,6 +161,7 @@
   --color-on-primary: var(--on-primary);
 
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
   --color-accent-soft: var(--accent-soft);
   --color-positive: var(--positive);
   --color-positive-soft: var(--positive-soft);
@@ -229,4 +237,16 @@
 
 @utility safe-top {
   padding-top: env(safe-area-inset-top);
+}
+
+/*
+ * Safe-area plus vaste ruimte erboven, in één eigenschap: `safe-top-3` = notch + 12 px.
+ * `safe-top pt-3` samen werkt niet betrouwbaar (beide zetten padding-top; één wint).
+ */
+@utility safe-top-* {
+  padding-top: calc(env(safe-area-inset-top) + --spacing(--value(integer)));
+}
+
+@utility safe-bottom-* {
+  padding-bottom: calc(env(safe-area-inset-bottom) + --spacing(--value(integer)));
 }

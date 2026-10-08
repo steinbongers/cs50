@@ -43,7 +43,7 @@ export function AppleButton({ next, inviteCode, label }: { next: string; inviteC
         {label}
       </button>
       {error && (
-        <p className="text-sm text-negative" role="alert">
+        <p className="text-[13px] leading-[18px] text-negative" role="alert">
           {error}
         </p>
       )}

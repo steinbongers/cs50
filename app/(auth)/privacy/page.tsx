@@ -67,7 +67,7 @@ export default function PrivacyPage() {
         </p>
       </section>
 
-      <p className="text-sm text-text-muted">
+      <p className="text-[13px] leading-[18px] text-text-muted">
         Vragen? Mail naar{" "}
         <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-primary">
           {SUPPORT_EMAIL}

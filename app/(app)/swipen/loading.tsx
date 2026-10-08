@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 /** Skelet van het hoofdscherm: header, kaart, actieregel en vier rijen tegels. */
 export default function Loading() {
   return (
-    <div className="safe-top px-4 pt-2" role="status" aria-label="Laden">
+    <div className="safe-top-3 px-4" role="status" aria-label="Laden">
       <div className="flex h-7 items-center justify-between">
         <Skeleton className="h-5 w-24 rounded-full" />
         <Skeleton className="h-4 w-12 rounded-full" />

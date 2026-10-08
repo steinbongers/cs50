@@ -1,9 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-/** Alle transacties laden: kop, zoekveld, chips en acht rijen. */
+/** Alle kaartjes laden: kop, zoekveld, chips en acht rijen. */
 export default function Loading() {
   return (
-    <div className="safe-top" role="status" aria-label="Transacties laden">
+    <div className="safe-top" role="status" aria-label="Alle kaartjes laden">
       <div className="flex items-center gap-1 px-4 pt-2">
         <Skeleton className="-ml-2 size-11 rounded-full!" />
         <Skeleton className="h-7 w-44" />

@@ -66,12 +66,12 @@ export function Switch({
           "relative inline-flex items-center rounded-full p-[2px]",
           "transition-colors duration-200 ease-out-soft",
           trackSize[size],
-          checked ? "bg-positive" : "bg-surface-muted",
+          checked ? "bg-positive" : "bg-border-strong",
         )}
       >
         <span
           className={cn(
-            "block rounded-full bg-white shadow-card",
+            "block rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)]",
             "transition-transform duration-200 ease-out-soft",
             thumbSize[size],
             checked ? thumbOn[size] : "translate-x-0",

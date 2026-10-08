@@ -14,11 +14,13 @@ export const COACH_STEPS: ReadonlyArray<{ title: string; text?: string; arrow: C
     arrow: "center",
   },
   {
-    title: `Je hebt ${UNDO_WINDOW_MS / 1000} seconden voor Ongedaan maken. Geen zin in deze? Tik op Later.`,
+    title: "Vergist? Ongedaan maken",
+    text: `Je hebt ${UNDO_WINDOW_MS / 1000} seconden. Geen zin in deze? Tik op Later.`,
     arrow: "right",
   },
   {
-    title: "Samen betaald? Zet ‘Ik krijg geld terug’ aan. De app rekent jouw deel uit en onthoudt wie jou nog wat moet.",
+    title: "Samen betaald?",
+    text: "Zet ‘Ik krijg geld terug’ aan. Wij rekenen jouw deel uit.",
     arrow: "left",
   },
 ];

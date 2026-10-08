@@ -48,7 +48,7 @@ export function periodSubtitle(period: Period, today: Date, isCurrent: boolean, 
 }
 
 export type CompareLine =
-  | { kind: "chip"; tone: "positive" | "accent" | "neutral"; text: string }
+  | { kind: "chip"; tone: "positive" | "accent" | "neutral"; text: string; basis: string | null }
   | { kind: "note"; text: string };
 
 /**
@@ -60,16 +60,17 @@ export function compareLine(comparison: Comparison | null): CompareLine | null {
   if (comparison.periodsUsed === 0 || comparison.average === null) {
     return { kind: "note", text: "Je eerste maand. Vanaf volgende maand zie je hier je gemiddelde." };
   }
+  // Bij weinig historie een losse regel onder de chip, zodat de chip op één regel past.
   const basis =
-    comparison.periodsUsed === 1 ? " · op basis van 1 maand" : comparison.periodsUsed === 2 ? " · op basis van 2 maanden" : "";
+    comparison.periodsUsed === 1 ? "Op basis van 1 maand" : comparison.periodsUsed === 2 ? "Op basis van 2 maanden" : null;
   const diff = comparison.current - comparison.average;
   const size = Math.abs(diff);
   if (size <= AVERAGE_TOLERANCE * comparison.average || Math.round(size) < 1) {
-    return { kind: "chip", tone: "neutral", text: `Precies rond je gemiddelde${basis}` };
+    return { kind: "chip", tone: "neutral", text: "Precies rond je gemiddelde", basis };
   }
   return diff < 0
-    ? { kind: "chip", tone: "positive", text: `${formatEuroWhole(size)} minder dan je gemiddelde tot nu toe${basis}` }
-    : { kind: "chip", tone: "accent", text: `${formatEuroWhole(size)} meer dan je gemiddelde tot nu toe${basis}` };
+    ? { kind: "chip", tone: "positive", text: `${formatEuroWhole(size)} minder dan je gemiddelde tot nu toe`, basis }
+    : { kind: "chip", tone: "accent", text: `${formatEuroWhole(size)} meer dan je gemiddelde tot nu toe`, basis };
 }
 
 /** "9 kaartjes wachten" of "1 kaartje wacht". */

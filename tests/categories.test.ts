@@ -11,6 +11,7 @@ import {
 import { isCategoryIcon } from "../lib/categories/icons";
 import { isCategoryColor } from "../lib/categories/palette";
 import { VOORGESCHOTEN_CATEGORY } from "../lib/categories/types";
+import { isSavingsPot, tileName } from "../lib/categories/display";
 
 const COLUMNS = 4;
 
@@ -118,15 +119,35 @@ test("de snelle suggesties zijn geldig en botsen niet met de standaardset", () =
   assert.ok(!isQuickSuggestionKey(null));
 });
 
-test("hulpregels horen bij bestaande standaardpotjes", () => {
+test("hulpregels horen bij bestaande standaardpotjes, en elk standaardpotje heeft er één", () => {
   const keys = new Set(DEFAULT_CATEGORIES.map((c) => c.key));
   for (const key of Object.keys(CATEGORY_HINTS)) assert.ok(keys.has(key), key);
+  for (const c of DEFAULT_CATEGORIES) assert.ok(CATEGORY_HINTS[c.key], c.key);
 });
 
 test("hintForName zoekt hoofdletterongevoelig op naam", () => {
   assert.equal(hintForName("Vervoer"), "Ook auto, brandstof en parkeren");
   assert.equal(hintForName("  zorg & VERZEKERINGEN "), "Ook zorgverzekering en andere verzekeringen");
-  assert.equal(hintForName("Boodschappen"), null);
+  assert.equal(hintForName("Boodschappen"), "Ook drogist en markt");
   assert.equal(hintForName("Sport"), null);
   assert.equal(hintForName(""), null);
+});
+
+test("tegelnamen krijgen zachte afbreekstreepjes, de tekst blijft gelijk", () => {
+  assert.equal(tileName("Boodschappen"), "Bood\u00ADschap\u00ADpen");
+  // Meer woorden: eerst op spaties breken, geen streepjes in woorden die op één regel passen.
+  assert.equal(tileName("Zorg & verzekeringen"), "Zorg & verzekeringen");
+  assert.equal(tileName("Kleding & verzorging"), "Kleding & verzorging");
+  // Past een woord zelf niet op één regel, dan wel streepjes.
+  assert.equal(tileName("Wekelijkse boodschappen"), "Wekelijkse bood\u00ADschap\u00ADpen");
+  assert.equal(tileName("BOODSCHAPPEN"), "BOOD\u00ADSCHAP\u00ADPEN");
+  assert.equal(tileName("Eigen naam"), "Eigen naam");
+  for (const c of DEFAULT_CATEGORIES) assert.equal(tileName(c.name).replaceAll("\u00AD", ""), c.name);
+});
+
+test("spaarpotje: spaarvarken-icoon of spaardoel, nooit inkomen", () => {
+  assert.equal(isSavingsPot({ icon: "piggy-bank", goalAmount: null }), true);
+  assert.equal(isSavingsPot({ icon: "plane", goalAmount: 1500 }), true);
+  assert.equal(isSavingsPot({ icon: "shopping-cart", goalAmount: null }), false);
+  assert.equal(isSavingsPot({ icon: "piggy-bank", goalAmount: null, isIncome: true }), false);
 });

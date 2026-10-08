@@ -77,7 +77,7 @@ export function ListRow({
         </span>
       )}
       <span className="flex min-h-[52px] min-w-0 flex-1 items-center gap-3 self-stretch border-b border-border pr-3 group-last/row:border-b-0">
-        <span className={cn("min-w-0 flex-1 text-[16px]", danger ? "text-negative" : "text-text")}>
+        <span className={cn("min-w-0 flex-1 text-[15px] leading-5", danger ? "text-negative" : "text-text")}>
           {label}
         </span>
         {value !== undefined && value !== null && (

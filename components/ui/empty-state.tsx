@@ -25,9 +25,9 @@ export function EmptyState({ icon, title, description, action, footnote }: Empty
         </div>
       )}
       <h2 className="text-base font-semibold">{title}</h2>
-      {description && <p className="mt-1 max-w-xs text-sm text-text-muted">{description}</p>}
+      {description && <p className="mt-1 max-w-xs text-[13px] leading-[18px] text-text-muted">{description}</p>}
       {action && <div className="mt-5">{action}</div>}
-      {footnote && <p className="mt-3 max-w-xs text-xs text-text-muted">{footnote}</p>}
+      {footnote && <p className="mt-3 max-w-xs text-[13px] leading-[18px] text-text-muted">{footnote}</p>}
     </div>
   );
 }

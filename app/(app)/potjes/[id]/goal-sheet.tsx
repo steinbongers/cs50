@@ -9,10 +9,16 @@ import { setBudget, setGoal } from "../actions";
 
 type Mode = "budget" | "goal";
 
+// Korte labels, zodat ze op 375 px niet worden afgekapt; de uitleg staat eronder.
 const MODES = [
-  { value: "budget", label: "Maximaal per maand" },
-  { value: "goal", label: "Sparen voor een doel" },
+  { value: "budget", label: "Maandbudget" },
+  { value: "goal", label: "Spaardoel" },
 ] as const;
+
+const MODE_HINTS: Record<Mode, string> = {
+  budget: "Maximaal per maand",
+  goal: "Sparen voor een doel",
+};
 
 const AMOUNT_ERROR = "Vul een bedrag boven € 0 in.";
 
@@ -98,6 +104,7 @@ export function GoalSheet({ open, onClose, categoryId, monthlyBudget, goalAmount
           }}
           ariaLabel="Wat wil je bijhouden?"
         />
+        {mode && <p className="-mt-2 text-[13px] leading-[18px] text-text-muted">{MODE_HINTS[mode]}</p>}
         {mode && (
           <div className="flex flex-col gap-1.5">
             <label htmlFor={inputId} className="text-[15px] font-medium">
@@ -127,14 +134,14 @@ export function GoalSheet({ open, onClose, categoryId, monthlyBudget, goalAmount
               />
             </div>
             {error && (
-              <p id={errorId} className="text-sm text-negative" role="alert">
+              <p id={errorId} className="text-[13px] leading-[18px] text-negative" role="alert">
                 {error}
               </p>
             )}
           </div>
         )}
         {!mode && error && (
-          <p className="text-sm text-negative" role="alert">
+          <p className="text-[13px] leading-[18px] text-negative" role="alert">
             {error}
           </p>
         )}
@@ -144,7 +151,7 @@ export function GoalSheet({ open, onClose, categoryId, monthlyBudget, goalAmount
           </Button>
           {hasAny && (
             <Button variant="secondary" fullWidth onClick={clear} disabled={isPending}>
-              Geen doel
+              {goalAmount !== null ? "Geen doel meer" : "Geen budget meer"}
             </Button>
           )}
           <Button variant="ghost" fullWidth onClick={close}>

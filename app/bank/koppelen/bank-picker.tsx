@@ -49,7 +49,7 @@ export function BankPicker({ banks, next, reconnect }: { banks: BankOption[]; ne
         autoComplete="off"
       />
       {error && (
-        <p className="rounded-control bg-negative-soft px-4 py-3 text-sm text-negative" role="alert">
+        <p className="rounded-control bg-negative-soft px-4 py-3 text-[13px] leading-[18px] text-negative" role="alert">
           {error}
         </p>
       )}
@@ -65,7 +65,7 @@ export function BankPicker({ banks, next, reconnect }: { banks: BankOption[]; ne
                 busy !== null && busy !== bank.name && "opacity-50",
               )}
             >
-              <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-muted text-sm font-semibold text-text-muted">
+              <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-muted text-[13px] leading-[18px] font-semibold text-text-muted">
                 {bank.logo ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={bank.logo} alt="" className="size-10 object-contain" loading="lazy" />
@@ -78,7 +78,7 @@ export function BankPicker({ banks, next, reconnect }: { banks: BankOption[]; ne
             </button>
           </li>
         ))}
-        {filtered.length === 0 && <li className="px-4 py-6 text-center text-sm text-text-muted">Geen bank gevonden met die naam.</li>}
+        {filtered.length === 0 && <li className="px-4 py-6 text-center text-[13px] leading-[18px] text-text-muted">Geen bank gevonden met die naam.</li>}
       </ul>
     </div>
   );

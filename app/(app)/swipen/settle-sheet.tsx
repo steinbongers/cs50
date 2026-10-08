@@ -91,7 +91,7 @@ export function SettleSheet({
                   <span
                     className={cn(
                       "flex size-6 shrink-0 items-center justify-center rounded-full border-2",
-                      checked ? "border-primary bg-primary text-on-primary" : "border-border",
+                      checked ? "border-primary bg-primary text-on-primary" : "border-border-strong",
                     )}
                     aria-hidden
                   >
@@ -114,7 +114,11 @@ export function SettleSheet({
           })}
         </ul>
 
-        <div className="flex items-center justify-between text-[15px]">
+        {/* Pas een getal als er iets is aangetikt; de regel houdt wel zijn plek, zodat niets verspringt. */}
+        <div
+          className={cn("flex items-center justify-between text-[15px]", selected.size === 0 && "invisible")}
+          aria-hidden={selected.size === 0}
+        >
           <span className="text-text-muted">Samen</span>
           <span className="font-semibold tabular-nums">{formatEuro(selectedTotal)}</span>
         </div>

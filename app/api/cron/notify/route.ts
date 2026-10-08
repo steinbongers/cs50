@@ -111,7 +111,11 @@ export async function GET(request: NextRequest) {
         ...(delivered > 0 ? { expiry_notified_at: new Date().toISOString() } : {}),
       })
       .eq("id", connection.id);
-    if (delivered > 0) expiryNotified++;
+    if (delivered > 0) {
+      expiryNotified++;
+      // Ook deze tag telt mee in 'geopend / verstuurd' op /admin.
+      await admin.from("events").insert({ user_id: connection.user_id, type: "push_sent", payload: { tag: "bank-verloopt" } });
+    }
   }
 
   return NextResponse.json({ sent, skipped, undelivered, expiryNotified });

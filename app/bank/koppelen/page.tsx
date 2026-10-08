@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { IconChevronLeft } from "@/components/ui/icons";
 import { APP_NAME } from "@/config/app";
@@ -70,7 +71,7 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
         >
           <IconChevronLeft />
         </Link>
-        <p className="text-sm font-semibold text-primary">{APP_NAME}</p>
+        <p className="text-[13px] leading-[18px] font-semibold text-primary">{APP_NAME}</p>
       </header>
 
       <div className="px-5 pt-4 pb-3">
@@ -78,14 +79,14 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
           {connection && status === "active" && !reconnect ? "Je bankkoppeling" : "Koppel je bank"}
         </h1>
         <p className="mt-2 text-[15px] leading-5 text-text-muted">
-          Je logt in bij je eigen bank en geeft toestemming om mee te lezen. Wij kunnen nooit geld overmaken. Af en
+          Je logt in bij je eigen bank en geeft toestemming om mee te kijken. Wij kunnen nooit geld overmaken. Af en
           toe vraagt je bank opnieuw om toestemming. Wij laten het je op tijd weten.
         </p>
       </div>
 
       <div className="flex flex-col gap-4 px-4">
         {errorKey && (
-          <p className="rounded-control bg-negative-soft px-4 py-3 text-sm text-negative" role="alert">
+          <p className="rounded-control bg-negative-soft px-4 py-3 text-[13px] leading-[18px] text-negative" role="alert">
             {ERRORS[errorKey]}
           </p>
         )}
@@ -104,14 +105,20 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
         )}
 
         {!configured ? (
-          <Card className="text-sm text-text-muted">{NOT_CONFIGURED}</Card>
+          <>
+            <Card className="text-[13px] leading-[18px] text-text-muted">{NOT_CONFIGURED}</Card>
+            {/* Geen doodlopende weg: je kunt altijd door naar waar je vandaan kwam. */}
+            <ButtonLink href={next} variant="secondary" size="lg" fullWidth>
+              Verder naar de app
+            </ButtonLink>
+          </>
         ) : loadError ? (
-          <Card className="text-sm text-negative">{loadError}</Card>
+          <Card className="text-[13px] leading-[18px] text-negative">{loadError}</Card>
         ) : banks.length > 0 ? (
           <BankPicker banks={banks.map((b) => ({ name: b.name, logo: b.logo ?? null }))} next={next} reconnect={Boolean(connection)} />
         ) : null}
 
-        <p className="px-1 text-xs text-text-muted">
+        <p className="px-1 text-[13px] leading-[18px] text-text-muted">
           Je koppelt één bank, met al je rekeningen daar. Geld dat je naar jezelf overmaakt, slaan we over.
         </p>
       </div>
