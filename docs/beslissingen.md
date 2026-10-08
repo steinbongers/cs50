@@ -1,34 +1,117 @@
 # Productbeslissingen
 
-Keuzes van Stein die afwijken van of een aanvulling zijn op de spec. Datum: 8 oktober 2026.
+Keuzes van Stein die afwijken van of een aanvulling zijn op de spec. Bijgewerkt: 8 oktober 2026.
+Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
+
+## Uitgangspunten
+
+- **Uitstraling:** rustig en minimaal. Veel witruimte, kleur alleen voor de hoofdactie en de potjes.
+- **Toon:** speels met een knipoog. Je-vorm, kort, af en toe een compliment. Ook in meldingen.
+- **Beweging:** iets meer beleving dan het minimum (kaart glijdt weg, tegel veert op, klein
+  feestmoment), altijd met respect voor `prefers-reduced-motion`.
+- **Potjes:** lijniconen (lucide-react) in de potjeskleur op een zacht kleurvlak. Geen emoji.
+- **Thema:** volgt het systeem, met schakelaar (systeem, licht, donker) in het profiel.
+- **Naam van de hoofdactie** ("Swipen") krijgt later een eigen naam die bij de appnaam past:
+  `ACTION_LABEL` en `ACTION_VERB` in `config/app.ts`.
+- **Alleen bankkoppeling.** CSV-import vervalt volledig.
 
 ## Hoofdscherm (fase 2): tikken, niet vegen
 
-- De transactiekaart staat **bovenin**; de kaart reageert niet op slepen of vegen.
-- Daaronder staan **alle potjes als knoppen in rijen** (icoon + naam), allemaal zichtbaar, geen scrollen.
-  Eén tik is de keuze. "Ander potje" uit de spec vervalt daardoor.
-- **Overslaan** ("Later") en **Ongedaan maken** (4 seconden) zijn knoppen.
-- De potjesknoppen staan in de **vaste volgorde van de gebruiker** (onboarding, later herschikbaar).
-  Geen "meestgebruikte eerst": dat is een hint van de app en schuurt met het kernprincipe.
-- De naam "Swipen" (tab, knop, teksten) krijgt later een **eigen, leuke naam** die bij de appnaam past.
-  Daarom staat hij op één plek: `ACTION_LABEL` en `ACTION_VERB` in `config/app.ts`.
-- Swipe-richtingen (`categories.swipe_direction`) worden niet meer gebruikt in de UI; de kolom blijft
-  bestaan maar is leeg voor nieuwe gebruikers.
+- Kaart **bovenin**, reageert niet op slepen of vegen. Daaronder alle potjes als knoppen.
+- **Knoppen:** gelijke tegels, drie per rij, icoon boven de naam, sterk afgeronde hoeken.
+  Allemaal zichtbaar, geen scrollen, vaste volgorde van de gebruiker. Niets voorgeselecteerd.
+- **'+'-tegel** tussen de potjes om ter plekke een nieuw potje te maken (opent de potje-editor).
+- **Later** legt de kaart achteraan de stapel (zelfde ronde). **Ongedaan maken** 4 seconden;
+  daarna verplaats je via de detailpagina van het potje.
+- **Stapelvolgorde:** oudste eerst; eerder op Later gezette kaarten achteraan.
+- Swipe-richtingen (`categories.swipe_direction`) worden niet gebruikt; de kolom blijft leeg.
 
-## Uiterlijk
+### De kaart
 
-- **Uitstraling:** rustig en minimaal. Veel witruimte, kleur alleen voor de hoofdactie en de potjes.
-- **Kaart:** tegenpartij groot, bedrag eronder in kleur, datum en omschrijving klein.
-- **Potjes:** lijniconen (lucide-react) in de potjeskleur op een zacht kleurvlak, geen emoji.
-  De gebruiker kiest het icoon in de onboarding.
-- **Overzicht:** top-potjes als horizontale balken, geen donut.
-- **Toon:** speels met een knipoog. Je-vorm, kort, af en toe een compliment.
-- **Beweging:** iets meer beleving dan het minimum: kaart glijdt weg met een lichte draai, het gekozen
-  potje veert kort op, klein feestmoment als alles een potje heeft. Altijd `prefers-reduced-motion`.
+- **Datum groot** ("Donderdag 8 oktober"). **Tijd** erbij als die uit de banktekst te halen is
+  (ING en ABN AMRO zetten die bij pinbetalingen in de omschrijving); anders niets. Enable Banking
+  levert zelf alleen datums (`booking_date`, `value_date`, `transaction_date`).
+- **Tegenpartij groot**, opgeschoond: hoofdletters normaliseren, filiaalnummers en codes als
+  `CCV*`, `BEA` weg, **plaatsnaam behouden**. Ruwe tekst blijft beschikbaar.
+- **Bedrag** eronder: uitgaven **neutraal zwart**, inkomend geld **groen**.
+- **Omschrijving** opgeschoond (pasvolgnummers, datums, codes weg); tik op de kaart voor de
+  volledige banktekst.
+- **Saldo na deze transactie** op de kaart, als de bank `balance_after_transaction` meestuurt.
+
+### Geld terugkrijgen (nieuw, kern van de app)
+
+- Op de kaart, **vóór** je een potje kiest, een schakelaar **"Ik krijg geld terug"**.
+- Aangezet: kies **met hoeveel personen** je was (jij + 1, 2, 3 ...). Gelijk delen: **jouw deel
+  gaat naar het gekozen potje**, de rest naar het ingebouwde potje **Voorgeschoten**.
+- **Namen zijn optioneel** (met suggesties uit eerdere namen).
+- Keuze per transactie: **"via mijn rekening"** (deel komt open te staan in Voorgeschoten) of
+  **"anders" (WieBetaaltWat, contant)**: dat deel telt niet als uitgave en is direct afgehandeld.
+- **Voorgeschoten** is een vast, ingebouwd potje dat niet meetelt als uitgave, met een lijst van
+  openstaande delen. Op het overzicht: "Nog € 36 te krijgen".
+- **Terugbetaling verwerken, beide wegen:** komt er een Tikkie binnen, dan kies je Terugbetaling en
+  tik je aan **welk deel van welke persoon** daarmee betaald is (geen bedragen matchen, geen
+  afrondmarge). Betaalt iemand buiten de bank om, dan vink je het deel af in Voorgeschoten.
+- De app helpt **niet** met terugvragen (geen deelknop, geen koppeling); alleen bijhouden.
+
+### Eerste keer
+
+- Na het koppelen van de bank: **begeleide eerste drie kaarten** (kaart, knoppen, Later,
+  Ongedaan maken), daarna nooit meer.
+
+## Overzicht (fase 4)
+
+- Bovenaan: **wat er nog te doen is**, met de hoofdknop. Daaronder de cijfers.
+- **Periode loopt vanaf de salarisdag**, die de gebruiker zelf instelt (onboarding en
+  instellingen). Valt de dag in het weekend, dan de werkdag ervoor.
+- **Vergelijking met het gemiddelde van de laatste drie maanden.** Zolang er minder data is:
+  gemiddelde van wat er is, met uitleg ("op basis van 1 maand").
+- **Historie bij koppelen:** vanaf de laatste salarisdag.
+- **Saldo:** rond pictogram rechtsboven; tik opent een paneel met saldo per rekening.
+- Top-potjes als **horizontale balken**, geen donut.
+- **Streak:** dagelijks. Een dag telt als de stapel aan het eind van de dag leeg is; dagen zonder
+  nieuwe kaartjes tellen gewoon door. Getoond als getal met een klein symbool, ook op het overzicht.
+
+## Potjes (fase 4)
+
+- Lijst in de vaste volgorde van de gebruiker, met het **bedrag deze periode**.
+- **Budget:** overschrijding rustig: balk wordt amber, tekst "over je budget". Geen rood.
+- **Detailpagina:** transactie naar ander potje verplaatsen, budget instellen of aanpassen,
+  grafiekje per week of maand.
+
+## Jouw maand (vervangt het weekoverzicht)
+
+- Geen weekoverzicht. **"Jouw maand"** verschijnt op de salarisdag, als kaart bovenaan het
+  overzicht tot hij bekeken is, plus een melding.
+- Inhoud: totaal uitgegeven t.o.v. je gemiddelde, gemiddeldes per potje en de budgetstand.
+
+## Meldingen
+
+- **Elke avond om 20:00** een pushmelding als er kaartjes liggen; geen melding als er niets is.
+- Speelse toon ("9 kaartjes wachten op jou. Twee minuten werk.").
+- Verlopende bankkoppeling: banner vanaf 7 dagen vooraf én één melding.
+
+## Bankkoppeling (fase 3)
+
+- **Eén bank per gebruiker, alle rekeningen van die bank.**
+- **Eigen overboekingen** tussen gekoppelde rekeningen worden herkend en **automatisch
+  overgeslagen** (komen niet op de stapel). Dit is de enige automatische beslissing in de app;
+  het is ontdubbeling, geen categorisering.
+- Historie vanaf de laatste salarisdag; daarna 2x per dag sync plus handmatig verversen.
+
+## Account en toegang
+
+- **Inloggen:** e-mail en wachtwoord, plus **Inloggen met Apple**. Magic link vervalt als
+  zichtbare optie (de callback blijft bestaan voor e-mailbevestiging).
+- **Pilot gesloten:** registreren alleen met een **uitnodigingscode**.
+- **Account verwijderen:** direct en definitief na één bevestiging.
+- Taal: alleen Nederlands.
 
 ## Nog open
 
 - Supabase-project (Pro-organisatie, kost geld): aanmaken of zelf aanleveren?
 - GitHub-toegang voor pushen (Claude GitHub App voor `steinbongers/cs50`).
+- Apple Developer-account voor Inloggen met Apple.
+- Enable Banking-account (application ID en private key) en de bank van Stein om mee te testen.
 - Primaire knop: `#0075ff` met witte tekst is 4,2:1 (net onder AA). Houden of `#006be8`?
 - Accentkleur: Voorgeschoten-amber (`#b76e00`) of iets anders?
+- Appnaam en de naam van de hoofdactie.
