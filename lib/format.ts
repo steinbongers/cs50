@@ -29,6 +29,12 @@ export function formatEuroAbs(amount: number): string {
   return currencyFormatter.format(Math.abs(amount));
 }
 
+/** "− € 23,45" of "+ € 12,50": expliciet teken, echte minus. */
+export function formatSignedEuro(amount: number): string {
+  const sign = amount < 0 ? "\u2212 " : amount > 0 ? "+ " : "";
+  return `${sign}${currencyFormatter.format(Math.abs(amount))}`;
+}
+
 const dayFormatter = new Intl.DateTimeFormat(LOCALE, {
   weekday: "short",
   day: "numeric",
