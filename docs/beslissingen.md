@@ -140,3 +140,9 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 - Appnaam en de naam van de hoofdactie (Stein denkt na).
 - Supabase-project: in de Pro-organisatie (~$10 per maand) of in een nieuwe Free-organisatie.
 - Echt logo en app-icoon zodra de naam er is.
+
+## Distributie (8 oktober 2026)
+
+- **Pilot: webapp via Safari, "Zet op beginscherm".** Snelste weg voor Stein en de testers; pushmeldingen werken zo ook op iPhone.
+- **Later: App Store.** Stein heeft een Apple Developer-account en wil de app uiteindelijk in de App Store. Plan: een Capacitor-schil om de bestaande webapp (laadt de live versie), met pushmeldingen via Apple's pushdienst in plaats van webpush, eigen appicoon en splash. Bouwen en uploaden naar TestFlight gebeurt op Steins Mac in Xcode.
+- **Volgorde:** eerst de appnaam en bundel-id vastleggen, dan de schil als aparte fase. Vercel moet dan naar Pro (Hobby is niet voor commercieel gebruik).
