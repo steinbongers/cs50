@@ -5,6 +5,10 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 
 ## Uitgangspunten
 
+- **Referenties:** Voorgeschoten, Mollie en de ING-app. Stein houdt van overzicht; "loze getallen",
+  zo veel mogelijk data in iemands gezicht en onnodige dingen op het scherm zijn fout. Elk getal
+  dat we tonen moet een beslissing van de gebruiker helpen.
+
 - **Uitstraling:** rustig en minimaal. Veel witruimte, kleur alleen voor de hoofdactie en de potjes.
 - **Toon:** speels met een knipoog. Je-vorm, kort, af en toe een compliment. Ook in meldingen.
 - **Beweging:** iets meer beleving dan het minimum (kaart glijdt weg, tegel veert op, klein
@@ -20,6 +24,7 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 - Kaart **bovenin**, reageert niet op slepen of vegen. Daaronder alle potjes als knoppen.
 - **Knoppen:** gelijke tegels, drie per rij, icoon boven de naam, sterk afgeronde hoeken.
   Allemaal zichtbaar, geen scrollen, vaste volgorde van de gebruiker. Niets voorgeselecteerd.
+- Op elke tegel staat klein het **bedrag van deze periode**.
 - **'+'-tegel** tussen de potjes om ter plekke een nieuw potje te maken (opent de potje-editor).
 - **Later** legt de kaart achteraan de stapel (zelfde ronde). **Ongedaan maken** 4 seconden;
   daarna verplaats je via de detailpagina van het potje.
@@ -69,7 +74,7 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 - **Saldo:** rond pictogram rechtsboven; tik opent een paneel met saldo per rekening.
 - Top-potjes als **horizontale balken**, geen donut.
 - **Streak:** dagelijks. Een dag telt als de stapel aan het eind van de dag leeg is; dagen zonder
-  nieuwe kaartjes tellen gewoon door. Getoond als getal met een klein symbool, ook op het overzicht.
+  nieuwe kaartjes tellen gewoon door. Getoond als getal met een **vlammetje**, ook op het overzicht.
 
 ## Potjes (fase 4)
 
@@ -82,7 +87,8 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 
 - Geen weekoverzicht. **"Jouw maand"** verschijnt op de salarisdag, als kaart bovenaan het
   overzicht tot hij bekeken is, plus een melding.
-- Inhoud: totaal uitgegeven t.o.v. je gemiddelde, gemiddeldes per potje en de budgetstand.
+- Inhoud: totaal uitgegeven t.o.v. je gemiddelde, en **per potje** het bedrag naast je gemiddelde
+  en de budgetstand.
 
 ## Meldingen
 
@@ -106,12 +112,17 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 - **Account verwijderen:** direct en definitief na één bevestiging.
 - Taal: alleen Nederlands.
 
+## Praktisch
+
+- **Kleuren:** hoofdblauw `#0075ff` blijft (bewust, ook al is het contrast met witte tekst 4,2:1);
+  accent is het Voorgeschoten-amber.
+- **Enable Banking:** account met application ID en private key is er; Stein bankiert bij ING,
+  dus ING is de eerste testbank.
+- **Apple Developer-account** is er, dus Inloggen met Apple kan.
+- **Pilot:** start volgende week; eerst moet de app helemaal af zijn.
+- Supabase-project mag door Claude worden aangemaakt.
+
 ## Nog open
 
-- Supabase-project (Pro-organisatie, kost geld): aanmaken of zelf aanleveren?
-- GitHub-toegang voor pushen (Claude GitHub App voor `steinbongers/cs50`).
-- Apple Developer-account voor Inloggen met Apple.
-- Enable Banking-account (application ID en private key) en de bank van Stein om mee te testen.
-- Primaire knop: `#0075ff` met witte tekst is 4,2:1 (net onder AA). Houden of `#006be8`?
-- Accentkleur: Voorgeschoten-amber (`#b76e00`) of iets anders?
-- Appnaam en de naam van de hoofdactie.
+- GitHub-toegang voor pushen (Stein installeert de Claude GitHub App).
+- Appnaam en de naam van de hoofdactie (Stein denkt na).
