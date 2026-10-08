@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Native iOS-schil (Capacitor): gegenereerd, geen app-code.
+    "ios/**",
+    "native/**",
   ]),
 ]);
 

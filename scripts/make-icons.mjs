@@ -27,16 +27,24 @@ function chunk(type, data) {
   return Buffer.concat([len, typeBuf, data, crc]);
 }
 
-function png(width, height, pixels) {
-  const raw = Buffer.alloc((width * 4 + 1) * height);
+function png(width, height, pixels, { alpha = true } = {}) {
+  // alpha: false schrijft RGB zonder alfakanaal (vereist voor het App Store-icoon).
+  const bpp = alpha ? 4 : 3;
+  const raw = Buffer.alloc((width * bpp + 1) * height);
   for (let y = 0; y < height; y++) {
-    raw[y * (width * 4 + 1)] = 0;
-    pixels.copy(raw, y * (width * 4 + 1) + 1, y * width * 4, (y + 1) * width * 4);
+    const rowStart = y * (width * bpp + 1);
+    raw[rowStart] = 0;
+    for (let x = 0; x < width; x++) {
+      const src = (y * width + x) * 4;
+      const dst = rowStart + 1 + x * bpp;
+      raw[dst] = pixels[src]; raw[dst + 1] = pixels[src + 1]; raw[dst + 2] = pixels[src + 2];
+      if (alpha) raw[dst + 3] = pixels[src + 3];
+    }
   }
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8; ihdr[9] = 6; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  ihdr[8] = 8; ihdr[9] = alpha ? 6 : 2; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk("IHDR", ihdr),
@@ -52,7 +60,7 @@ function roundedRect(x, y, w, h, r, px, py) {
 }
 
 /** Tekent met 4x4 supersampling voor zachte randen. */
-function render(size, { background, maskablePadding = 0 }) {
+function render(size, { background, maskablePadding = 0, square = false }) {
   const pixels = Buffer.alloc(size * size * 4);
   const pad = size * maskablePadding;
   const inner = size - pad * 2;
@@ -68,7 +76,8 @@ function render(size, { background, maskablePadding = 0 }) {
       for (let sy = 0; sy < S; sy++) {
         for (let sx = 0; sx < S; sx++) {
           const px = x + (sx + 0.5) / S, py = y + (sy + 0.5) / S;
-          const inBg = background ? roundedRect(pad, pad, inner, inner, radius, px, py) : false;
+          // square: volledig gevuld en ondoorzichtig (iOS rondt de hoeken zelf af)
+          const inBg = background ? square || roundedRect(pad, pad, inner, inner, radius, px, py) : false;
           const inFg =
             roundedRect(bodyX, bodyY, bodyW, bodyH, bodyR, px, py) ||
             roundedRect(neckX, neckY, neckW, neckH, inner * 0.01, px, py) ||
@@ -92,7 +101,7 @@ function render(size, { background, maskablePadding = 0 }) {
       }
     }
   }
-  return png(size, size, pixels);
+  return png(size, size, pixels, { alpha: !square });
 }
 
 mkdirSync("public/icons", { recursive: true });
@@ -102,3 +111,7 @@ writeFileSync("public/icons/icon-maskable-512.png", render(512, { background: tr
 writeFileSync("public/icons/apple-touch-icon.png", render(180, { background: true }));
 writeFileSync("public/icons/badge-72.png", render(72, { background: false }));
 console.log("iconen geschreven naar public/icons/");
+
+// iOS-appicoon (native app): 1024x1024, vierkant en zonder transparantie.
+mkdirSync("ios/App/App/Assets.xcassets/AppIcon.appiconset", { recursive: true });
+writeFileSync("ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png", render(1024, { background: true, square: true }));

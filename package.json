@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "ios:sync": "cap sync ios",
+    "ios:open": "cap open ios",
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
     "check": "npm run typecheck && npm run lint",
     "test": "node --import tsx --test \"tests/**/*.test.ts\""
@@ -24,6 +26,9 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
