@@ -1,10 +1,10 @@
 name: Cron
 
 # Vercel Hobby staat maar één cron per dag toe, daarom draait de planning hier.
-# 06:00 en 18:00 UTC: bankkoppelingen verversen. 18:00 en 19:00 UTC: de
-# meldingsroute, die zelf alleen stuurt als het 20:00 is in Amsterdam
-# (zomertijd 18:00 UTC, wintertijd 19:00 UTC). Extra aanroepen zijn onschadelijk:
-# beide routes doen niets dubbel.
+# Elke run roept beide routes aan (06:07, 18:07 en 19:07 UTC). De sync-route
+# haalt nieuwe transacties op (dubbelen worden genegeerd); de meldingsroute
+# stuurt alleen als het 20:00 (of bij vertraging 21:00) is in Amsterdam:
+# zomertijd 18 UTC, wintertijd 19 UTC. Hoogstens één melding per gebruiker per dag.
 #
 # Nodig in GitHub: Settings → Secrets and variables → Actions:
 #   secret CRON_SECRET  (zelfde waarde als in Vercel)
@@ -12,7 +12,8 @@ name: Cron
 
 on:
   schedule:
-    - cron: "0 6,18,19 * * *"
+    # Niet op het hele uur: dan loopt GitHub het vaakst achter.
+    - cron: "7 6,18,19 * * *"
   workflow_dispatch:
 
 jobs:
@@ -24,12 +25,12 @@ jobs:
     steps:
       - name: Bankkoppelingen verversen
         run: |
-          curl --fail --silent --show-error --max-time 120 \
+          curl --fail --silent --show-error --max-time 300 -w '\nHTTP %{http_code}\n' \
             -H "Authorization: Bearer $CRON_SECRET" \
             "$APP_URL/api/cron/sync"
       - name: Meldingen (alleen om 20:00 Amsterdam)
         if: always()
         run: |
-          curl --fail --silent --show-error --max-time 120 \
+          curl --fail --silent --show-error --max-time 120 -w '\nHTTP %{http_code}\n' \
             -H "Authorization: Bearer $CRON_SECRET" \
             "$APP_URL/api/cron/notify"

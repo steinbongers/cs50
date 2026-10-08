@@ -76,7 +76,7 @@ export function MonthReviewCard({ review, currentPeriodStart }: { review: MonthR
                   <span className="text-sm font-medium tabular-nums">{formatEuroWhole(row.spent)}</span>
                   {row.average !== null && (
                     <span className={cn("w-16 text-right text-xs tabular-nums", row.spent <= row.average ? "text-positive" : "text-accent")}>
-                      {row.spent <= row.average ? "−" : "+"}
+                      {row.spent <= row.average ? "\u2212 " : "+ "}
                       {formatEuroWhole(Math.abs(row.spent - row.average))}
                     </span>
                   )}

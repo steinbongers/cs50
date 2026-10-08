@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { IconSparkle } from "@/components/ui/icons";
+import { UNDO_WINDOW_MS } from "@/config/app";
 
 export const COACH_STEPS = [
   {
@@ -11,7 +12,7 @@ export const COACH_STEPS = [
   },
   {
     title: "Verkeerd potje? Geen stress",
-    text: "Je hebt vier seconden om het ongedaan te maken. Even geen zin in deze? Zet hem op Later.",
+    text: `Je hebt ${UNDO_WINDOW_MS / 1000} seconden om het ongedaan te maken. Even geen zin in deze? Zet hem op Later.`,
   },
   {
     title: "Betaald voor anderen?",
@@ -43,7 +44,7 @@ export function CoachTip({ step, onDismiss }: CoachTipProps) {
         <p className="text-sm font-semibold">{content.title}</p>
         <p className="mt-0.5 text-sm text-text">{content.text}</p>
       </div>
-      <Button variant="ghost" onClick={onDismiss} className="-mr-2 h-9 min-h-9 shrink-0 px-3 text-primary">
+      <Button variant="ghost" onClick={onDismiss} className="-mr-2 min-h-11 shrink-0 px-3 text-primary">
         Snap ik
       </Button>
     </motion.aside>

@@ -12,27 +12,22 @@ export interface SplitResult {
   otherShares: number[];
 }
 
-function roundCents(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
 /**
- * Gelijk delen met centen die netjes opgaan: het restje gaat naar de laatste
- * persoon, zodat jouw deel plus alle delen exact het totaal is.
+ * Gelijk delen, gerekend in hele centen zodat er geen floating-point-centen
+ * verdwijnen (1,14 / 2 is 0,57 + 0,57). Het restje gaat naar de laatste
+ * personen, zodat jouw deel plus alle delen exact het totaal is.
  */
 export function splitEqually(totalAbs: number, persons: number): SplitResult {
   const count = Math.min(Math.max(Math.round(persons), MIN_SPLIT_PERSONS), MAX_SPLIT_PERSONS);
-  const total = roundCents(Math.abs(totalAbs));
-  const base = Math.floor((total * 100) / count) / 100;
-  const remainder = roundCents(total - base * count);
+  const totalCents = Math.round(Math.abs(totalAbs) * 100);
+  const baseCents = Math.floor(totalCents / count);
+  let left = totalCents - baseCents * count;
 
-  const ownShare = base;
-  const others = Array.from({ length: count - 1 }, () => base);
+  const othersCents = Array.from({ length: count - 1 }, () => baseCents);
   // restcenten verdelen over de anderen, beginnend bij de laatste
-  let left = Math.round(remainder * 100);
-  for (let i = others.length - 1; i >= 0 && left > 0; i--) {
-    others[i] = roundCents(others[i] + 0.01);
+  for (let i = othersCents.length - 1; i >= 0 && left > 0; i--) {
+    othersCents[i] += 1;
     left--;
   }
-  return { ownShare, otherShares: others };
+  return { ownShare: baseCents / 100, otherShares: othersCents.map((c) => c / 100) };
 }

@@ -2,7 +2,7 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { consumeInviteCode, inviteCodesEnabled, isInviteCodeValid, normalizeInviteCode } from "@/lib/invites/codes";
+import { inviteCodesEnabled, isInviteCodeValid, normalizeInviteCode } from "@/lib/invites/codes";
 import { INVITE_COOKIE } from "@/lib/invites/cookie";
 import { isAdminEmail } from "@/lib/admin/access";
 import { createClient } from "@/lib/supabase/server";
@@ -55,6 +55,8 @@ function translateAuthError(message: string): string {
     return "Even geduld: probeer het over een minuut opnieuw.";
   if (m.includes("signups not allowed")) return "Registreren is op dit moment niet mogelijk.";
   if (m.includes("invalid email")) return "Dit e-mailadres lijkt niet te kloppen.";
+  if (m.includes("uitnodigingscode") || m.includes("database error saving new user"))
+    return "Deze uitnodigingscode is niet geldig of al gebruikt.";
   return "Er ging iets mis. Probeer het opnieuw.";
 }
 
@@ -118,7 +120,7 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
     return { error: "Er bestaat al een account met dit e-mailadres. Log in.", ...state };
   }
 
-  if (inviteCode) await consumeInviteCode(inviteCode);
+  // De code wordt door de databasetrigger (handle_new_user) atomair verbruikt.
 
   if (data.session) redirect("/onboarding");
 

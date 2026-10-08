@@ -1,3 +1,5 @@
+import { ACTION_VERB } from "@/config/app";
+
 /** Speelse meldingsteksten. Afwisseling op basis van de dag, zodat het niet gaat vervelen. */
 export function openCardsMessage(count: number, dayIndex: number): { title: string; body: string } {
   if (count === 1) {
@@ -5,7 +7,7 @@ export function openCardsMessage(count: number, dayIndex: number): { title: stri
   }
   const variants = [
     { title: `${count} kaartjes wachten op jou`, body: "Twee minuten werk, dan weet je weer precies waar je geld heen ging." },
-    { title: `Er liggen ${count} kaartjes klaar`, body: "Even swipen voor het slapengaan? Je toekomstige ik is er blij mee." },
+    { title: `Er liggen ${count} kaartjes klaar`, body: `Even ${ACTION_VERB} voor het slapengaan? Je toekomstige ik is er blij mee.` },
     { title: `${count} transacties zoeken een potje`, body: "Kort momentje van aandacht voor je geld. Dat is alles." },
   ];
   return variants[Math.abs(dayIndex) % variants.length];

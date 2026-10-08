@@ -124,3 +124,34 @@ test("jouw maand: afgelopen periode tegenover gemiddelde en budget", () => {
   assert.equal(review.categories[0].spent, 150);
   assert.equal(review.categories[0].budget, 200);
 });
+
+test("vergelijking: een vorige periode met alleen salaris telt niet als 0 uitgegeven", () => {
+  const txs = [
+    tx({ bookingDate: "2026-09-26", amount: -50, categoryId: "bood" }), // huidige periode
+    tx({ bookingDate: "2026-08-26", amount: -100, categoryId: "bood" }), // vorige periode
+    tx({ bookingDate: "2026-07-27", amount: 2500, categoryId: "ink" }), // twee terug: alleen salaris
+    tx({ bookingDate: "2026-06-27", amount: -200, isInternal: true }), // drie terug: alleen eigen overboeking
+  ];
+  const c = compareWithAverage(txs, catMap, 25, new Date(2026, 9, 8));
+  assert.equal(c.periodsUsed, 1);
+  assert.equal(c.average, 100);
+});
+
+test("jouw maand: alleen salaris in de afgelopen periode is geen maand om te tonen", () => {
+  const txs = [
+    tx({ bookingDate: "2026-09-01", amount: 2500, categoryId: "ink" }),
+    tx({ bookingDate: "2026-08-01", amount: -100, categoryId: "bood" }),
+  ];
+  assert.equal(monthReview(txs, cats, 25, new Date(2026, 9, 8)), null);
+
+  // Met een echte uitgave wel; een eerdere periode met alleen salaris telt niet mee in het gemiddelde.
+  const withSpend = [
+    ...txs,
+    tx({ bookingDate: "2026-09-02", amount: -40, categoryId: "uit" }),
+    tx({ bookingDate: "2026-07-01", amount: 2500, categoryId: "ink" }),
+  ];
+  const review = monthReview(withSpend, cats, 25, new Date(2026, 9, 8))!;
+  assert.equal(review.total, 40);
+  assert.equal(review.periodsUsed, 1);
+  assert.equal(review.average, 100);
+});

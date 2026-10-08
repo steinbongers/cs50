@@ -99,7 +99,7 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
 
         {!configured ? (
           <Card className="text-sm text-text-muted">
-            De bankkoppeling is op deze server nog niet ingesteld (Enable Banking-sleutels ontbreken).
+            De bankkoppeling staat nog niet aan voor deze omgeving. Probeer het later.
           </Card>
         ) : loadError ? (
           <Card className="text-sm text-negative">{loadError}</Card>

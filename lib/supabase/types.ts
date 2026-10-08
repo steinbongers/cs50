@@ -86,6 +86,7 @@ export type AccountRow = {
   last_balance: number | null;
   last_synced_at: string | null;
   iban_hash: string | null;
+  active: boolean;
   created_at: string;
 };
 
@@ -212,6 +213,7 @@ export type Database = {
           | "last_balance"
           | "last_synced_at"
           | "iban_hash"
+          | "active"
           | "created_at"
         >
       >;

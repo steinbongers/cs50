@@ -3,7 +3,7 @@
 import { Wallet } from "lucide-react";
 import { useState } from "react";
 import { Sheet } from "@/components/ui/sheet";
-import { formatEuro } from "@/lib/format";
+import { formatDateTime, formatEuro } from "@/lib/format";
 import type { AccountBalance } from "@/lib/insights/queries";
 
 /** Rond pictogram rechtsboven; tik opent een paneel met het saldo per rekening. */
@@ -46,7 +46,7 @@ export function BalanceButton({ accounts }: { accounts: AccountBalance[] }) {
         )}
         {synced && (
           <p className="mt-3 text-xs text-text-muted">
-            Bijgewerkt {new Date(synced).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}
+            Bijgewerkt {formatDateTime(synced)}
           </p>
         )}
       </Sheet>

@@ -11,6 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  // Gesloten pilot: niet indexeren.
+  robots: { index: false, follow: false },
   title: {
     default: APP_NAME,
     template: `%s · ${APP_NAME}`,

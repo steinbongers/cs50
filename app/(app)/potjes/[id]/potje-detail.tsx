@@ -12,7 +12,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { Sheet } from "@/components/ui/sheet";
 import { categoryColorClasses } from "@/lib/categories/palette";
 import type { CategoryDraft } from "@/lib/categories/types";
-import { formatDay, formatEuro, formatEuroWhole, formatSignedEuro } from "@/lib/format";
+import { formatDay, formatDayShort, formatEuro, formatEuroWhole, formatSignedEuro } from "@/lib/format";
 import type { WeekPoint } from "@/lib/insights/compute";
 import { cn } from "@/lib/utils";
 import { archiveCategory, moveTransaction, setBudget, updateCategory } from "../actions";
@@ -41,6 +41,7 @@ export function PotjeDetail({ category, spent, periodLabel, series, transactions
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [budgetValue, setBudgetValue] = useState(category.monthlyBudget === null ? "" : String(category.monthlyBudget));
   const [editDraft, setEditDraft] = useState<CategoryDraft | null>(null);
+  const [archiveOpen, setArchiveOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
   const [showAll, setShowAll] = useState(false);
@@ -51,6 +52,10 @@ export function PotjeDetail({ category, spent, periodLabel, series, transactions
   const overBudget = budget !== null && spent > budget;
   const label = periodLabel.charAt(0).toUpperCase() + periodLabel.slice(1);
   const maxWeek = Math.max(...series.map((p) => p.spent), 1);
+  const topWeek = series.reduce<WeekPoint | null>((best, p) => (p.spent > 0 && (!best || p.spent > best.spent) ? p : best), null);
+  const chartLabel = topWeek
+    ? `Uitgaven per week, laatste acht weken. Meeste in de week van ${formatDayShort(topWeek.weekStart)}: ${formatEuro(topWeek.spent)}.`
+    : "Uitgaven per week, laatste acht weken";
   const visible = transactions.filter((t) => !hiddenIds.has(t.id) && (showAll || t.inPeriod));
   const olderCount = transactions.filter((t) => !t.inPeriod).length;
 
@@ -97,7 +102,7 @@ export function PotjeDetail({ category, spent, periodLabel, series, transactions
   }
 
   function archive() {
-    if (!window.confirm(`Potje "${category.name}" archiveren? De transacties blijven bewaard.`)) return;
+    setArchiveOpen(false);
     startTransition(async () => {
       const result = await archiveCategory(category.id);
       if (result && !result.ok) setError(result.error);
@@ -133,14 +138,14 @@ export function PotjeDetail({ category, spent, periodLabel, series, transactions
                   <span className={overBudget ? "text-accent" : "text-text-muted"}>
                     {overBudget ? `${formatEuro(spent - budget)} over je budget` : `${formatEuro(budget - spent)} over van ${formatEuroWhole(budget)}`}
                   </span>
-                  <button type="button" onClick={() => setBudgetOpen(true)} className="min-h-9 font-medium text-primary">
+                  <button type="button" onClick={() => setBudgetOpen(true)} className="-mr-2 min-h-11 px-2 font-medium text-primary">
                     Aanpassen
                   </button>
                 </div>
                 <ProgressBar value={Math.min(spent, budget)} max={budget} label="Budget" tone={overBudget ? "accent" : "primary"} />
               </>
             ) : (
-              <button type="button" onClick={() => setBudgetOpen(true)} className="self-start text-sm font-medium text-primary">
+              <button type="button" onClick={() => setBudgetOpen(true)} className="min-h-11 self-start text-sm font-medium text-primary">
                 Budget instellen
               </button>
             )}
@@ -151,7 +156,7 @@ export function PotjeDetail({ category, spent, periodLabel, series, transactions
       {series.some((p) => p.spent > 0) && (
         <Card className="flex flex-col gap-2">
           <p className="text-sm text-text-muted">Per week</p>
-          <div className="flex items-end gap-1.5" role="img" aria-label="Uitgaven per week, laatste acht weken">
+          <div className="flex items-end gap-1.5" role="img" aria-label={chartLabel}>
             {series.map((point) => (
               <div key={point.weekStart} className="flex flex-1 flex-col items-center gap-1">
                 <div className="flex h-20 w-full items-end">
@@ -161,7 +166,7 @@ export function PotjeDetail({ category, spent, periodLabel, series, transactions
                     title={`${formatEuro(point.spent)} in de week van ${formatDay(point.weekStart)}`}
                   />
                 </div>
-                <span className="text-[10px] tabular-nums text-text-muted">{point.weekStart.slice(8, 10)}/{point.weekStart.slice(5, 7)}</span>
+                <span className="text-[10px] tabular-nums text-text-muted">{formatDayShort(point.weekStart)}</span>
               </div>
             ))}
           </div>
@@ -178,7 +183,7 @@ export function PotjeDetail({ category, spent, periodLabel, series, transactions
         <div className="flex items-center justify-between px-4 py-3">
           <p className="text-sm text-text-muted">Transacties</p>
           {olderCount > 0 && (
-            <button type="button" onClick={() => setShowAll((s) => !s)} className="text-sm font-medium text-primary">
+            <button type="button" onClick={() => setShowAll((s) => !s)} className="-mr-2 min-h-11 px-2 text-sm font-medium text-primary">
               {showAll ? "Alleen deze periode" : `Ook eerder (${olderCount})`}
             </button>
           )}
@@ -269,11 +274,33 @@ export function PotjeDetail({ category, spent, periodLabel, series, transactions
               doneLabel="Opslaan"
               pending={isPending}
             />
-            <Button variant="danger" onClick={archive}>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setEditDraft(null);
+                setArchiveOpen(true);
+              }}
+            >
               Potje archiveren
             </Button>
           </div>
         )}
+      </Sheet>
+
+      <Sheet
+        open={archiveOpen}
+        onClose={() => setArchiveOpen(false)}
+        title={`Potje "${category.name}" archiveren?`}
+        description="De transacties blijven bewaard. Je kunt het potje later terugzetten via Potjes beheren."
+      >
+        <div className="flex gap-2">
+          <Button variant="ghost" fullWidth onClick={() => setArchiveOpen(false)}>
+            Toch niet
+          </Button>
+          <Button variant="danger" fullWidth onClick={archive} loading={isPending}>
+            Archiveren
+          </Button>
+        </div>
       </Sheet>
     </div>
   );

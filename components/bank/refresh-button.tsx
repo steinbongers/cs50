@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { refreshConnection } from "@/app/bank/actions";
 import { Spinner } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 /** "Ververs": haalt nieuwe transacties op, hoogstens eens per 15 minuten. */
@@ -28,18 +29,18 @@ export function RefreshButton({ lastSyncedAt }: { lastSyncedAt: string | null })
     });
   }
 
-  const synced = lastSyncedAt
-    ? new Date(lastSyncedAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
-    : null;
+  const synced = lastSyncedAt ? formatDateTime(lastSyncedAt) : null;
 
   return (
     <div className="flex items-center justify-between gap-3 px-1 text-xs text-text-muted">
-      <span className="min-w-0 truncate">{message ?? (synced ? `Bijgewerkt ${synced}` : "Nog niet bijgewerkt")}</span>
+      <span className="min-w-0 truncate" role="status">
+        {message ?? (synced ? `Bijgewerkt ${synced}` : "Nog niet bijgewerkt")}
+      </span>
       <button
         type="button"
         onClick={run}
         disabled={isPending}
-        className={cn("flex min-h-9 shrink-0 items-center gap-1.5 rounded-full px-3 font-medium text-primary hover:bg-primary-soft", isPending && "opacity-60")}
+        className={cn("flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 font-medium text-primary hover:bg-primary-soft", isPending && "opacity-60")}
       >
         {isPending && <Spinner className="size-3.5" />}
         Ververs

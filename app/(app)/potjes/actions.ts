@@ -52,9 +52,22 @@ export async function moveTransaction(transactionId: string, categoryId: string)
     .maybeSingle();
   if (!category || category.system_key) return { ok: false, error: "Dit potje bestaat niet (meer)." };
 
+  // categorized_at alleen zetten als hij nog leeg is: verplaatsen is geen nieuwe
+  // beslissing, anders valt de dagstreak op de oorspronkelijke dag weg.
+  const { data: transaction } = await supabase
+    .from("transactions")
+    .select("id, categorized_at")
+    .eq("id", transactionId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!transaction) return { ok: false, error: GENERIC };
+
   const { error } = await supabase
     .from("transactions")
-    .update({ category_id: categoryId, categorized_at: new Date().toISOString() })
+    .update({
+      category_id: categoryId,
+      ...(transaction.categorized_at === null ? { categorized_at: new Date().toISOString() } : {}),
+    })
     .eq("id", transactionId)
     .eq("user_id", user.id);
   if (error) return { ok: false, error: GENERIC };

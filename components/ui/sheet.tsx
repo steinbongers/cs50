@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useId, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { IconClose } from "./icons";
 
 interface SheetProps {
@@ -12,26 +12,60 @@ interface SheetProps {
   children: ReactNode;
 }
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 /**
  * Bottom sheet voor secundaire keuzes (potje bewerken, "Ander potje", ...).
- * Sluit met Escape, tik op de achtergrond of de sluitknop.
+ * Sluit met Escape, tik op de achtergrond of de sluitknop. Bij openen gaat de focus
+ * naar de titel; Tab en Shift+Tab blijven binnen het paneel; bij sluiten keert de
+ * focus terug naar het element dat de sheet opende.
  */
 export function Sheet({ open, onClose, title, description, children }: SheetProps) {
   const reduceMotion = useReducedMotion();
   const titleId = useId();
   const descId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     if (!open) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    // Focus in het paneel zetten zodra het in de DOM staat.
+    const raf = requestAnimationFrame(() => titleRef.current?.focus());
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (focusable.length === 0) {
+        e.preventDefault();
+        titleRef.current?.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      const inside = panelRef.current.contains(active);
+      if (e.shiftKey && (active === first || !inside || active === titleRef.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !inside)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
+      cancelAnimationFrame(raf);
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      opener?.focus();
     };
   }, [open, onClose]);
 
@@ -43,9 +77,8 @@ export function Sheet({ open, onClose, title, description, children }: SheetProp
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <motion.button
-            type="button"
-            aria-label="Sluiten"
+          <motion.div
+            aria-hidden
             className="absolute inset-0 bg-black/40"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -54,6 +87,7 @@ export function Sheet({ open, onClose, title, description, children }: SheetProp
             onClick={onClose}
           />
           <motion.div
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
@@ -67,7 +101,7 @@ export function Sheet({ open, onClose, title, description, children }: SheetProp
             <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-border sm:hidden" aria-hidden />
             <div className="flex items-start justify-between gap-3 px-5 pt-3 pb-2">
               <div className="min-w-0">
-                <h2 id={titleId} className="text-lg font-semibold">
+                <h2 id={titleId} ref={titleRef} tabIndex={-1} className="text-lg font-semibold outline-none">
                   {title}
                 </h2>
                 {description && (

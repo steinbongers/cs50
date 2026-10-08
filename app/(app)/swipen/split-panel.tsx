@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useId } from "react";
 import { Input } from "@/components/ui/input";
 import { formatEuro } from "@/lib/format";
 import { MAX_SPLIT_PERSONS, MIN_SPLIT_PERSONS, splitEqually } from "@/lib/transactions/split";
@@ -29,6 +30,8 @@ interface SplitPanelProps {
   amountAbs: number;
   state: SplitState;
   onChange: (patch: Partial<SplitState>) => void;
+  /** Eerder gebruikte namen, als suggesties (datalist) bij de naamvelden. */
+  knownNames?: string[];
 }
 
 const QUICK_PERSONS = [2, 3, 4, 5, 6];
@@ -37,8 +40,9 @@ const QUICK_PERSONS = [2, 3, 4, 5, 6];
  * "Ik krijg geld terug": met hoeveel personen was je, en hoe komt het terug?
  * Jouw deel gaat naar het potje; de rest naar Voorgeschoten of is direct geregeld.
  */
-export function SplitPanel({ amountAbs, state, onChange }: SplitPanelProps) {
+export function SplitPanel({ amountAbs, state, onChange, knownNames = [] }: SplitPanelProps) {
   const reduce = useReducedMotion();
+  const namesListId = useId();
   const result = splitEqually(amountAbs, state.persons);
   const othersTotal = Math.round(result.otherShares.reduce((a, b) => a + b, 0) * 100) / 100;
 
@@ -89,7 +93,7 @@ export function SplitPanel({ amountAbs, state, onChange }: SplitPanelProps) {
                       onClick={() => onChange({ persons: n, customPersons: false })}
                       aria-pressed={!state.customPersons && state.persons === n}
                       className={cn(
-                        "flex size-10 items-center justify-center rounded-full text-sm font-semibold tabular-nums transition-colors duration-150",
+                        "flex size-11 items-center justify-center rounded-full text-sm font-semibold tabular-nums transition-colors duration-150",
                         !state.customPersons && state.persons === n
                           ? "bg-primary text-on-primary"
                           : "bg-surface-muted text-text hover:bg-border",
@@ -113,13 +117,13 @@ export function SplitPanel({ amountAbs, state, onChange }: SplitPanelProps) {
                           onChange({ persons: value });
                         }
                       }}
-                      className="h-10 w-16 rounded-full border bg-surface px-3 text-center text-sm font-semibold tabular-nums focus:border-primary focus:outline-none"
+                      className="h-11 w-16 rounded-full border bg-surface px-3 text-center text-sm font-semibold tabular-nums focus:border-primary focus:outline-none"
                     />
                   ) : (
                     <button
                       type="button"
                       onClick={() => onChange({ customPersons: true, persons: Math.max(state.persons, 7) })}
-                      className="flex h-10 items-center justify-center rounded-full bg-surface-muted px-3 text-sm font-medium text-text hover:bg-border"
+                      className="flex h-11 items-center justify-center rounded-full bg-surface-muted px-3 text-sm font-medium text-text hover:bg-border"
                     >
                       Meer
                     </button>
@@ -143,7 +147,7 @@ export function SplitPanel({ amountAbs, state, onChange }: SplitPanelProps) {
                       aria-checked={state.method === option.value}
                       onClick={() => onChange({ method: option.value })}
                       className={cn(
-                        "min-h-10 rounded-[0.625rem] px-2 text-xs font-medium transition-colors duration-150",
+                        "min-h-11 rounded-[0.625rem] px-2 text-xs font-medium transition-colors duration-150",
                         state.method === option.value ? "bg-surface text-text shadow-card" : "text-text-muted hover:text-text",
                       )}
                     >
@@ -168,6 +172,13 @@ export function SplitPanel({ amountAbs, state, onChange }: SplitPanelProps) {
                 <div>
                   {state.showNames ? (
                     <div className="flex flex-col gap-1.5">
+                      {knownNames.length > 0 && (
+                        <datalist id={namesListId}>
+                          {knownNames.map((name) => (
+                            <option key={name} value={name} />
+                          ))}
+                        </datalist>
+                      )}
                       {result.otherShares.map((_, index) => (
                         <Input
                           key={index}
@@ -175,7 +186,8 @@ export function SplitPanel({ amountAbs, state, onChange }: SplitPanelProps) {
                           placeholder={`Persoon ${index + 1}`}
                           value={state.names[index] ?? ""}
                           maxLength={60}
-                          className="h-10 text-sm"
+                          list={knownNames.length > 0 ? namesListId : undefined}
+                          className="h-11 text-sm"
                           onChange={(e) => {
                             const names = [...state.names];
                             names[index] = e.target.value;
@@ -188,7 +200,7 @@ export function SplitPanel({ amountAbs, state, onChange }: SplitPanelProps) {
                     <button
                       type="button"
                       onClick={() => onChange({ showNames: true })}
-                      className="min-h-10 text-sm font-medium text-primary"
+                      className="min-h-11 text-sm font-medium text-primary"
                     >
                       Namen toevoegen (optioneel)
                     </button>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { APP_NAME } from "@/config/app";
-import { isAdminEmail } from "@/lib/admin/access";
+import { isAdminUser } from "@/lib/admin/access";
 import {
   RETENTION_WEEKS,
   cohortRetention,
@@ -14,6 +14,7 @@ import {
   type EventLite,
 } from "@/lib/admin/metrics";
 import { requireUser } from "@/lib/auth";
+import { formatDayShort } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { InviteCodes } from "./invite-codes";
 
@@ -25,7 +26,7 @@ export const metadata: Metadata = { title: "Admin" };
  */
 export default async function AdminPage() {
   const user = await requireUser();
-  if (!isAdminEmail(user.email)) notFound();
+  if (!isAdminUser(user)) notFound();
 
   const admin = createAdminClient();
   const today = new Date();
@@ -58,6 +59,10 @@ export default async function AdminPage() {
   const reconnects = eventRows.filter((e) => e.type === "bank_reconnect").length;
   const conn = connectionStats((connections ?? []).map((c) => ({ status: c.status, validUntil: c.valid_until })), reconnects, today);
   const maxWeekly = Math.max(1, ...weekly.map((w) => w.activeUsers));
+  const topWeekly = weekly.reduce<(typeof weekly)[number] | null>((best, w) => (w.activeUsers > 0 && (!best || w.activeUsers > best.activeUsers) ? w : best), null);
+  const weeklyLabel = topWeekly
+    ? `Actieve gebruikers per week, laatste twaalf weken. Meeste in de week van ${formatDayShort(topWeekly.weekStart)}: ${topWeekly.activeUsers}.`
+    : "Actieve gebruikers per week, laatste twaalf weken";
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6">
@@ -81,14 +86,14 @@ export default async function AdminPage() {
       <Card className="flex flex-col gap-3">
         <h2 className="font-semibold">Actieve gebruikers per week</h2>
         <p className="text-xs text-text-muted">Iemand is actief als hij die week minstens één transactie in een potje stopte.</p>
-        <div className="flex h-28 items-end gap-1" role="img" aria-label="Actieve gebruikers per week, laatste twaalf weken">
+        <div className="flex h-28 items-end gap-1" role="img" aria-label={weeklyLabel}>
           {weekly.map((w) => (
             <div key={w.weekStart} className="flex flex-1 flex-col items-center gap-1">
               <span className="text-[10px] tabular-nums text-text-muted">{w.activeUsers}</span>
               <div className="flex h-16 w-full items-end">
-                <div className="w-full rounded-t-md bg-primary" style={{ height: `${Math.max(4, (w.activeUsers / maxWeekly) * 100)}%` }} title={`Week van ${w.weekStart}: ${w.activeUsers}`} />
+                <div className="w-full rounded-t-md bg-primary" style={{ height: `${Math.max(4, (w.activeUsers / maxWeekly) * 100)}%` }} title={`Week van ${formatDayShort(w.weekStart)}: ${w.activeUsers}`} />
               </div>
-              <span className="text-[10px] tabular-nums text-text-muted">{w.weekStart.slice(5)}</span>
+              <span className="text-[10px] tabular-nums text-text-muted">{formatDayShort(w.weekStart)}</span>
             </div>
           ))}
         </div>

@@ -47,7 +47,7 @@ export async function syncConnection(
   }
 
   for (const account of accounts ?? []) {
-    if (!account.external_uid) continue;
+    if (!account.external_uid || account.active === false) continue;
     try {
       const dateFrom =
         options.dateFrom ??

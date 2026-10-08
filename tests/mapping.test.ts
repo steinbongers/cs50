@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { hashIban, mapTransaction, maskIban, pickBalance } from "../lib/bank/mapping";
 import type { EbTransaction } from "../lib/enablebanking/types";
+import { dedupeHash } from "../lib/transactions/dedupe";
 
 const ctx = { userId: "u", accountId: "a", ownIbanHashes: new Set([hashIban("NL91ABNA0417164300")!]) };
 
@@ -44,6 +45,47 @@ test("bijschrijving gebruikt de verzender als tegenpartij", () => {
   assert.equal(row.counterparty, "S. de Vries");
   assert.equal(row.description, "Tikkie van Sanne: etentje");
   assert.match(row.dedupe_hash, /^h:/);
+});
+
+test("zonder bank-ID telt de rekening mee in de ontdubbelsleutel", () => {
+  const twin: EbTransaction = {
+    transaction_amount: { currency: "EUR", amount: "2.50" },
+    creditor: { name: "NS Reizigers" },
+    credit_debit_indicator: "DBIT",
+    status: "BOOK",
+    booking_date: "2026-10-06",
+    remittance_information: ["Reis"],
+  };
+  const a = mapTransaction(twin, ctx)!;
+  const b = mapTransaction(twin, { ...ctx, accountId: "b" })!;
+  const again = mapTransaction(twin, ctx)!;
+  assert.match(a.dedupe_hash, /^h:/);
+  assert.equal(a.dedupe_hash, again.dedupe_hash);
+  assert.notEqual(a.dedupe_hash, b.dedupe_hash);
+});
+
+test("zonder bank-ID maakt het saldo erna twee gelijke betalingen uniek", () => {
+  const twice: EbTransaction = {
+    transaction_amount: { currency: "EUR", amount: "3.20" },
+    creditor: { name: "Koffiebar" },
+    credit_debit_indicator: "DBIT",
+    status: "BOOK",
+    booking_date: "2026-10-06",
+    balance_after_transaction: { currency: "EUR", amount: "100.00" },
+  };
+  const first = mapTransaction(twice, ctx)!;
+  const second = mapTransaction({ ...twice, balance_after_transaction: { currency: "EUR", amount: "96.80" } }, ctx)!;
+  const noBalance = mapTransaction({ ...twice, balance_after_transaction: undefined }, ctx)!;
+  assert.notEqual(first.dedupe_hash, second.dedupe_hash);
+  assert.notEqual(first.dedupe_hash, noBalance.dedupe_hash);
+  assert.equal(noBalance.balance_after, null);
+  // Zelfde invoer met een andere spelling van de omschrijving blijft gelijk.
+  assert.equal(
+    dedupeHash({ bookingDate: "2026-10-06", amount: -3.2, counterparty: "Koffiebar", description: "Latte  macchiato", accountId: "a", balanceAfter: 100 }),
+    dedupeHash({ bookingDate: "2026-10-06", amount: -3.2, counterparty: "KOFFIEBAR", description: "latte macchiato", accountId: "a", balanceAfter: 100 }),
+  );
+  // Met een bank-ID doen rekening en saldo er niet toe.
+  assert.equal(dedupeHash({ externalId: "x1", bookingDate: "2026-10-06", amount: -3.2, accountId: "a" }), "ext:x1");
 });
 
 test("overboeking naar eigen rekening wordt herkend", () => {

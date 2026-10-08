@@ -4,6 +4,7 @@ import { THEME_COLOR_LIGHT } from "@/config/theme";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: "/",
     name: APP_NAME,
     short_name: APP_NAME,
     description: APP_DESCRIPTION,

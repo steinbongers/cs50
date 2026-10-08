@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col pb-24">{children}</div>
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col pb-[calc(6rem+env(safe-area-inset-bottom))]">{children}</div>
       <BottomNav />
       <AppOpenLogger />
     </>

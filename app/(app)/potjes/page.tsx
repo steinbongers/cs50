@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CategoryBadge } from "@/components/categories/category-badge";
+import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { IconChevronRight, IconJar } from "@/components/ui/icons";
@@ -8,7 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ensureProfile, requireUser } from "@/lib/auth";
 import { VOORGESCHOTEN_CATEGORY } from "@/lib/categories/types";
 import { formatEuroWhole } from "@/lib/format";
-import { currentPeriod } from "@/lib/periods";
+import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { getActiveCategories, getOpenShares } from "@/lib/transactions/queries";
 import { SharesList } from "./shares-list";
 
@@ -17,7 +18,7 @@ export const metadata: Metadata = { title: "Potjes" };
 export default async function PotjesPage() {
   const user = await requireUser();
   const profile = await ensureProfile(user);
-  const period = currentPeriod(profile.salary_day);
+  const period = currentPeriod(profile.salary_day, amsterdamToday());
   const [categories, openShares] = await Promise.all([getActiveCategories(period), getOpenShares()]);
 
   const potjes = categories.filter((c) => c.systemKey === null);
@@ -36,7 +37,12 @@ export default async function PotjesPage() {
       />
       <div className="flex flex-col gap-4 px-4">
         {potjes.length === 0 ? (
-          <EmptyState icon={<IconJar size={28} />} title="Nog geen potjes" description="Kies je potjes in de onboarding." />
+          <EmptyState
+            icon={<IconJar size={28} />}
+            title="Nog geen potjes"
+            description="Kies een paar potjes om je uitgaven in te stoppen."
+            action={<ButtonLink href="/onboarding/potjes">Potjes kiezen</ButtonLink>}
+          />
         ) : (
           <Card padding="none" className="divide-y">
             {potjes.map((category) => (

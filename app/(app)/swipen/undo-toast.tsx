@@ -8,15 +8,17 @@ interface UndoToastProps {
   id: string | null;
   counterparty: string;
   categoryName: string;
+  /** Eigen tekst in plaats van "naar <potje>", bv. "verwerkt als terugbetaling". */
+  label?: string;
   onUndo: () => void;
 }
 
 /** Vier seconden "Ongedaan maken" na elke keuze, met een leeglopend balkje. */
-export function UndoToast({ id, counterparty, categoryName, onUndo }: UndoToastProps) {
+export function UndoToast({ id, counterparty, categoryName, label, onUndo }: UndoToastProps) {
   const reduce = useReducedMotion();
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 flex justify-center px-4 pb-3">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(8rem+env(safe-area-inset-bottom))] z-30 flex justify-center px-4 pb-3">
       <AnimatePresence>
         {id && (
           <motion.div
@@ -30,7 +32,7 @@ export function UndoToast({ id, counterparty, categoryName, onUndo }: UndoToastP
           >
             <span className="flex min-w-0 flex-1 flex-col text-sm leading-tight">
               <span className="truncate text-bg/70">{counterparty}</span>
-              <span className="truncate font-medium">naar {categoryName}</span>
+              <span className="truncate font-medium">{label ?? `naar ${categoryName}`}</span>
             </span>
             <button
               type="button"

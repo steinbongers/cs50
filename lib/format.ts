@@ -14,19 +14,25 @@ const wholeCurrencyFormatter = new Intl.NumberFormat(LOCALE, {
   maximumFractionDigits: 0,
 });
 
+/** Negatieve nul en afrondrestjes (|x| < 0,005) tonen we als gewone nul, nooit als "€ -0,00". */
+function zeroSafe(amount: number): number {
+  return Math.abs(amount) < 0.005 ? 0 : amount;
+}
+
 /** € 12,34 — altijd met twee decimalen. */
 export function formatEuro(amount: number): string {
-  return currencyFormatter.format(amount);
+  return currencyFormatter.format(zeroSafe(amount));
 }
 
 /** € 12 — zonder decimalen, voor grote cijfers op het overzicht. */
 export function formatEuroWhole(amount: number): string {
-  return wholeCurrencyFormatter.format(amount);
+  // Alles wat op € 0 afrondt, ook -0,4, tonen als € 0 zonder minteken.
+  return wholeCurrencyFormatter.format(Math.round(amount) === 0 ? 0 : amount);
 }
 
 /** Bedrag zonder teken, voor weergave naast een kleur die het teken al aangeeft. */
 export function formatEuroAbs(amount: number): string {
-  return currencyFormatter.format(Math.abs(amount));
+  return currencyFormatter.format(Math.abs(zeroSafe(amount)));
 }
 
 /** "− € 23,45" of "+ € 12,50": expliciet teken, echte minus. */
@@ -52,6 +58,53 @@ const longDateFormatter = new Intl.DateTimeFormat(LOCALE, {
   month: "long",
   year: "numeric",
 });
+
+const shortDayFormatter = new Intl.DateTimeFormat(LOCALE, {
+  day: "numeric",
+  month: "short",
+});
+
+const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: "Europe/Amsterdam",
+  day: "numeric",
+  month: "long",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const timeFormatter = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: "Europe/Amsterdam",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+const amsterdamDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Amsterdam",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** "3 okt", zonder weekdag: voor krappe labels zoals een grafiek-as. */
+export function formatDayShort(date: Date | string): string {
+  return shortDayFormatter.format(typeof date === "string" ? parseISODate(date) : date);
+}
+
+/**
+ * Tijdstip in Amsterdamse tijd: "14:32" als het vandaag is, anders "3 oktober, 14:32".
+ * Voor "Bijgewerkt om ..." en vergelijkbare momenten.
+ */
+export function formatDateTime(date: Date | string): string {
+  const value = typeof date === "string" ? new Date(date) : date;
+  const isToday = amsterdamDateFormatter.format(value) === amsterdamDateFormatter.format(new Date());
+  if (isToday) return timeFormatter.format(value);
+  const parts = dateTimeFormatter.formatToParts(value);
+  const day = parts.find((p) => p.type === "day")?.value ?? "";
+  const month = parts.find((p) => p.type === "month")?.value ?? "";
+  const hour = parts.find((p) => p.type === "hour")?.value ?? "";
+  const minute = parts.find((p) => p.type === "minute")?.value ?? "";
+  return `${day} ${month}, ${hour}:${minute}`;
+}
 
 /** "do 3 okt" */
 export function formatDay(date: Date | string): string {

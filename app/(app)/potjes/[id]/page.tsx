@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ensureProfile, requireUser } from "@/lib/auth";
 import { spentPerCategory, weeklySeries } from "@/lib/insights/compute";
 import { loadInsightData } from "@/lib/insights/queries";
-import { currentPeriod } from "@/lib/periods";
+import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import { PotjeDetail, type DetailTransaction } from "./potje-detail";
 
@@ -15,7 +15,7 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
   const user = await requireUser();
   const profile = await ensureProfile(user);
   const supabase = await createClient();
-  const today = new Date();
+  const today = amsterdamToday();
   const period = currentPeriod(profile.salary_day, today);
 
   const [{ data: category }, insight] = await Promise.all([

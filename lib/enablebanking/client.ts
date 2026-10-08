@@ -97,3 +97,19 @@ export async function getAccountTransactions(
 export async function getAccountBalances(accountUid: string): Promise<EbBalancesResponse> {
   return ebFetch<EbBalancesResponse>(`/accounts/${encodeURIComponent(accountUid)}/balances`);
 }
+
+/**
+ * Controleert onze eigen applicatiesleutel vóór een sync-ronde. Geeft false bij
+ * 401/403: dan ligt het aan onze configuratie, niet aan de banktoestemmingen,
+ * en mogen koppelingen niet als ingetrokken worden gemarkeerd.
+ */
+export async function verifyCredentials(): Promise<boolean> {
+  try {
+    await ebFetch<unknown>("/application");
+    return true;
+  } catch (err) {
+    if (err instanceof EnableBankingError && err.needsReconnect) return false;
+    // Andere fouten (netwerk, 5xx) zeggen niets over de sleutel.
+    return true;
+  }
+}

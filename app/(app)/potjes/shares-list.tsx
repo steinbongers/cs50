@@ -50,10 +50,10 @@ export function SharesList({ shares }: { shares: OpenShare[] }) {
               <li key={share.id} className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 truncate text-sm">{share.personName || `Persoon ${index + 1}`}</span>
                 <span className="text-sm font-medium tabular-nums">{formatEuro(share.amount)}</span>
-                <Button variant="secondary" className="h-9 min-h-9 px-3 text-xs" onClick={() => mark(share.id, "received")}>
+                <Button variant="secondary" className="min-h-11 px-3 text-xs" onClick={() => mark(share.id, "received")}>
                   Ontvangen
                 </Button>
-                <Button variant="ghost" className="h-9 min-h-9 px-2 text-xs" onClick={() => mark(share.id, "settled_elsewhere")}>
+                <Button variant="ghost" className="min-h-11 px-2 text-xs" onClick={() => mark(share.id, "settled_elsewhere")}>
                   Anders
                 </Button>
               </li>

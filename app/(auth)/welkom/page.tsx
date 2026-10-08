@@ -1,3 +1,4 @@
+import { Hand } from "lucide-react";
 import type { Metadata } from "next";
 import { ButtonLink } from "@/components/ui/button";
 import { APP_DESCRIPTION, APP_NAME } from "@/config/app";
@@ -16,10 +17,10 @@ export default async function WelkomPage({ searchParams }: PageProps<"/welkom">)
       )}
       <div className="flex flex-col gap-4">
         <div
-          className="flex size-16 items-center justify-center rounded-card bg-primary-soft text-3xl"
+          className="flex size-16 items-center justify-center rounded-full bg-primary-soft text-primary"
           aria-hidden
         >
-          👋
+          <Hand size={28} />
         </div>
         <h1 className="text-3xl font-semibold tracking-tight">
           Grip op je geld, <span className="text-primary">met je eigen handen.</span>

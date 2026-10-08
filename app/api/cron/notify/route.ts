@@ -27,7 +27,7 @@ function amsterdamNow(): { hour: number; dateISO: string; dayIndex: number } {
 /**
  * Dagelijkse meldingen om 20:00 Nederlandse tijd. De planning (GitHub Actions,
  * zie .github/workflows/cron.yml) roept deze route om 18:00 en 19:00 UTC aan,
- * voor zomer- en wintertijd; alleen de aanroep die op 20:00 valt stuurt.
+ * voor zomer- en wintertijd; alleen de aanroep die op 20:00 (of bij vertraging 21:00) valt stuurt.
  * Per gebruiker hoogstens één melding per dag: Jouw maand op de salarisdag,
  * anders het aantal kaartjes dat ligt. Verloopmeldingen apart, eenmalig.
  */
@@ -40,7 +40,8 @@ export async function GET(request: NextRequest) {
 
   const { hour, dateISO, dayIndex } = amsterdamNow();
   const force = request.nextUrl.searchParams.get("force") === "1";
-  if (hour !== 20 && !force) return NextResponse.json({ skipped: `het is ${hour}:00 in Amsterdam` });
+  // 20:00 is het doel; 21:00 vangt een vertraagde cron-run op. Dubbel sturen kan niet door last_push_at.
+  if (hour !== 20 && hour !== 21 && !force) return NextResponse.json({ skipped: `het is ${hour}:00 in Amsterdam` });
 
   const admin = createAdminClient();
   const { data: profiles } = await admin
@@ -98,9 +99,13 @@ export async function GET(request: NextRequest) {
     const days = daysUntil(connection.valid_until);
     if (days === null || days > CONNECTION_EXPIRY_WARNING_DAYS) continue;
     const delivered = await sendPushToUser(admin, connection.user_id, { ...expiringMessage(days), url: "/bank/koppelen?reconnect=1", tag: "bank-verloopt" });
+    // Pas als 'gemeld' markeren wanneer er echt een apparaat is bereikt; anders de volgende keer opnieuw.
     await admin
       .from("bank_connections")
-      .update({ expiry_notified_at: new Date().toISOString(), status: days < 0 ? "expired" : "expiring" })
+      .update({
+        status: days < 0 ? "expired" : "expiring",
+        ...(delivered > 0 ? { expiry_notified_at: new Date().toISOString() } : {}),
+      })
       .eq("id", connection.id);
     if (delivered > 0) expiryNotified++;
   }

@@ -35,7 +35,7 @@ export default async function ProfielPage() {
         </Card>
 
         <Card padding="none" className="divide-y">
-          <Link href="/potjes" className="flex min-h-14 items-center gap-3 px-4 hover:bg-surface-muted">
+          <Link href="/potjes/beheren" className="flex min-h-14 items-center gap-3 px-4 hover:bg-surface-muted">
             <IconJar size={20} className="text-text-muted" />
             <span className="flex-1 font-medium">Potjes beheren</span>
             <IconChevronRight size={18} className="text-text-muted" />

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { DisconnectButton } from "./disconnect-button";
 import { Card } from "@/components/ui/card";
 import { IconBank } from "@/components/ui/icons";
+import { formatDateTime } from "@/lib/format";
 import type { ConnectionStatus } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +51,7 @@ export function ConnectionCard({ aspspName, status, daysLeft, lastSyncedAt, last
           </p>
           {lastSyncedAt && (
             <p className="text-xs text-text-muted">
-              Laatst bijgewerkt {new Date(lastSyncedAt).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "short" })}
+              Laatst bijgewerkt {formatDateTime(lastSyncedAt)}
             </p>
           )}
         </div>

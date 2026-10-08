@@ -26,9 +26,12 @@ Zonder `SUPABASE_SECRET_KEY` staat de uitnodigingscode-controle uit, zodat je lo
 
 ## Deploy naar Vercel
 
-1. Maak een Supabase-project (regio `eu-central-1`) en voer de migraties uit.
-   Zet in Authentication → URL configuration de site-URL en `https://<domein>/auth/callback` als redirect.
-   Voor Inloggen met Apple: zet de Apple-provider aan met je Services ID, team ID, key ID en private key.
+1. Maak een Supabase-project (regio `eu-central-1`). Voor een nieuw project plak je `supabase/pilot-setup.sql`
+   (alle migraties in één bestand) in de SQL Editor; latere migraties voer je los uit.
+   Zet in Authentication → URL configuration de site-URL en `https://<domein>/auth/callback**` als redirect
+   (de app gebruikt `?next=` achter de callback). Laat "Confirm email" aan: alleen een bevestigd adres in
+   `ADMIN_EMAILS` krijgt beheerrechten. Voor Inloggen met Apple: zet de Apple-provider aan met je Services ID,
+   team ID, key ID en private key.
 2. Maak een Vercel-project aan op deze repo en zet de environment variables uit `.env.example`:
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`
    - `NEXT_PUBLIC_APP_URL` (bijvoorbeeld `https://app.voorbeeld.nl`)
@@ -39,9 +42,10 @@ Zonder `SUPABASE_SECRET_KEY` staat de uitnodigingscode-controle uit, zodat je lo
 4. De planning draait in GitHub Actions (`.github/workflows/cron.yml`), omdat Vercel Hobby maar één cron per dag
    toestaat. Zet in GitHub onder Settings → Secrets and variables → Actions het secret `CRON_SECRET` (zelfde waarde
    als in Vercel) en, als de app niet op `financeapppilot.vercel.app` staat, de variable `APP_URL`. De workflow roept
-   `/api/cron/sync` (06:00 en 18:00 UTC) en `/api/cron/notify` (18:00 en 19:00 UTC, stuurt alleen om 20:00 Nederlandse
-   tijd) aan met `Authorization: Bearer $CRON_SECRET`. Let op: GitHub zet geplande workflows uit na 60 dagen zonder
-   commits; een commit zet ze weer aan.
+   om 06:07, 18:07 en 19:07 UTC `/api/cron/sync` en `/api/cron/notify` aan met `Authorization: Bearer $CRON_SECRET`;
+   de meldingsroute stuurt alleen om 20:00 Nederlandse tijd (zomer- en wintertijd). Let op: GitHub zet geplande
+   workflows uit na 60 dagen zonder commits; een commit zet ze weer aan.
+   Zet in Vercel onder Project Settings → Functions de regio op Frankfurt (`fra1`), dicht bij Supabase.
 5. Registreer jezelf met een adres uit `ADMIN_EMAILS`; die adressen hebben geen uitnodigingscode nodig.
    Maak daarna via `/admin` uitnodigingscodes en deel ze als `/registreren?code=PILOT-XXXX`.
 

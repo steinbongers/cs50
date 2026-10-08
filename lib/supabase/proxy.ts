@@ -24,8 +24,12 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   let response = NextResponse.next({ request });
 
   if (!isSupabaseConfigured()) {
-    // Zonder configuratie laten we alles door; de pagina toont dan een duidelijke fout.
-    return response;
+    // Zonder configuratie één duidelijke uitlegpagina in plaats van een serverfout op elke route.
+    if (request.nextUrl.pathname === "/niet-ingesteld") return response;
+    const url = request.nextUrl.clone();
+    url.pathname = "/niet-ingesteld";
+    url.search = "";
+    return NextResponse.rewrite(url);
   }
 
   const { url, publishableKey } = getSupabaseEnv();

@@ -25,8 +25,15 @@ export async function consumeInviteCode(code: string): Promise<boolean> {
   if (!data) return false;
   if (data.expires_at && new Date(data.expires_at).getTime() < Date.now()) return false;
   if (data.uses >= data.max_uses) return false;
-  const { error } = await admin.from("invite_codes").update({ uses: data.uses + 1 }).eq("code", code).eq("uses", data.uses);
-  return !error;
+  // Alleen geslaagd als precies deze rij (met dezelfde teller) is bijgewerkt;
+  // bij een gelijktijdige registratie raakt de update nul rijen.
+  const { data: updated, error } = await admin
+    .from("invite_codes")
+    .update({ uses: data.uses + 1 })
+    .eq("code", code)
+    .eq("uses", data.uses)
+    .select("code");
+  return !error && (updated?.length ?? 0) === 1;
 }
 
 /** Zonder service key (lokaal zonder Supabase) staat de controle uit. */

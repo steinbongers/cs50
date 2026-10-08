@@ -5,6 +5,20 @@ const nextConfig: NextConfig = {
   // (sessiecookie), dus het klassieke model (dynamisch renderen zodra de
   // sessie gelezen wordt) is eenvoudiger en voorspelbaarder voor deze app.
   reactStrictMode: true,
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {

@@ -33,8 +33,29 @@ export function salaryDateInMonth(year: number, monthIndex: number, salaryDay: n
 }
 
 /**
+ * De kalenderdag van dit moment in Europe/Amsterdam, als lokale Date op
+ * middernacht. Servers draaien in UTC; rond middernacht zou "vandaag" anders
+ * een dag verschillen van wat de gebruiker ziet.
+ */
+export function amsterdamToday(now: Date = new Date()): Date {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Amsterdam",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now); // "2026-10-08"
+  const [y, m, d] = parts.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/**
  * De huidige periode: vanaf de laatste salarisdag tot de volgende.
  * Zonder salarisdag: de kalendermaand.
+ *
+ * De salarisdag kan door de weekendregel in de vorige maand vallen (1 augustus
+ * op zaterdag wordt 31 juli). Daarom kijken we naar de kandidaten van de
+ * maand ervoor, deze maand en de maand erna: de start is de laatste kandidaat
+ * op of voor vandaag, het einde de kandidaat van de nominale maand erna.
  */
 export function currentPeriod(salaryDay: number | null | undefined, today: Date = new Date()): Period {
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -45,11 +66,16 @@ export function currentPeriod(salaryDay: number | null | undefined, today: Date 
     return { start, end, startISO: toISODate(start), endISO: toISODate(end), label: MONTHS[start.getMonth()] };
   }
 
-  let start = salaryDateInMonth(todayStart.getFullYear(), todayStart.getMonth(), salaryDay);
-  if (start > todayStart) {
-    start = salaryDateInMonth(todayStart.getFullYear(), todayStart.getMonth() - 1, salaryDay);
+  const year = todayStart.getFullYear();
+  const month = todayStart.getMonth();
+  // Nominale maand van de start (offset t.o.v. deze maand); de kandidaat van
+  // de maand ervoor ligt altijd op of voor vandaag.
+  let startOffset = -1;
+  for (const offset of [0, 1]) {
+    if (salaryDateInMonth(year, month + offset, salaryDay) <= todayStart) startOffset = offset;
   }
-  const end = salaryDateInMonth(start.getFullYear(), start.getMonth() + 1, salaryDay);
+  const start = salaryDateInMonth(year, month + startOffset, salaryDay);
+  const end = salaryDateInMonth(year, month + startOffset + 1, salaryDay);
 
   return {
     start,

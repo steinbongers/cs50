@@ -3,7 +3,11 @@ import { getUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 function csvField(value: unknown): string {
-  const text = value === null || value === undefined ? "" : String(value);
+  let text = value === null || value === undefined ? "" : String(value);
+  // Tekst die een rekenprogramma als formule zou lezen (=, +, -, @, tab) onschadelijk maken.
+  // Bedragen gaan niet door deze functie als getal maar als "12,34"; een minteken daar is
+  // legitiem en wordt door de apostrof niet verstoord bij importeren als tekst.
+  if (/^[=+\-@\t\r]/.test(text) && !/^-?\d+(,\d+)?$/.test(text)) text = `'${text}`;
   return /[";\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 

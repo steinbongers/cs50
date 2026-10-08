@@ -26,13 +26,12 @@ self.addEventListener("notificationclick", (event) => {
   const url = (event.notification.data && event.notification.data.url) || "/";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
-      for (const client of list) {
-        if ("focus" in client) {
-          client.navigate(url);
-          return client.focus();
-        }
-      }
-      return self.clients.openWindow(url);
+      const client = list.find((c) => "focus" in c);
+      if (!client) return self.clients.openWindow(url);
+      return client
+        .focus()
+        .then((focused) => (focused && "navigate" in focused ? focused.navigate(url) : null))
+        .catch(() => self.clients.openWindow(url));
     }),
   );
 });

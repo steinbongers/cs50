@@ -1,9 +1,10 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
-import { isAdminEmail } from "@/lib/admin/access";
+import { isAdminUser } from "@/lib/admin/access";
 import { INVITE_COOKIE } from "@/lib/invites/cookie";
 import { consumeInviteCode, inviteCodesEnabled, normalizeInviteCode } from "@/lib/invites/codes";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const OTP_TYPES: readonly EmailOtpType[] = ["signup", "magiclink", "recovery", "invite", "email", "email_change"];
@@ -41,7 +42,8 @@ export async function GET(request: NextRequest) {
     const { data } = await supabase.auth.getClaims();
     const userId = data?.claims.sub;
     const email = typeof data?.claims.email === "string" ? data.claims.email : null;
-    if (userId && !isAdminEmail(email)) {
+    const meta = data?.claims.user_metadata as { email_verified?: unknown } | undefined;
+    if (userId && !isAdminUser({ email, emailVerified: meta?.email_verified === true })) {
       const { data: profile } = await supabase.from("profiles").select("invite_code").eq("id", userId).maybeSingle();
       if (!profile?.invite_code) {
         const cookieStore = await cookies();
@@ -52,7 +54,8 @@ export async function GET(request: NextRequest) {
           await supabase.auth.signOut();
           return NextResponse.redirect(`${origin}/registreren?error=code`);
         }
-        await supabase.from("profiles").upsert({ id: userId, invite_code: pending }, { onConflict: "id" });
+        // De kolom invite_code is voor gebruikers niet schrijfbaar; alleen de server zet hem.
+        await createAdminClient().from("profiles").upsert({ id: userId, invite_code: pending }, { onConflict: "id" });
       }
     }
   }

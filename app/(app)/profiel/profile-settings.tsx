@@ -82,7 +82,7 @@ export function ProfileSettings({ displayName, salaryDay }: ProfileSettingsProps
                   aria-checked={day === d}
                   onClick={() => setDay(d)}
                   className={cn(
-                    "flex aspect-square min-h-10 items-center justify-center rounded-lg text-sm font-medium tabular-nums",
+                    "flex aspect-square min-h-11 items-center justify-center rounded-lg text-sm font-medium tabular-nums",
                     day === d ? "bg-primary text-on-primary" : "bg-surface-muted hover:bg-border",
                   )}
                 >
@@ -90,7 +90,7 @@ export function ProfileSettings({ displayName, salaryDay }: ProfileSettingsProps
                 </button>
               ))}
             </div>
-            <button type="button" onClick={() => setDay(null)} className={cn("self-start text-sm font-medium", day === null ? "text-text" : "text-primary")}>
+            <button type="button" onClick={() => setDay(null)} className={cn("min-h-11 self-start text-sm font-medium", day === null ? "text-text" : "text-primary")}>
               {day === null ? "Kalendermaand (gekozen)" : "Liever de kalendermaand"}
             </button>
           </div>

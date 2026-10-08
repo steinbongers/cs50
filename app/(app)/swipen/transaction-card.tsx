@@ -43,7 +43,7 @@ export function TransactionCard({ transaction, onOpenDetails }: TransactionCardP
       initial="enter"
       animate="center"
       exit="exit"
-      className="absolute inset-0 flex cursor-pointer flex-col justify-between rounded-card-lg bg-surface p-5 text-left shadow-float will-change-transform"
+      className="relative flex min-h-56 cursor-pointer [grid-area:1/1] flex-col justify-between overflow-hidden rounded-card-lg bg-surface p-5 text-left shadow-float will-change-transform"
       aria-label={`${transaction.counterparty}, ${formatSignedEuro(transaction.amount)}, ${formatLongDay(transaction.bookingDate)}. Tik voor de banktekst.`}
       role="button"
       tabIndex={0}
@@ -62,7 +62,7 @@ export function TransactionCard({ transaction, onOpenDetails }: TransactionCardP
         </p>
         {transaction.skippedCount > 0 && (
           <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-medium text-text-muted">
-            Eerder op later
+            Eerder op Later gezet
           </span>
         )}
       </div>

@@ -9,3 +9,8 @@ export function isAdminEmail(email: string | null | undefined): boolean {
     .filter(Boolean);
   return allowed.includes(email.toLowerCase());
 }
+
+/** Beheerder: adres staat in ADMIN_EMAILS én is bevestigd. */
+export function isAdminUser(user: { email: string | null; emailVerified: boolean } | null | undefined): boolean {
+  return Boolean(user && user.emailVerified && isAdminEmail(user.email));
+}

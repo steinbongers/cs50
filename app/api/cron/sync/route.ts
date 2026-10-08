@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { syncConnection } from "@/lib/bank/sync";
+import { verifyCredentials } from "@/lib/enablebanking/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /**
  * Cron (GitHub Actions, 2x per dag): ververst alle actieve bankkoppelingen.
@@ -15,12 +16,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Geen toegang" }, { status: 401 });
   }
 
+  if (!(await verifyCredentials())) {
+    return NextResponse.json({ error: "Enable Banking accepteert onze applicatiesleutel niet; geen koppelingen aangeraakt." }, { status: 500 });
+  }
+
   const admin = createAdminClient();
+  // Langst niet gesynchroniseerd eerst, zodat niemand structureel achteraan blijft.
   const { data: connections, error } = await admin
     .from("bank_connections")
     .select("*")
     .eq("provider", "enablebanking")
-    .in("status", ["active", "expiring"]);
+    .in("status", ["active", "expiring"])
+    .order("last_synced_at", { ascending: true, nullsFirst: true });
 
   if (error) return NextResponse.json({ error: "Koppelingen konden niet worden geladen." }, { status: 500 });
 

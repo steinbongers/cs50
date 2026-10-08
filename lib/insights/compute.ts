@@ -44,6 +44,14 @@ function inRange(date: string, from: string, to: string): boolean {
   return date >= from && date < to;
 }
 
+/**
+ * Heeft deze periode uitgaven die meetellen? Een periode met alleen salaris of
+ * eigen overboekingen telt niet als "0 uitgegeven" in een gemiddelde.
+ */
+function hasSpending(txs: TxLite[], cats: Map<string, CatLite>, from: string, to: string): boolean {
+  return txs.some((t) => inRange(t.bookingDate, from, to) && spendOf(t, cats) !== 0);
+}
+
 export function totalSpent(txs: TxLite[], cats: Map<string, CatLite>, from: string, to: string): number {
   let total = 0;
   for (const tx of txs) if (inRange(tx.bookingDate, from, to)) total += spendOf(tx, cats);
@@ -101,8 +109,8 @@ export interface Comparison {
 
 /**
  * Uitgegeven in de huidige periode, vergeleken met het gemiddelde van de
- * (maximaal drie) vorige periodes na even veel dagen. Periodes zonder enige
- * transactie tellen niet mee.
+ * (maximaal drie) vorige periodes na even veel dagen. Periodes zonder
+ * meetellende uitgaven tellen niet mee.
  */
 export function compareWithAverage(
   txs: TxLite[],
@@ -117,8 +125,7 @@ export function compareWithAverage(
 
   const samples: number[] = [];
   for (const prev of previousPeriods(salaryDay, today, 3)) {
-    const hasAny = txs.some((t) => inRange(t.bookingDate, prev.startISO, prev.endISO));
-    if (!hasAny) continue;
+    if (!hasSpending(txs, cats, prev.startISO, prev.endISO)) continue;
     const until = addDays(prev.startISO, daysElapsed);
     samples.push(totalSpent(txs, cats, prev.startISO, until < prev.endISO ? until : prev.endISO));
   }
@@ -227,10 +234,9 @@ export function monthReview(
   const cats = new Map(catList.map((c) => [c.id, c]));
   const [last, ...earlier] = previousPeriods(salaryDay, today, 4);
   if (!last) return null;
-  const hasAny = txs.some((t) => inRange(t.bookingDate, last.startISO, last.endISO));
-  if (!hasAny) return null;
+  if (!hasSpending(txs, cats, last.startISO, last.endISO)) return null;
 
-  const usable = earlier.filter((p) => txs.some((t) => inRange(t.bookingDate, p.startISO, p.endISO)));
+  const usable = earlier.filter((p) => hasSpending(txs, cats, p.startISO, p.endISO));
   const avg = (values: number[]) => (values.length ? round2(values.reduce((a, b) => a + b, 0) / values.length) : null);
 
   const total = totalSpent(txs, cats, last.startISO, last.endISO);

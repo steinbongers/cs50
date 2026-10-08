@@ -17,14 +17,22 @@ import { VOORGESCHOTEN_CATEGORY } from "@/lib/categories/types";
 import { formatEuroWhole } from "@/lib/format";
 import { compareWithAverage, dailyStreak, monthReview, spentPerCategory } from "@/lib/insights/compute";
 import { loadAccountBalances, loadInsightData } from "@/lib/insights/queries";
-import { currentPeriod } from "@/lib/periods";
+import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import { getOpenShares } from "@/lib/transactions/queries";
 
 export const metadata: Metadata = { title: "Overzicht" };
 
+/** Uur van de dag in Amsterdam, onafhankelijk van de servertijdzone. */
+function amsterdamHour(): number {
+  const part = new Intl.DateTimeFormat("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", hour12: false })
+    .formatToParts(new Date())
+    .find((p) => p.type === "hour");
+  return Number(part?.value ?? 0) % 24;
+}
+
 function greeting(name: string | null): string {
-  const hour = new Date().getHours();
+  const hour = amsterdamHour();
   const dagdeel = hour < 6 ? "Goedenacht" : hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
   return name ? `${dagdeel}, ${name}` : dagdeel;
 }
@@ -34,7 +42,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const profile = await ensureProfile(user);
   const supabase = await createClient();
   const params = await searchParams;
-  const today = new Date();
+  const today = amsterdamToday();
   const period = currentPeriod(profile.salary_day, today);
 
   const [{ count }, connection, insight, accounts, openShares] = await Promise.all([
@@ -57,6 +65,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const openSharesTotal = openShares.reduce((a, s) => a + s.amount, 0);
 
   const openCount = count ?? 0;
+  const hasTransactions = openCount > 0 || insight.txs.length > 0;
   const justConnected = params.bank === "gekoppeld";
   const canRefresh = connection !== null && ["active", "expiring"].includes(statusFor(connection));
 
@@ -100,36 +109,55 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
           />
         )}
 
-        <Card padding="lg" className="flex flex-col gap-4">
-          {openCount > 0 ? (
-            <>
+        {connection === null ? (
+          <Card padding="lg" className="flex flex-col gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">Koppel je bank</h2>
+              <p className="mt-1 text-sm text-text-muted">Dan komen je eerste kaartjes vanzelf binnen.</p>
+            </div>
+            <ButtonLink href="/bank/koppelen" size="lg" fullWidth>
+              Bank koppelen
+            </ButtonLink>
+          </Card>
+        ) : (
+          <Card padding="lg" className="flex flex-col gap-4">
+            {openCount > 0 ? (
+              <>
+                <div>
+                  <p className="text-sm text-text-muted">Nog te {ACTION_VERB}</p>
+                  <p className="text-4xl font-semibold tabular-nums tracking-tight">{openCount}</p>
+                  <p className="mt-1 text-sm text-text-muted">
+                    {openCount === 1 ? "transactie zoekt nog een potje" : "transacties zoeken nog een potje"}
+                  </p>
+                </div>
+                <ButtonLink href="/swipen" size="lg" fullWidth>
+                  {ACTION_LABEL}
+                </ButtonLink>
+              </>
+            ) : hasTransactions ? (
+              <>
+                <div>
+                  <p className="text-sm text-text-muted">Nog te {ACTION_VERB}</p>
+                  <p className="text-4xl font-semibold tabular-nums tracking-tight">0</p>
+                  <p className="mt-1 text-sm text-text-muted">Alles zit in een potje. Lekker bezig, kop koffie verdiend.</p>
+                </div>
+                <ButtonLink href="/swipen" variant="secondary" size="lg" fullWidth>
+                  Naar {ACTION_LABEL.toLowerCase()}
+                </ButtonLink>
+              </>
+            ) : (
               <div>
-                <p className="text-sm text-text-muted">Nog te {ACTION_VERB}</p>
-                <p className="text-4xl font-semibold tabular-nums tracking-tight">{openCount}</p>
+                <h2 className="text-lg font-semibold">Nog geen kaartjes</h2>
                 <p className="mt-1 text-sm text-text-muted">
-                  {openCount === 1 ? "transactie zoekt nog een potje" : "transacties zoeken nog een potje"}
+                  Je bank is gekoppeld. Zodra er transacties binnenkomen, liggen ze hier voor je klaar.
                 </p>
               </div>
-              <ButtonLink href="/swipen" size="lg" fullWidth>
-                {ACTION_LABEL}
-              </ButtonLink>
-            </>
-          ) : (
-            <>
-              <div>
-                <p className="text-sm text-text-muted">Nog te {ACTION_VERB}</p>
-                <p className="text-4xl font-semibold tabular-nums tracking-tight">0</p>
-                <p className="mt-1 text-sm text-text-muted">Alles zit in een potje. Lekker bezig, kop koffie verdiend.</p>
-              </div>
-              <ButtonLink href="/swipen" variant="secondary" size="lg" fullWidth>
-                Naar {ACTION_LABEL.toLowerCase()}
-              </ButtonLink>
-            </>
-          )}
-          {canRefresh && <RefreshButton lastSyncedAt={connection?.last_synced_at ?? null} />}
-        </Card>
+            )}
+            {canRefresh && <RefreshButton lastSyncedAt={connection.last_synced_at ?? null} />}
+          </Card>
+        )}
 
-        <SpendSummary comparison={comparison} periodLabel={period.label} />
+        {hasTransactions && <SpendSummary comparison={comparison} periodLabel={period.label} />}
 
         <TopCategories cats={insight.cats} spent={perCategory} />
 

@@ -110,7 +110,7 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
                 <span
                   className={cn(
                     "flex size-6 items-center justify-center rounded-full border-2 transition-colors duration-150",
-                    draft.enabled ? cn("border-transparent", colors.solid, "text-white") : "border-border",
+                    draft.enabled ? cn("border-transparent", colors.solid, "text-bg") : "border-border",
                   )}
                   aria-hidden
                 >

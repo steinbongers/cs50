@@ -53,6 +53,8 @@ export function mapTransaction(
 
   const externalId = tx.entry_reference?.trim() || tx.transaction_id?.trim() || null;
   const time = extractTime(rawDescription);
+  const balanceAfterRaw = tx.balance_after_transaction ? Number(tx.balance_after_transaction.amount) : null;
+  const balanceAfter = balanceAfterRaw !== null && Number.isFinite(balanceAfterRaw) ? balanceAfterRaw : null;
 
   return {
     user_id: context.userId,
@@ -64,6 +66,8 @@ export function mapTransaction(
       amount,
       counterparty: rawCounterparty,
       description: rawDescription,
+      accountId: context.accountId,
+      balanceAfter,
     }),
     booking_date: bookingDate,
     booking_time: time ? `${time}:00` : null,
@@ -73,7 +77,7 @@ export function mapTransaction(
     description: cleanDescription(rawDescription),
     raw_counterparty: rawCounterparty,
     raw_description: rawDescription,
-    balance_after: tx.balance_after_transaction ? Number(tx.balance_after_transaction.amount) : null,
+    balance_after: balanceAfter,
     is_internal_transfer: isInternal,
     source: "bank",
   };

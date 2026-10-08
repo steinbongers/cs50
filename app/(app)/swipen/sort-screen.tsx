@@ -1,7 +1,6 @@
 "use client";
 
 import { AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { CategoryEditor } from "@/components/categories/category-editor";
 import { Button } from "@/components/ui/button";
@@ -37,6 +36,8 @@ interface SortScreenProps {
   transactions: OpenTransaction[];
   totalOpen: number;
   openShares: OpenShare[];
+  /** Eerder gebruikte namen, als suggesties bij het verdelen. */
+  knownNames?: string[];
   coachStep: number;
 }
 
@@ -54,10 +55,19 @@ const VOORGESCHOTEN_OPTION: CategoryOption = {
  * Het hart van de app. Eén kaart bovenin, alle potjes als tegels eronder.
  * De gebruiker beslist zelf, de app vult niets in en markeert niets vooraf.
  */
-export function SortScreen({ categories: initialCategories, transactions, totalOpen, openShares, coachStep: initialCoachStep }: SortScreenProps) {
-  const router = useRouter();
+export function SortScreen({
+  categories: initialCategories,
+  transactions,
+  totalOpen,
+  openShares: initialOpenShares,
+  knownNames = [],
+  coachStep: initialCoachStep,
+}: SortScreenProps) {
   const [queue, setQueue] = useState<OpenTransaction[]>(transactions);
   const [categories, setCategories] = useState<CategoryOption[]>(initialCategories);
+  // Openstaande delen houden we lokaal bij: nieuwe delen komen terug uit assignCategory,
+  // zodat er geen refresh (en dus geen verlies van ongedaan maken) nodig is.
+  const [openShares, setOpenShares] = useState<OpenShare[]>(initialOpenShares);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [skipped, setSkipped] = useState(0);
   const [undone, setUndone] = useState(0);
@@ -74,13 +84,18 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
   const [editorDraft, setEditorDraft] = useState<CategoryDraft | null>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [coachStep, setCoach] = useState(initialCoachStep);
-  const [totalAtStart] = useState(totalOpen);
+  const [totalAtStart, setTotalAtStart] = useState(totalOpen);
   const [isPending, startTransition] = useTransition();
 
   const shownAt = useRef<number>(0);
   const sessionStart = useRef<number | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const completed = useRef(false);
+  // Voor welke stapel de ronde al als afgerond is gemeld.
+  const completedFor = useRef<OpenTransaction[] | null>(null);
+  // Per Terugbetaling: welke delen ermee betaald zijn, zodat ongedaan maken ze lokaal terugzet.
+  const settledByTransaction = useRef(new Map<string, string[]>());
+  // De stapel waarmee de lokale staat is gevuld.
+  const [adoptedBatch, setAdoptedBatch] = useState(transactions);
 
   const current = queue[0] ?? null;
   const split = splitFor.id === current?.id ? splitFor.state : EMPTY_SPLIT;
@@ -88,8 +103,8 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
   const openSharesTotal = availableShares.reduce((a, s) => a + s.amount, 0);
 
   useEffect(() => {
-    sessionStart.current ??= Date.now();
-  }, []);
+    sessionStart.current = Date.now();
+  }, [adoptedBatch]);
 
   // Per kaart: starttijd voor de meting "duur van kaart tot beslissing".
   useEffect(() => {
@@ -109,9 +124,32 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
   const remaining = Math.max(totalAtStart - assignedCount, queue.length);
   const finished = current === null;
 
+  // Nieuwe stapel uit de server (na "Volgende stapel" in de samenvatting) overnemen,
+  // maar alleen als de ronde af is: tijdens het sorteren blijft de lokale staat leidend.
+  // Props van een refresh halverwege de ronde bevatten kaarten die inmiddels een potje
+  // hebben; die nemen we niet over. Staat aanpassen tijdens het renderen is hier de
+  // aangeraden vorm (geen effect nodig).
+  const isFreshBatch =
+    adoptedBatch !== transactions &&
+    transactions.length > 0 &&
+    !transactions.some((t) => decisions.some((d) => d.transaction.id === t.id));
+  if (finished && isFreshBatch) {
+    setAdoptedBatch(transactions);
+    setQueue(transactions);
+    setCategories(initialCategories);
+    setOpenShares(initialOpenShares);
+    setDecisions([]);
+    setSkipped(0);
+    setUndone(0);
+    setUndo(null);
+    setError(null);
+    setSettledShareIds(new Set());
+    setTotalAtStart(totalOpen);
+  }
+
   useEffect(() => {
-    if (!finished || completed.current) return;
-    completed.current = true;
+    if (!finished || completedFor.current === adoptedBatch) return;
+    completedFor.current = adoptedBatch;
     const summary = {
       assigned: assignedCount,
       skipped,
@@ -121,7 +159,7 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
     startTransition(() => {
       void completeSession(summary);
     });
-  }, [finished, assignedCount, skipped, undone, startTransition]);
+  }, [finished, adoptedBatch, assignedCount, skipped, undone, startTransition]);
 
   function bumpCategoryTotal(categoryId: string, delta: number) {
     setCategories((prev) =>
@@ -172,11 +210,13 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
           setError(result.error);
           return;
         }
-        // Nieuwe openstaande delen ophalen voor de tegel Terugbetaling.
-        if (useSplit && split.method === "bank") router.refresh();
+        // Nieuwe openstaande delen meteen beschikbaar voor de tegel Terugbetaling.
+        if (result.shares.length > 0) {
+          setOpenShares((prev) => [...prev.filter((s) => s.transactionId !== transaction.id), ...result.shares]);
+        }
       });
     },
-    [current, split, router, startTransition],
+    [current, split, startTransition],
   );
 
   const settle = useCallback(
@@ -193,6 +233,7 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
       setDecisions((d) => [...d, decision]);
       setUndo(decision);
       setSettledShareIds((prev) => new Set([...prev, ...shareIds]));
+      settledByTransaction.current.set(transaction.id, shareIds);
       setAnnouncement(`${transaction.counterparty} verwerkt als terugbetaling`);
 
       startTransition(async () => {
@@ -206,6 +247,7 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
             shareIds.forEach((id) => next.delete(id));
             return next;
           });
+          settledByTransaction.current.delete(transaction.id);
           setError(result.error);
         }
       });
@@ -220,7 +262,7 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
     setExitKind("skip");
     setQueue((q) => [...q.slice(1), { ...transaction, skippedCount: transaction.skippedCount + 1 }]);
     setSkipped((s) => s + 1);
-    setAnnouncement(`${transaction.counterparty} op later gezet`);
+    setAnnouncement(`${transaction.counterparty} op Later gezet`);
     startTransition(async () => {
       const result = await skipTransaction(transaction.id);
       if (!result.ok) setError(result.error);
@@ -237,10 +279,17 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
     setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
     setUndone((u) => u + 1);
     if (category.id === VOORGESCHOTEN_OPTION.id) {
-      // Welke delen deze Tikkie afbetaalde weten we niet lokaal; de server zet ze terug.
-      router.refresh();
-      setSettledShareIds(new Set());
+      // De delen die deze Tikkie afbetaalde komen lokaal weer open te staan.
+      const shareIds = settledByTransaction.current.get(transaction.id) ?? [];
+      settledByTransaction.current.delete(transaction.id);
+      setSettledShareIds((prev) => {
+        const next = new Set(prev);
+        shareIds.forEach((id) => next.delete(id));
+        return next;
+      });
     } else {
+      // Delen die bij deze uitgave hoorden verdwijnen weer (de server verwijdert ze ook).
+      if (ownShare !== undefined) setOpenShares((prev) => prev.filter((s) => s.transactionId !== transaction.id));
       const delta = category.isIncome
         ? Math.max(transaction.amount, 0)
         : transaction.amount < 0
@@ -253,7 +302,7 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
       const result = await undoAssign(transaction.id);
       if (!result.ok) setError(result.error);
     });
-  }, [undo, router, startTransition]);
+  }, [undo, startTransition]);
 
   function openEditor() {
     const used = new Set(categories.map((c) => c.color));
@@ -294,6 +343,7 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
       id={undo ? undo.transaction.id : null}
       counterparty={undo?.transaction.counterparty ?? ""}
       categoryName={undo?.category.name ?? ""}
+      label={undo?.category.id === VOORGESCHOTEN_OPTION.id ? "verwerkt als terugbetaling" : undefined}
       onUndo={handleUndo}
     />
   );
@@ -325,7 +375,7 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
       </header>
 
       <section className="px-4 pt-5" aria-label="Transactie">
-        <div className="relative h-56">
+        <div className="relative grid min-h-56">
           {queue.length > 2 && <GhostCard depth={2} />}
           {queue.length > 1 && <GhostCard depth={1} />}
           <AnimatePresence custom={exitKind} initial={false}>
@@ -340,6 +390,7 @@ export function SortScreen({ categories: initialCategories, transactions, totalO
         {!isIncoming && (
           <SplitPanel
             amountAbs={Math.abs(current.amount)}
+            knownNames={knownNames}
             state={split}
             onChange={(patch) => setSplitFor({ id: current.id, state: { ...split, ...patch } })}
           />

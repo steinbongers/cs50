@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { requireUser } from "@/lib/auth";
@@ -23,10 +24,10 @@ export default async function OnboardingKlaarPage() {
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
         <div
-          className="mb-5 flex size-20 items-center justify-center rounded-full bg-positive-soft text-4xl"
+          className="mb-5 flex size-20 items-center justify-center rounded-full bg-primary-soft text-primary"
           aria-hidden
         >
-          ✨
+          <Sparkles size={32} />
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">Je bent er klaar voor</h1>
         <p className="mt-2 max-w-xs text-text-muted">

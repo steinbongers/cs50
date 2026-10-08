@@ -9,9 +9,12 @@ import type { CategoryDraft } from "@/lib/categories/types";
 import { logEvent } from "@/lib/events";
 import { createClient } from "@/lib/supabase/server";
 import { MAX_SPLIT_PERSONS, MIN_SPLIT_PERSONS, splitEqually } from "@/lib/transactions/split";
-import type { CategoryOption } from "@/lib/transactions/queries";
+import type { CategoryOption, OpenShare } from "@/lib/transactions/queries";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+
+/** Na het kiezen van een potje: de nieuwe openstaande delen (alleen bij "via mijn rekening"). */
+export type AssignResult = { ok: true; shares: OpenShare[] } | { ok: false; error: string };
 
 const GENERIC_ERROR = "Opslaan lukte niet. Probeer het nog eens.";
 
@@ -51,7 +54,7 @@ export async function assignCategory(
   categoryId: string,
   durationMs: number,
   split?: SplitInput,
-): Promise<ActionResult> {
+): Promise<AssignResult> {
   const user = await requireUser();
   if (!isUuid(transactionId) || !isUuid(categoryId)) return { ok: false, error: GENERIC_ERROR };
   if (split !== undefined && !isValidSplit(split)) return { ok: false, error: GENERIC_ERROR };
@@ -70,34 +73,19 @@ export async function assignCategory(
 
   const { data: transaction } = await supabase
     .from("transactions")
-    .select("id, amount, skipped_count")
+    .select("id, amount, skipped_count, counterparty, booking_date")
     .eq("id", transactionId)
     .eq("user_id", user.id)
     .maybeSingle();
   if (!transaction) return { ok: false, error: GENERIC_ERROR };
 
   const amount = Number(transaction.amount);
-  let ownShare: number | null = null;
+  const useSplit = split !== undefined && amount < 0;
+  const result = useSplit ? splitEqually(amount, split.persons) : null;
+  const ownShare = result ? result.ownShare : null;
 
-  // Eventuele oude delen (na ongedaan maken) opruimen.
-  await supabase.from("transaction_shares").delete().eq("transaction_id", transactionId).eq("user_id", user.id);
-
-  if (split && amount < 0) {
-    const result = splitEqually(amount, split.persons);
-    ownShare = result.ownShare;
-    const names = (split.names ?? []).map((n) => n.trim().slice(0, 60));
-    const { error: sharesError } = await supabase.from("transaction_shares").insert(
-      result.otherShares.map((shareAmount, index) => ({
-        user_id: user.id,
-        transaction_id: transactionId,
-        person_name: names[index] || null,
-        amount: shareAmount,
-        status: split.method === "bank" ? ("open" as const) : ("settled_elsewhere" as const),
-      })),
-    );
-    if (sharesError) return { ok: false, error: GENERIC_ERROR };
-  }
-
+  // Eerst de transactie zelf; de delen pas daarna. Zo blijven er nooit open
+  // delen hangen aan een transactie die nog geen potje heeft.
   const { data: updated, error } = await supabase
     .from("transactions")
     .update({ category_id: categoryId, categorized_at: new Date().toISOString(), own_share: ownShare })
@@ -108,16 +96,56 @@ export async function assignCategory(
 
   if (error || !updated) return { ok: false, error: GENERIC_ERROR };
 
+  // Eventuele oude delen (na ongedaan maken) opruimen.
+  await supabase.from("transaction_shares").delete().eq("transaction_id", transactionId).eq("user_id", user.id);
+
+  let shares: OpenShare[] = [];
+  if (result && split) {
+    const names = (split.names ?? []).map((n) => n.trim().slice(0, 60));
+    const status = split.method === "bank" ? ("open" as const) : ("settled_elsewhere" as const);
+    const { data: inserted, error: sharesError } = await supabase
+      .from("transaction_shares")
+      .insert(
+        result.otherShares.map((shareAmount, index) => ({
+          user_id: user.id,
+          transaction_id: transactionId,
+          person_name: names[index] || null,
+          amount: shareAmount,
+          status,
+        })),
+      )
+      .select("id, person_name, amount");
+    if (sharesError || !inserted) {
+      // Terugdraaien: liever een kaart opnieuw op de stapel dan een halve verdeling.
+      await supabase
+        .from("transactions")
+        .update({ category_id: null, categorized_at: null, own_share: null })
+        .eq("id", transactionId)
+        .eq("user_id", user.id);
+      return { ok: false, error: GENERIC_ERROR };
+    }
+    if (status === "open") {
+      shares = inserted.map((s) => ({
+        id: s.id,
+        transactionId,
+        personName: s.person_name,
+        amount: Number(s.amount),
+        counterparty: transaction.counterparty?.trim() || "Onbekende tegenpartij",
+        bookingDate: transaction.booking_date,
+      }));
+    }
+  }
+
   await logEvent("swipe", {
     transaction_id: transactionId,
     category_id: categoryId,
     duration_ms: Math.max(0, Math.round(Number.isFinite(durationMs) ? durationMs : 0)),
     skipped_before: transaction.skipped_count,
-    split_persons: split && amount < 0 ? split.persons : null,
-    split_method: split && amount < 0 ? split.method : null,
+    split_persons: useSplit ? split.persons : null,
+    split_method: useSplit ? split.method : null,
   });
 
-  return { ok: true };
+  return { ok: true, shares };
 }
 
 /**

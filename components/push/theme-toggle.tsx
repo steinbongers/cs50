@@ -62,7 +62,7 @@ export function ThemeToggle() {
             aria-checked={theme === option.value}
             onClick={() => choose(option.value)}
             className={cn(
-              "min-h-10 rounded-[0.625rem] text-sm font-medium transition-colors duration-150",
+              "min-h-11 rounded-[0.625rem] text-sm font-medium transition-colors duration-150",
               theme === option.value ? "bg-surface text-text shadow-card" : "text-text-muted hover:text-text",
             )}
           >

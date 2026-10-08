@@ -7,6 +7,7 @@ import { MANUAL_SYNC_COOLDOWN_MS } from "@/config/app";
 import { requireUser } from "@/lib/auth";
 import { getPrimaryConnection, statusFor } from "@/lib/bank/connections";
 import { syncConnection } from "@/lib/bank/sync";
+import { verifyCredentials } from "@/lib/enablebanking/client";
 import { deleteSession, startAuthorization } from "@/lib/enablebanking/client";
 import { isEnableBankingConfigured } from "@/lib/enablebanking/jwt";
 import { logEvent } from "@/lib/events";
@@ -97,6 +98,10 @@ export async function refreshConnection(): Promise<RefreshResult> {
       const minutes = Math.ceil((MANUAL_SYNC_COOLDOWN_MS - elapsed) / 60000);
       return { ok: false, error: `Net ververst. Over ${minutes} ${minutes === 1 ? "minuut" : "minuten"} kan het weer.`, retryInMinutes: minutes };
     }
+  }
+
+  if (!(await verifyCredentials())) {
+    return { ok: false, error: "De bankkoppeling is tijdelijk niet beschikbaar. Probeer het later." };
   }
 
   const result = await syncConnection(supabase, connection, { manual: true });

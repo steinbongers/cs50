@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
   // Rekeningen: bestaande bijwerken op uid, nieuwe toevoegen.
   const { data: knownAccounts } = await supabase.from("accounts").select("id, external_uid").eq("connection_id", connectionId);
   const knownByUid = new Map((knownAccounts ?? []).map((a) => [a.external_uid, a.id]));
+  const seenUids = new Set<string>();
 
   for (const account of session.accounts ?? []) {
     const iban = account.account_id?.iban ?? null;
@@ -96,11 +97,19 @@ export async function GET(request: NextRequest) {
       currency: account.currency || "EUR",
     };
     const knownId = knownByUid.get(account.uid);
+    seenUids.add(account.uid);
     if (knownId) {
-      await supabase.from("accounts").update(values).eq("id", knownId);
+      await supabase.from("accounts").update({ ...values, active: true }).eq("id", knownId);
     } else {
       await supabase.from("accounts").insert({ user_id: user.id, connection_id: connectionId, external_uid: account.uid, ...values });
     }
+  }
+
+  // Rekeningen die niet meer in de nieuwe toestemming zitten (andere bank, rekening
+  // weggelaten) worden gedeactiveerd: de sync slaat ze over, transacties blijven.
+  const vanished = (knownAccounts ?? []).filter((a) => a.external_uid && !seenUids.has(a.external_uid)).map((a) => a.id);
+  if (vanished.length > 0) {
+    await supabase.from("accounts").update({ active: false }).in("id", vanished);
   }
 
   await logEvent(existing || pending.reconnect ? "bank_reconnect" : "bank_connected", {
