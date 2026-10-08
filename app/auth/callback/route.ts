@@ -1,6 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
+import { isAdminEmail } from "@/lib/admin/access";
 import { INVITE_COOKIE } from "@/lib/invites/cookie";
 import { consumeInviteCode, inviteCodesEnabled, normalizeInviteCode } from "@/lib/invites/codes";
 import { createClient } from "@/lib/supabase/server";
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest) {
   if (inviteCodesEnabled()) {
     const { data } = await supabase.auth.getClaims();
     const userId = data?.claims.sub;
-    if (userId) {
+    const email = typeof data?.claims.email === "string" ? data.claims.email : null;
+    if (userId && !isAdminEmail(email)) {
       const { data: profile } = await supabase.from("profiles").select("invite_code").eq("id", userId).maybeSingle();
       if (!profile?.invite_code) {
         const cookieStore = await cookies();

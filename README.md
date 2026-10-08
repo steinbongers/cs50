@@ -42,7 +42,8 @@ Zonder `SUPABASE_SECRET_KEY` staat de uitnodigingscode-controle uit, zodat je lo
    `/api/cron/sync` (06:00 en 18:00 UTC) en `/api/cron/notify` (18:00 en 19:00 UTC, stuurt alleen om 20:00 Nederlandse
    tijd) aan met `Authorization: Bearer $CRON_SECRET`. Let op: GitHub zet geplande workflows uit na 60 dagen zonder
    commits; een commit zet ze weer aan.
-5. Maak na de eerste deploy via `/admin` uitnodigingscodes en deel ze als `/registreren?code=PILOT-XXXX`.
+5. Registreer jezelf met een adres uit `ADMIN_EMAILS`; die adressen hebben geen uitnodigingscode nodig.
+   Maak daarna via `/admin` uitnodigingscodes en deel ze als `/registreren?code=PILOT-XXXX`.
 
 ## Bankkoppeling (Enable Banking)
 

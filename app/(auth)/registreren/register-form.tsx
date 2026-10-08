@@ -41,7 +41,6 @@ export function RegisterForm({ requireInvite, prefillCode }: { requireInvite: bo
             autoComplete="one-time-code"
             autoCapitalize="characters"
             spellCheck={false}
-            required
             value={inviteCode}
             onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
             className="uppercase tracking-wider"

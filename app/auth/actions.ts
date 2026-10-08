@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { consumeInviteCode, inviteCodesEnabled, isInviteCodeValid, normalizeInviteCode } from "@/lib/invites/codes";
 import { INVITE_COOKIE } from "@/lib/invites/cookie";
+import { isAdminEmail } from "@/lib/admin/access";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthFormState = {
@@ -86,8 +87,9 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
   if (password.length < MIN_PASSWORD_LENGTH)
     return { error: `Kies een wachtwoord van minimaal ${MIN_PASSWORD_LENGTH} tekens.`, ...state };
 
+  // Gesloten pilot. Adressen in ADMIN_EMAILS mogen zonder code, anders kan de eerste beheerder nooit beginnen.
   let inviteCode: string | null = null;
-  if (inviteCodesEnabled()) {
+  if (inviteCodesEnabled() && !isAdminEmail(email)) {
     inviteCode = normalizeInviteCode(inviteRaw);
     if (!inviteCode) return { error: "Vul je uitnodigingscode in.", ...state };
     if (!(await isInviteCodeValid(inviteCode))) {
