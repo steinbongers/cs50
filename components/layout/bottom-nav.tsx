@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconCards, IconHome, IconJar, IconUser } from "@/components/ui/icons";
+import { ACTION_LABEL } from "@/config/app";
 import { cn } from "@/lib/utils";
 
 const items = [
   { href: "/overzicht", label: "Overzicht", Icon: IconHome },
-  { href: "/swipen", label: "Swipen", Icon: IconCards, primary: true },
+  { href: "/swipen", label: ACTION_LABEL, Icon: IconCards, primary: true },
   { href: "/potjes", label: "Potjes", Icon: IconJar },
   { href: "/profiel", label: "Profiel", Icon: IconUser },
 ] as const;

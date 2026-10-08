@@ -60,7 +60,7 @@ create table public.categories (
   id              uuid primary key default gen_random_uuid(),
   user_id         uuid not null references auth.users (id) on delete cascade,
   name            text not null check (char_length(name) between 1 and 40),
-  emoji           text not null default '🏷️' check (char_length(emoji) between 1 and 8),
+  icon            text not null default 'tag' check (char_length(icon) between 1 and 40),
   color           text not null default 'blauw' check (color in (
                     'blauw','indigo','paars','roze','rood','oranje','geel','groen','mint','grijs')),
   sort_order      integer not null default 0,

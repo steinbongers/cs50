@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { ACTION_VERB } from "@/config/app";
 import { finishOnboarding } from "../actions";
 
 export const metadata: Metadata = { title: "Klaar om te beginnen" };
@@ -31,14 +32,14 @@ export default async function OnboardingKlaarPage() {
         <p className="mt-2 max-w-xs text-text-muted">
           Je hebt {potjes === 1 ? "1 potje" : `${potjes} potjes`} klaarstaan.{" "}
           {open > 0
-            ? `Er wachten ${open} transacties op een plek. Elke swipe is een klein moment van aandacht voor je geld.`
-            : "Zodra er transacties binnenkomen, swipe je ze één voor één naar het juiste potje."}
+            ? `Er zoeken ${open} transacties nog een potje. Elke keuze is een klein moment van aandacht voor je geld (en een beetje voldoening).`
+            : `Zodra er transacties binnenkomen, stop je ze één voor één in het juiste potje.`}
         </p>
       </div>
 
       <form action={finishOnboarding} className="safe-bottom px-4 pt-6 pb-5">
         <SubmitButton size="lg" fullWidth>
-          {open > 0 ? "Begin met swipen" : "Naar de app"}
+          {open > 0 ? `Begin met ${ACTION_VERB}` : "Naar de app"}
         </SubmitButton>
       </form>
     </div>

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { IconCards } from "@/components/ui/icons";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { ACTION_LABEL } from "@/config/app";
 
-export const metadata: Metadata = { title: "Swipen" };
+export const metadata: Metadata = { title: ACTION_LABEL };
 
 export default async function SwipenPage() {
   await requireUser();
@@ -18,13 +20,13 @@ export default async function SwipenPage() {
 
   return (
     <>
-      <PageHeader title="Swipen" subtitle={openCount > 0 ? `Nog ${openCount} te gaan` : undefined} />
+      <PageHeader title={ACTION_LABEL} subtitle={openCount > 0 ? `Nog ${openCount} te gaan` : undefined} />
       <EmptyState
-        emoji="🃏"
-        title="Het swipescherm komt in fase 2"
+        icon={<IconCards size={28} />}
+        title="Dit scherm komt in fase 2"
         description={
           openCount > 0
-            ? `Er staan ${openCount} transacties klaar om te swipen.`
+            ? `Er staan ${openCount} transacties klaar voor een potje.`
             : "Zodra er transacties zijn, verschijnen ze hier als kaarten."
         }
       />

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { MAX_CATEGORIES, MAX_CATEGORY_NAME_LENGTH } from "@/lib/categories/defaults";
+import { DEFAULT_CATEGORY_ICON, isCategoryIcon } from "@/lib/categories/icons";
 import { isCategoryColor } from "@/lib/categories/palette";
 import { createClient } from "@/lib/supabase/server";
 import type { SwipeDirection } from "@/lib/supabase/types";
@@ -11,7 +12,7 @@ export interface CategoryDraft {
   /** Aanwezig als het potje al in de database staat. */
   id?: string;
   name: string;
-  emoji: string;
+  icon: string;
   color: string;
   isIncome: boolean;
   enabled: boolean;
@@ -27,7 +28,7 @@ function isValidDraft(value: unknown): value is CategoryDraft {
   return (
     (v.id === undefined || typeof v.id === "string") &&
     typeof v.name === "string" &&
-    typeof v.emoji === "string" &&
+    typeof v.icon === "string" &&
     typeof v.color === "string" &&
     typeof v.isIncome === "boolean" &&
     typeof v.enabled === "boolean"
@@ -53,7 +54,7 @@ export async function saveOnboardingCategories(
   const cleaned = drafts.map((d) => ({
     ...d,
     name: d.name.trim().slice(0, MAX_CATEGORY_NAME_LENGTH),
-    emoji: d.emoji.trim().slice(0, 8) || "🏷️",
+    icon: isCategoryIcon(d.icon) ? d.icon : DEFAULT_CATEGORY_ICON,
     color: isCategoryColor(d.color) ? d.color : "grijs",
   }));
 
@@ -95,7 +96,7 @@ export async function saveOnboardingCategories(
         .from("categories")
         .update({
           name: draft.name,
-          emoji: draft.emoji,
+          icon: draft.icon,
           color: draft.color,
           is_income: draft.isIncome,
           archived: !draft.enabled,
@@ -110,7 +111,7 @@ export async function saveOnboardingCategories(
       const { error } = await supabase.from("categories").insert({
         user_id: user.id,
         name: draft.name,
-        emoji: draft.emoji,
+        icon: draft.icon,
         color: draft.color,
         is_income: draft.isIncome,
         sort_order: sortOrder,

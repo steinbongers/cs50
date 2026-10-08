@@ -5,7 +5,15 @@
 export const APP_NAME = "[Appnaam]";
 
 export const APP_DESCRIPTION =
-  "Swipe elke uitgave zelf naar een potje en krijg grip op je geld.";
+  "Stop elke uitgave zelf in een potje en krijg grip op je geld.";
+
+/**
+ * Naam van de hoofdactie: transacties één voor één in een potje stoppen.
+ * Krijgt later een eigen, leuke naam die bij de appnaam past. Tot die tijd
+ * de werknaam uit de spec. Alle UI-teksten gebruiken deze twee constanten.
+ */
+export const ACTION_LABEL = "Swipen"; // knop en tabblad: "Swipen"
+export const ACTION_VERB = "swipen"; // in zinnen: "Nog 12 te swipen"
 
 /** Standaardvaluta voor bedragen en formattering. */
 export const DEFAULT_CURRENCY = "EUR";
@@ -13,7 +21,7 @@ export const DEFAULT_CURRENCY = "EUR";
 /** Locale voor datums en bedragen. */
 export const LOCALE = "nl-NL";
 
-/** Hoe lang de "Ongedaan maken"-knop na een swipe zichtbaar blijft (ms). */
+/** Hoe lang de "Ongedaan maken"-knop na een keuze zichtbaar blijft (ms). */
 export const UNDO_WINDOW_MS = 4000;
 
 /** Minimale tijd tussen twee handmatige bank-syncs (ms). */

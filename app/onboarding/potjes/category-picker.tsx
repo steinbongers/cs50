@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { CategoryBadge } from "@/components/categories/category-badge";
+import { CategoryIcon } from "@/components/categories/category-icon";
 import { Button } from "@/components/ui/button";
 import { IconCheck, IconPencil, IconPlus } from "@/components/ui/icons";
 import { Field, Input } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
-import { CATEGORY_EMOJI_OPTIONS, MAX_CATEGORIES, MAX_CATEGORY_NAME_LENGTH } from "@/lib/categories/defaults";
+import { MAX_CATEGORIES, MAX_CATEGORY_NAME_LENGTH } from "@/lib/categories/defaults";
+import { CATEGORY_ICON_KEYS, CATEGORY_ICON_LABELS, DEFAULT_CATEGORY_ICON } from "@/lib/categories/icons";
 import { CATEGORY_COLORS, categoryColorClasses, type CategoryColor } from "@/lib/categories/palette";
 import { cn } from "@/lib/utils";
 import { saveOnboardingCategories, type CategoryDraft } from "../actions";
@@ -41,7 +43,7 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
     const color = CATEGORY_COLORS.find((c) => !usedColors.has(c)) ?? "grijs";
     setDrafts((prev) => [
       ...prev,
-      { key, name: "", emoji: "🏷️", color, isIncome: false, enabled: true, isCustom: true },
+      { key, name: "", icon: DEFAULT_CATEGORY_ICON, color, isIncome: false, enabled: true, isCustom: true },
     ]);
     setEditingKey(key);
   }
@@ -66,7 +68,7 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
       const payload: CategoryDraft[] = drafts.map((d) => ({
         id: d.id,
         name: d.name,
-        emoji: d.emoji,
+        icon: d.icon,
         color: d.color,
         isIncome: d.isIncome,
         enabled: d.enabled,
@@ -96,7 +98,7 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
                 onClick={() => toggle(draft.key)}
                 className="flex min-h-14 flex-1 items-center gap-3 rounded-card py-2 pl-3 text-left"
               >
-                <CategoryBadge emoji={draft.emoji} color={draft.color} />
+                <CategoryBadge icon={draft.icon} color={draft.color} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">
                     {draft.name || <span className="text-text-muted">Naam ontbreekt</span>}
@@ -176,11 +178,12 @@ function CategoryEditor({
   onRemove?: () => void;
 }) {
   const canSave = draft.name.trim().length > 0;
+  const colors = categoryColorClasses(draft.color);
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3">
-        <CategoryBadge emoji={draft.emoji} color={draft.color} size="lg" />
+        <CategoryBadge icon={draft.icon} color={draft.color} size="lg" />
         <div className="flex-1">
           <Field label="Naam" htmlFor="category-name">
             <Input
@@ -197,23 +200,26 @@ function CategoryEditor({
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-medium">Emoji</legend>
-        <div className="grid grid-cols-8 gap-1">
-          {CATEGORY_EMOJI_OPTIONS.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              onClick={() => onChange({ emoji })}
-              aria-label={`Emoji ${emoji}`}
-              aria-pressed={draft.emoji === emoji}
-              className={cn(
-                "flex aspect-square min-h-11 items-center justify-center rounded-xl text-xl transition-colors duration-150",
-                draft.emoji === emoji ? "bg-primary-soft ring-2 ring-primary" : "hover:bg-surface-muted",
-              )}
-            >
-              {emoji}
-            </button>
-          ))}
+        <legend className="text-sm font-medium">Icoon</legend>
+        <div className="grid grid-cols-6 gap-1.5">
+          {CATEGORY_ICON_KEYS.map((key) => {
+            const selected = draft.icon === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => onChange({ icon: key })}
+                aria-label={`Icoon ${CATEGORY_ICON_LABELS[key]}`}
+                aria-pressed={selected}
+                className={cn(
+                  "flex aspect-square min-h-11 items-center justify-center rounded-xl transition-colors duration-150",
+                  selected ? cn(colors.bg, colors.text, "ring-2", colors.ring) : "text-text-muted hover:bg-surface-muted hover:text-text",
+                )}
+              >
+                <CategoryIcon icon={key} size={22} />
+              </button>
+            );
+          })}
         </div>
       </fieldset>
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
+import { ACTION_LABEL, ACTION_VERB } from "@/config/app";
 import { ensureProfile, requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,25 +34,25 @@ export default async function OverzichtPage() {
           {openCount > 0 ? (
             <>
               <div>
-                <p className="text-sm text-text-muted">Nog te swipen</p>
+                <p className="text-sm text-text-muted">Nog te {ACTION_VERB}</p>
                 <p className="text-4xl font-semibold tabular-nums tracking-tight">{openCount}</p>
                 <p className="mt-1 text-sm text-text-muted">
-                  {openCount === 1 ? "transactie wacht op een potje" : "transacties wachten op een potje"}
+                  {openCount === 1 ? "transactie zoekt nog een potje" : "transacties zoeken nog een potje"}
                 </p>
               </div>
               <ButtonLink href="/swipen" size="lg" fullWidth>
-                Swipen
+                {ACTION_LABEL}
               </ButtonLink>
             </>
           ) : (
             <>
               <div>
-                <p className="text-sm text-text-muted">Nog te swipen</p>
+                <p className="text-sm text-text-muted">Nog te {ACTION_VERB}</p>
                 <p className="text-4xl font-semibold tabular-nums tracking-tight">0</p>
-                <p className="mt-1 text-sm text-text-muted">Alles heeft een potje. Lekker bezig.</p>
+                <p className="mt-1 text-sm text-text-muted">Alles zit in een potje. Lekker bezig, kop koffie verdiend.</p>
               </div>
               <ButtonLink href="/swipen" variant="secondary" size="lg" fullWidth>
-                Naar swipen
+                Naar {ACTION_LABEL.toLowerCase()}
               </ButtonLink>
             </>
           )}

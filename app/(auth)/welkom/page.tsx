@@ -19,8 +19,8 @@ export default function WelkomPage() {
         </h1>
         <p className="text-lg text-text-muted">{APP_DESCRIPTION}</p>
         <p className="text-text-muted">
-          {APP_NAME} vult niets voor je in. Door elke uitgave zelf een plek te geven, sta je even
-          stil bij waar je geld heen gaat. Dat korte moment is precies wat werkt.
+          {APP_NAME} vult niets voor je in en voorspelt niets. Jij tikt elke uitgave zelf in een
+          potje. Dat duurt een seconde, en precies die seconde zorgt dat je weet waar je geld heen gaat.
         </p>
       </div>
 

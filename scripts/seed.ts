@@ -152,7 +152,7 @@ async function main() {
       DEFAULT_CATEGORIES.map((c, i) => ({
         user_id: userId,
         name: c.name,
-        emoji: c.emoji,
+        icon: c.icon,
         color: c.color,
         is_income: c.isIncome,
         sort_order: i,

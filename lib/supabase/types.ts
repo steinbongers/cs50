@@ -22,7 +22,7 @@ export type CategoryRow = {
   id: string;
   user_id: string;
   name: string;
-  emoji: string;
+  icon: string;
   color: string;
   sort_order: number;
   swipe_direction: SwipeDirection | null;
@@ -114,7 +114,7 @@ export type Database = {
         WithOptional<
           CategoryRow,
           | "id"
-          | "emoji"
+          | "icon"
           | "color"
           | "sort_order"
           | "swipe_direction"

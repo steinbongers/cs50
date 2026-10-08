@@ -20,14 +20,14 @@ export default async function OnboardingPotjesPage() {
       ? existing.map((c) => ({
           id: c.id,
           name: c.name,
-          emoji: c.emoji,
+          icon: c.icon,
           color: c.color,
           isIncome: c.is_income,
           enabled: !c.archived,
         }))
       : DEFAULT_CATEGORIES.map((c) => ({
           name: c.name,
-          emoji: c.emoji,
+          icon: c.icon,
           color: c.color,
           isIncome: c.isIncome,
           enabled: true,
@@ -38,7 +38,7 @@ export default async function OnboardingPotjesPage() {
       <div className="px-5 pt-6 pb-3">
         <h1 className="text-2xl font-semibold tracking-tight">Welke potjes passen bij jou?</h1>
         <p className="mt-1 text-text-muted">
-          Zet potjes aan of uit, geef ze een eigen naam, emoji of kleur. Je kunt dit later altijd
+          Zet potjes aan of uit, geef ze een eigen naam, icoon of kleur. Je kunt dit later altijd
           aanpassen.
         </p>
       </div>

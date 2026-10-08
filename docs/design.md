@@ -27,6 +27,13 @@ De waarden komen uit de live stylesheet van voorgeschoten.com (`:root`-variabele
 Dark mode heeft dezelfde tokens met eigen waarden (systeemvoorkeur, of handmatig via
 `data-theme="dark|light"` op `<html>`, opgeslagen in `localStorage.theme`).
 
+## Potjesiconen
+
+Potjes hebben een lijnicoon uit lucide-react (`lib/categories/icons.ts`), in de potjeskleur op
+het zachte kleurvlak. In de database staat de sleutel (`icon`), bijvoorbeeld `shopping-cart`.
+lucide-react is toegevoegd omdat de gebruiker uit ruim 50 iconen moet kunnen kiezen; de bibliotheek
+is tree-shakeable, dus alleen gebruikte iconen komen in de bundel.
+
 ## Potjespalet
 
 Tien zachte kleuren (`--cat-*` en `--cat-*-soft`): blauw, indigo, paars, roze, rood,
