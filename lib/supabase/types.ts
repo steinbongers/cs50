@@ -69,7 +69,7 @@ export type PushSubscriptionRow = {
   user_id: string;
   endpoint: string;
   p256dh: string;
-  auth: string;
+  auth_secret: string;
   user_agent: string | null;
   created_at: string;
   last_used_at: string | null;

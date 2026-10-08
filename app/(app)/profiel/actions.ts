@@ -45,7 +45,7 @@ export async function savePushSubscription(subscription: unknown): Promise<Resul
     .eq("endpoint", subscription.endpoint)
     .maybeSingle();
 
-  const values = { p256dh: subscription.keys.p256dh, auth: subscription.keys.auth, user_agent: userAgent };
+  const values = { p256dh: subscription.keys.p256dh, auth_secret: subscription.keys.auth, user_agent: userAgent };
   const { error } = existing
     ? await supabase.from("push_subscriptions").update(values).eq("id", existing.id)
     : await supabase.from("push_subscriptions").insert({ user_id: user.id, endpoint: subscription.endpoint, ...values });

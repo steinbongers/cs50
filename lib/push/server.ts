@@ -45,7 +45,7 @@ export async function sendPushToUser(
   for (const sub of subscriptions) {
     try {
       await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_secret } },
         JSON.stringify(payload),
         { TTL: 60 * 60 * 12 },
       );

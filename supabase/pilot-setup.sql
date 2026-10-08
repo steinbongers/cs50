@@ -347,7 +347,7 @@ create table public.push_subscriptions (
   user_id      uuid not null references auth.users (id) on delete cascade,
   endpoint     text not null,
   p256dh       text not null,
-  auth         text not null,
+  auth_secret  text not null,  -- 'auth' als kolomnaam breekt de Supabase SQL Editor
   user_agent   text,
   created_at   timestamptz not null default now(),
   last_used_at timestamptz,
