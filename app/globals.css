@@ -1,0 +1,225 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens
+ * De waarden komen uit de Voorgeschoten-huisstijl (voorgeschoten.com):
+ * accent #0075ff / #005fd1, achtergrond #f6f7f9, inkt #131417, muted #7b8194,
+ * groen #00915a, rood #d43d51, amber #b76e00, border #ebedf1.
+ * Dark mode gebruikt dezelfde tokens met andere waarden.
+ * Gebruik in componenten uitsluitend Tailwind-klassen op basis van deze tokens.
+ */
+:root {
+  color-scheme: light;
+
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-muted: #eef0f4;
+  --border: #ebedf1;
+  --text: #131417;
+  --text-muted: #7b8194;
+
+  --primary: #0075ff;
+  --primary-strong: #005fd1;
+  --primary-soft: #e7f1ff;
+  --on-primary: #ffffff;
+
+  --accent: #b76e00;
+  --accent-soft: #fdf3e0;
+
+  --positive: #00915a;
+  --positive-soft: #e2f6ec;
+  --negative: #d43d51;
+  --negative-soft: #fdeaec;
+
+  --focus: #0075ff;
+  --shadow-elev: 0 1px 2px rgba(19, 20, 23, 0.04), 0 4px 16px rgba(19, 20, 23, 0.05);
+  --shadow-float: 0 8px 24px rgba(19, 20, 23, 0.12), 0 2px 6px rgba(19, 20, 23, 0.06);
+
+  /* Potjespalet: 10 zachte kleuren die bij de hoofdkleuren passen */
+  --cat-blauw: #0a4fa8;   --cat-blauw-soft: #e7f1ff;
+  --cat-indigo: #3b43a0;  --cat-indigo-soft: #e8eafb;
+  --cat-paars: #5b3fa6;   --cat-paars-soft: #efe8fd;
+  --cat-roze: #a8235a;    --cat-roze-soft: #fde6ee;
+  --cat-rood: #a32a3b;    --cat-rood-soft: #fdeaec;
+  --cat-oranje: #a3461c;  --cat-oranje-soft: #fde9dc;
+  --cat-geel: #8a5300;    --cat-geel-soft: #fdf3e0;
+  --cat-groen: #00703f;   --cat-groen-soft: #e2f6ec;
+  --cat-mint: #0d6b66;    --cat-mint-soft: #dff5f3;
+  --cat-grijs: #4b5162;   --cat-grijs-soft: #eef0f4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg: #0f1115;
+    --surface: #171a20;
+    --surface-muted: #1f232b;
+    --border: #262b34;
+    --text: #f2f3f5;
+    --text-muted: #8a90a0;
+
+    --primary: #4d9bff;
+    --primary-strong: #78b3ff;
+    --primary-soft: #14294a;
+    --on-primary: #0b1a33;
+
+    --accent: #e0a63c;
+    --accent-soft: #332507;
+
+    --positive: #3ccf8e;
+    --positive-soft: #0f2d21;
+    --negative: #ff7a8a;
+    --negative-soft: #3a1a20;
+
+    --focus: #78b3ff;
+    --shadow-elev: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+    --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
+
+    --cat-blauw: #9cc6ff;   --cat-blauw-soft: #13284a;
+    --cat-indigo: #b4b9f7;  --cat-indigo-soft: #23264d;
+    --cat-paars: #cbb8fb;   --cat-paars-soft: #2c2350;
+    --cat-roze: #f7a8c8;    --cat-roze-soft: #47182d;
+    --cat-rood: #f5a3ad;    --cat-rood-soft: #461c23;
+    --cat-oranje: #f5b793;  --cat-oranje-soft: #45241a;
+    --cat-geel: #f0cd7a;    --cat-geel-soft: #3e2e0f;
+    --cat-groen: #8fe0b7;   --cat-groen-soft: #11311f;
+    --cat-mint: #8fded8;    --cat-mint-soft: #0f302e;
+    --cat-grijs: #b8bdc9;   --cat-grijs-soft: #262a33;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0f1115;
+  --surface: #171a20;
+  --surface-muted: #1f232b;
+  --border: #262b34;
+  --text: #f2f3f5;
+  --text-muted: #8a90a0;
+
+  --primary: #4d9bff;
+  --primary-strong: #78b3ff;
+  --primary-soft: #14294a;
+  --on-primary: #0b1a33;
+
+  --accent: #e0a63c;
+  --accent-soft: #332507;
+
+  --positive: #3ccf8e;
+  --positive-soft: #0f2d21;
+  --negative: #ff7a8a;
+  --negative-soft: #3a1a20;
+
+  --focus: #78b3ff;
+  --shadow-elev: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
+
+  --cat-blauw: #9cc6ff;   --cat-blauw-soft: #13284a;
+  --cat-indigo: #b4b9f7;  --cat-indigo-soft: #23264d;
+  --cat-paars: #cbb8fb;   --cat-paars-soft: #2c2350;
+  --cat-roze: #f7a8c8;    --cat-roze-soft: #47182d;
+  --cat-rood: #f5a3ad;    --cat-rood-soft: #461c23;
+  --cat-oranje: #f5b793;  --cat-oranje-soft: #45241a;
+  --cat-geel: #f0cd7a;    --cat-geel-soft: #3e2e0f;
+  --cat-groen: #8fe0b7;   --cat-groen-soft: #11311f;
+  --cat-mint: #8fded8;    --cat-mint-soft: #0f302e;
+  --cat-grijs: #b8bdc9;   --cat-grijs-soft: #262a33;
+}
+
+/* Tailwind-thema: alleen onze tokens, geen standaardpalet met losse hexcodes. */
+@theme inline {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-focus: var(--focus);
+
+  --color-cat-blauw: var(--cat-blauw);     --color-cat-blauw-soft: var(--cat-blauw-soft);
+  --color-cat-indigo: var(--cat-indigo);   --color-cat-indigo-soft: var(--cat-indigo-soft);
+  --color-cat-paars: var(--cat-paars);     --color-cat-paars-soft: var(--cat-paars-soft);
+  --color-cat-roze: var(--cat-roze);       --color-cat-roze-soft: var(--cat-roze-soft);
+  --color-cat-rood: var(--cat-rood);       --color-cat-rood-soft: var(--cat-rood-soft);
+  --color-cat-oranje: var(--cat-oranje);   --color-cat-oranje-soft: var(--cat-oranje-soft);
+  --color-cat-geel: var(--cat-geel);       --color-cat-geel-soft: var(--cat-geel-soft);
+  --color-cat-groen: var(--cat-groen);     --color-cat-groen-soft: var(--cat-groen-soft);
+  --color-cat-mint: var(--cat-mint);       --color-cat-mint-soft: var(--cat-mint-soft);
+  --color-cat-grijs: var(--cat-grijs);     --color-cat-grijs-soft: var(--cat-grijs-soft);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 1.25rem; /* 20px */
+  --radius-card-lg: 1.5rem; /* 24px */
+  --radius-control: 0.875rem; /* 14px */
+
+  --shadow-card: var(--shadow-elev);
+  --shadow-float: var(--shadow-float);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-bg text-text font-sans antialiased;
+    min-height: 100dvh;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
+}
