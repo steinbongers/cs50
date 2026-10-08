@@ -2,43 +2,66 @@ import type { Metadata } from "next";
 import { CategoryBadge } from "@/components/categories/category-badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader } from "@/components/ui/page-header";
 import { IconJar } from "@/components/ui/icons";
-import { requireUser } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { PageHeader } from "@/components/ui/page-header";
+import { ensureProfile, requireUser } from "@/lib/auth";
+import { VOORGESCHOTEN_CATEGORY } from "@/lib/categories/types";
+import { formatEuroWhole } from "@/lib/format";
+import { currentPeriod } from "@/lib/periods";
+import { getActiveCategories, getOpenShares } from "@/lib/transactions/queries";
+import { SharesList } from "./shares-list";
 
 export const metadata: Metadata = { title: "Potjes" };
 
 export default async function PotjesPage() {
-  await requireUser();
-  const supabase = await createClient();
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("archived", false)
-    .order("sort_order", { ascending: true });
+  const user = await requireUser();
+  const profile = await ensureProfile(user);
+  const period = currentPeriod(profile.salary_day);
+  const [categories, openShares] = await Promise.all([getActiveCategories(period), getOpenShares()]);
 
-  const list = categories ?? [];
+  const potjes = categories.filter((c) => c.systemKey === null);
+  const openTotal = openShares.reduce((a, s) => a + s.amount, 0);
 
   return (
     <>
-      <PageHeader title="Potjes" subtitle="Bedragen en trends volgen in fase 4" />
-      <div className="px-4">
-        {list.length === 0 ? (
+      <PageHeader title="Potjes" subtitle={period.label.charAt(0).toUpperCase() + period.label.slice(1)} />
+      <div className="flex flex-col gap-4 px-4">
+        {potjes.length === 0 ? (
           <EmptyState icon={<IconJar size={28} />} title="Nog geen potjes" description="Kies je potjes in de onboarding." />
         ) : (
           <Card padding="none" className="divide-y">
-            {list.map((category) => (
+            {potjes.map((category) => (
               <div key={category.id} className="flex min-h-14 items-center gap-3 px-4 py-2.5">
                 <CategoryBadge icon={category.icon} color={category.color} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{category.name}</p>
-                  {category.is_income && <p className="text-xs text-text-muted">Inkomen</p>}
+                  {category.isIncome && <p className="text-xs text-text-muted">Inkomen</p>}
                 </div>
+                <p className="text-sm font-medium tabular-nums text-text-muted">
+                  {category.spentThisPeriod === 0 ? "" : formatEuroWhole(category.spentThisPeriod)}
+                </p>
               </div>
             ))}
           </Card>
         )}
+
+        <section aria-labelledby="voorgeschoten-title">
+          <Card padding="none">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <CategoryBadge icon={VOORGESCHOTEN_CATEGORY.icon} color={VOORGESCHOTEN_CATEGORY.color} />
+              <div className="min-w-0 flex-1">
+                <h2 id="voorgeschoten-title" className="font-medium">
+                  {VOORGESCHOTEN_CATEGORY.name}
+                </h2>
+                <p className="text-xs text-text-muted">Geld dat anderen je nog terugbetalen</p>
+              </div>
+              {openTotal > 0 && <p className="text-sm font-medium tabular-nums">{formatEuroWhole(openTotal)} open</p>}
+            </div>
+            <div className="border-t">
+              <SharesList shares={openShares} />
+            </div>
+          </Card>
+        </section>
       </div>
     </>
   );

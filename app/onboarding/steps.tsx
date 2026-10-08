@@ -5,7 +5,8 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 
 const STEPS = [
   { path: "/onboarding/potjes", label: "Potjes kiezen" },
-  { path: "/onboarding/bron", label: "Transacties toevoegen" },
+  { path: "/onboarding/salarisdag", label: "Salarisdag" },
+  { path: "/onboarding/bron", label: "Bank koppelen" },
   { path: "/onboarding/klaar", label: "Beginnen" },
 ];
 

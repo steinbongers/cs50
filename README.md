@@ -18,6 +18,7 @@ De app heeft nog geen naam: zie `config/app.ts` (`APP_NAME`).
 
 - `npm run typecheck` — TypeScript
 - `npm run lint` — ESLint
+- `npm test` — unittests (tekst opschonen, salarisperiode, verdeling)
 - `npm run build` — productiebuild
 
 ## Structuur
@@ -28,3 +29,4 @@ De app heeft nog geen naam: zie `config/app.ts` (`APP_NAME`).
 - `lib/` — Supabase-clients, auth (DAL), formattering, potjes.
 - `supabase/migrations/` — SQL-migraties met Row Level Security.
 - `docs/design.md` — design tokens en herkomst van het kleurenpalet.
+- `docs/beslissingen.md` — productkeuzes die leidend zijn boven de spec.

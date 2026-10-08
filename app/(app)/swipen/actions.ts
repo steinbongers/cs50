@@ -1,44 +1,109 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
+import { ensureVoorgeschotenCategory } from "@/lib/categories/system";
+import { MAX_CATEGORIES, MAX_CATEGORY_NAME_LENGTH } from "@/lib/categories/defaults";
+import { DEFAULT_CATEGORY_ICON, isCategoryIcon } from "@/lib/categories/icons";
+import { isCategoryColor } from "@/lib/categories/palette";
+import type { CategoryDraft } from "@/lib/categories/types";
 import { logEvent } from "@/lib/events";
 import { createClient } from "@/lib/supabase/server";
+import { MAX_SPLIT_PERSONS, MIN_SPLIT_PERSONS, splitEqually } from "@/lib/transactions/split";
+import type { CategoryOption } from "@/lib/transactions/queries";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 const GENERIC_ERROR = "Opslaan lukte niet. Probeer het nog eens.";
 
+export interface SplitInput {
+  /** Totaal aantal personen, inclusief jijzelf. */
+  persons: number;
+  /** Hoe het geld terugkomt: via je rekening (blijft open) of anders (direct afgehandeld). */
+  method: "bank" | "other";
+  /** Optionele namen van de anderen, in volgorde. */
+  names?: string[];
+}
+
 function isUuid(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value);
 }
 
-/** Zet een transactie in een potje. Dit is de kernhandeling van de app. */
+function isValidSplit(value: unknown): value is SplitInput {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.persons === "number" &&
+    Number.isInteger(v.persons) &&
+    v.persons >= MIN_SPLIT_PERSONS &&
+    v.persons <= MAX_SPLIT_PERSONS &&
+    (v.method === "bank" || v.method === "other") &&
+    (v.names === undefined || (Array.isArray(v.names) && v.names.every((n) => typeof n === "string")))
+  );
+}
+
+/**
+ * Zet een transactie in een potje. Dit is de kernhandeling van de app.
+ * Met `split` gaat alleen jouw deel naar het potje; de delen van de anderen
+ * komen in Voorgeschoten (open) of zijn direct afgehandeld (anders geregeld).
+ */
 export async function assignCategory(
   transactionId: string,
   categoryId: string,
   durationMs: number,
+  split?: SplitInput,
 ): Promise<ActionResult> {
   const user = await requireUser();
   if (!isUuid(transactionId) || !isUuid(categoryId)) return { ok: false, error: GENERIC_ERROR };
+  if (split !== undefined && !isValidSplit(split)) return { ok: false, error: GENERIC_ERROR };
 
   const supabase = await createClient();
 
-  // Het potje moet van deze gebruiker zijn en actief.
   const { data: category } = await supabase
     .from("categories")
-    .select("id")
+    .select("id, system_key")
     .eq("id", categoryId)
     .eq("user_id", user.id)
     .eq("archived", false)
     .maybeSingle();
   if (!category) return { ok: false, error: "Dit potje bestaat niet (meer)." };
+  if (category.system_key) return { ok: false, error: "Dit potje kun je niet kiezen." };
+
+  const { data: transaction } = await supabase
+    .from("transactions")
+    .select("id, amount, skipped_count")
+    .eq("id", transactionId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!transaction) return { ok: false, error: GENERIC_ERROR };
+
+  const amount = Number(transaction.amount);
+  let ownShare: number | null = null;
+
+  // Eventuele oude delen (na ongedaan maken) opruimen.
+  await supabase.from("transaction_shares").delete().eq("transaction_id", transactionId).eq("user_id", user.id);
+
+  if (split && amount < 0) {
+    const result = splitEqually(amount, split.persons);
+    ownShare = result.ownShare;
+    const names = (split.names ?? []).map((n) => n.trim().slice(0, 60));
+    const { error: sharesError } = await supabase.from("transaction_shares").insert(
+      result.otherShares.map((shareAmount, index) => ({
+        user_id: user.id,
+        transaction_id: transactionId,
+        person_name: names[index] || null,
+        amount: shareAmount,
+        status: split.method === "bank" ? ("open" as const) : ("settled_elsewhere" as const),
+      })),
+    );
+    if (sharesError) return { ok: false, error: GENERIC_ERROR };
+  }
 
   const { data: updated, error } = await supabase
     .from("transactions")
-    .update({ category_id: categoryId, categorized_at: new Date().toISOString() })
+    .update({ category_id: categoryId, categorized_at: new Date().toISOString(), own_share: ownShare })
     .eq("id", transactionId)
     .eq("user_id", user.id)
-    .select("id, skipped_count")
+    .select("id")
     .maybeSingle();
 
   if (error || !updated) return { ok: false, error: GENERIC_ERROR };
@@ -47,7 +112,73 @@ export async function assignCategory(
     transaction_id: transactionId,
     category_id: categoryId,
     duration_ms: Math.max(0, Math.round(Number.isFinite(durationMs) ? durationMs : 0)),
-    skipped_before: updated.skipped_count,
+    skipped_before: transaction.skipped_count,
+    split_persons: split && amount < 0 ? split.persons : null,
+    split_method: split && amount < 0 ? split.method : null,
+  });
+
+  return { ok: true };
+}
+
+/**
+ * Koppelt een inkomende transactie (Tikkie) aan openstaande delen.
+ * De delen worden 'ontvangen'; de transactie gaat in Voorgeschoten, zodat
+ * ze niet als inkomen telt.
+ */
+export async function settleSharesWithTransaction(
+  transactionId: string,
+  shareIds: string[],
+  durationMs: number,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isUuid(transactionId) || !Array.isArray(shareIds) || shareIds.length === 0 || !shareIds.every(isUuid)) {
+    return { ok: false, error: GENERIC_ERROR };
+  }
+
+  const supabase = await createClient();
+
+  const { data: transaction } = await supabase
+    .from("transactions")
+    .select("id, amount")
+    .eq("id", transactionId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!transaction || Number(transaction.amount) <= 0) {
+    return { ok: false, error: "Alleen inkomend geld kan een terugbetaling zijn." };
+  }
+
+  const { data: shares } = await supabase
+    .from("transaction_shares")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("status", "open")
+    .in("id", shareIds);
+  if (!shares || shares.length !== shareIds.length) {
+    return { ok: false, error: "Een van de delen staat niet (meer) open." };
+  }
+
+  const voorgeschotenId = await ensureVoorgeschotenCategory(supabase, user.id);
+  const now = new Date().toISOString();
+
+  const { error: sharesError } = await supabase
+    .from("transaction_shares")
+    .update({ status: "received", received_transaction_id: transactionId, received_at: now })
+    .eq("user_id", user.id)
+    .in("id", shareIds);
+  if (sharesError) return { ok: false, error: GENERIC_ERROR };
+
+  const { error } = await supabase
+    .from("transactions")
+    .update({ category_id: voorgeschotenId, categorized_at: now, own_share: null })
+    .eq("id", transactionId)
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: GENERIC_ERROR };
+
+  await logEvent("swipe", {
+    transaction_id: transactionId,
+    category_id: voorgeschotenId,
+    duration_ms: Math.max(0, Math.round(Number.isFinite(durationMs) ? durationMs : 0)),
+    repayment_shares: shareIds.length,
   });
 
   return { ok: true };
@@ -59,9 +190,18 @@ export async function undoAssign(transactionId: string): Promise<ActionResult> {
   if (!isUuid(transactionId)) return { ok: false, error: GENERIC_ERROR };
 
   const supabase = await createClient();
+
+  // Delen die bij deze uitgave hoorden weg; delen die deze Tikkie afbetaalde weer open.
+  await supabase.from("transaction_shares").delete().eq("transaction_id", transactionId).eq("user_id", user.id);
+  await supabase
+    .from("transaction_shares")
+    .update({ status: "open", received_transaction_id: null, received_at: null })
+    .eq("received_transaction_id", transactionId)
+    .eq("user_id", user.id);
+
   const { data: updated, error } = await supabase
     .from("transactions")
-    .update({ category_id: null, categorized_at: null })
+    .update({ category_id: null, categorized_at: null, own_share: null })
     .eq("id", transactionId)
     .eq("user_id", user.id)
     .select("id")
@@ -96,6 +236,68 @@ export async function skipTransaction(transactionId: string): Promise<ActionResu
 
   await logEvent("skip", { transaction_id: transactionId, skipped_count: current.skipped_count + 1 });
   return { ok: true };
+}
+
+/** Nieuw potje vanaf het hoofdscherm. Geeft het potje terug als tegel. */
+export async function createCategory(
+  draft: Omit<CategoryDraft, "id" | "enabled">,
+): Promise<{ ok: true; category: CategoryOption } | { ok: false; error: string }> {
+  const user = await requireUser();
+
+  const name = typeof draft.name === "string" ? draft.name.trim().slice(0, MAX_CATEGORY_NAME_LENGTH) : "";
+  if (!name) return { ok: false, error: "Geef het potje een naam." };
+
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("categories")
+    .select("id", { count: "exact", head: true })
+    .eq("archived", false);
+  if ((count ?? 0) >= MAX_CATEGORIES) return { ok: false, error: `Je hebt al ${MAX_CATEGORIES} potjes.` };
+
+  const { data: last } = await supabase
+    .from("categories")
+    .select("sort_order")
+    .eq("user_id", user.id)
+    .is("system_key", null)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({
+      user_id: user.id,
+      name,
+      icon: isCategoryIcon(draft.icon) ? draft.icon : DEFAULT_CATEGORY_ICON,
+      color: isCategoryColor(draft.color) ? draft.color : "grijs",
+      is_income: Boolean(draft.isIncome),
+      sort_order: (last?.sort_order ?? -1) + 1,
+    })
+    .select("id, name, icon, color, is_income, system_key")
+    .single();
+
+  if (error || !data) return { ok: false, error: GENERIC_ERROR };
+
+  return {
+    ok: true,
+    category: {
+      id: data.id,
+      name: data.name,
+      icon: data.icon,
+      color: data.color,
+      isIncome: data.is_income,
+      systemKey: data.system_key,
+      spentThisPeriod: 0,
+    },
+  };
+}
+
+/** Bewaart hoe ver de gebruiker is met de begeleide eerste kaarten. */
+export async function setCoachStep(step: number): Promise<void> {
+  const user = await requireUser();
+  const value = Math.min(Math.max(Math.round(step), 0), 9);
+  const supabase = await createClient();
+  await supabase.from("profiles").update({ coach_step: value }).eq("id", user.id);
 }
 
 /** Registreert het einde van een ronde (alle geladen kaarten verwerkt). */

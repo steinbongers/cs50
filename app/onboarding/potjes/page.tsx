@@ -13,6 +13,7 @@ export default async function OnboardingPotjesPage() {
   const { data: existing } = await supabase
     .from("categories")
     .select("*")
+    .is("system_key", null)
     .order("sort_order", { ascending: true });
 
   const drafts: CategoryDraft[] =

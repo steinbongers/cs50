@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 export interface Decision {
   transaction: OpenTransaction;
   category: CategoryOption;
+  /** Jouw deel bij een gedeelde uitgave; undefined = het hele bedrag. */
+  ownShare?: number;
 }
 
 interface SessionSummaryProps {
@@ -34,9 +36,10 @@ export function SessionSummary({ decisions, skipped, remaining }: SessionSummary
   const reduce = useReducedMotion();
 
   const totals = new Map<string, { category: CategoryOption; spent: number; count: number }>();
-  for (const { transaction, category } of decisions) {
+  for (const { transaction, category, ownShare } of decisions) {
+    if (category.systemKey) continue;
     const entry = totals.get(category.id) ?? { category, spent: 0, count: 0 };
-    if (transaction.amount < 0) entry.spent += -transaction.amount;
+    if (transaction.amount < 0) entry.spent += ownShare ?? -transaction.amount;
     entry.count += 1;
     totals.set(category.id, entry);
   }

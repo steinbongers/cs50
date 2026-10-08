@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { IconBank, IconUpload } from "@/components/ui/icons";
+import { IconBank } from "@/components/ui/icons";
 
-export const metadata: Metadata = { title: "Transacties toevoegen" };
+export const metadata: Metadata = { title: "Bank koppelen" };
 
 export default function OnboardingBronPage() {
   return (
     <div className="flex flex-1 flex-col">
       <div className="px-5 pt-6 pb-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Hoe wil je je transacties toevoegen?</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Koppel je bank</h1>
         <p className="mt-1 text-text-muted">
-          Koppel je bank voor automatische updates, of importeer een CSV-export van je bank.
+          Je logt in bij je eigen bank en geeft toestemming om transacties te lezen. Wij kunnen
+          niets overmaken of wijzigen. Na 90 dagen vraagt je bank opnieuw om toestemming.
         </p>
       </div>
 
@@ -22,17 +23,7 @@ export default function OnboardingBronPage() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-semibold">Bank koppelen</p>
-            <p className="text-sm text-text-muted">Veilig via je eigen bank. Beschikbaar in fase 3.</p>
-          </div>
-        </Card>
-
-        <Card className="flex items-center gap-4 opacity-70" aria-disabled>
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
-            <IconUpload />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold">CSV importeren</p>
-            <p className="text-sm text-text-muted">ING, Rabobank, ABN AMRO of bunq. Beschikbaar in fase 3.</p>
+            <p className="text-sm text-text-muted">ING, Rabobank, ABN AMRO, bunq en meer. Beschikbaar in fase 3.</p>
           </div>
         </Card>
       </div>

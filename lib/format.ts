@@ -41,6 +41,12 @@ const dayFormatter = new Intl.DateTimeFormat(LOCALE, {
   month: "short",
 });
 
+const longDayFormatter = new Intl.DateTimeFormat(LOCALE, {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+
 const longDateFormatter = new Intl.DateTimeFormat(LOCALE, {
   day: "numeric",
   month: "long",
@@ -50,6 +56,12 @@ const longDateFormatter = new Intl.DateTimeFormat(LOCALE, {
 /** "do 3 okt" */
 export function formatDay(date: Date | string): string {
   return dayFormatter.format(typeof date === "string" ? parseISODate(date) : date);
+}
+
+/** "Donderdag 8 oktober", met hoofdletter. */
+export function formatLongDay(date: Date | string): string {
+  const text = longDayFormatter.format(typeof date === "string" ? parseISODate(date) : date);
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 /** "3 oktober 2026" */

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { formatDay, formatSignedEuro } from "@/lib/format";
+import { formatEuro, formatLongDay, formatSignedEuro } from "@/lib/format";
 import type { OpenTransaction } from "@/lib/transactions/queries";
 import { cn } from "@/lib/utils";
 
@@ -26,11 +26,14 @@ const reducedMotion: Variants = {
 
 interface TransactionCardProps {
   transaction: OpenTransaction;
-  incomeHint?: boolean;
+  onOpenDetails: () => void;
 }
 
-/** De transactiekaart bovenin: tegenpartij groot, bedrag eronder, datum en omschrijving klein. */
-export function TransactionCard({ transaction, incomeHint = false }: TransactionCardProps) {
+/**
+ * De transactiekaart bovenin: datum groot, tegenpartij groot, bedrag eronder,
+ * omschrijving en saldo klein. Tik op de kaart voor de volledige banktekst.
+ */
+export function TransactionCard({ transaction, onOpenDetails }: TransactionCardProps) {
   const reduce = useReducedMotion();
   const isIncoming = transaction.amount > 0;
 
@@ -40,37 +43,46 @@ export function TransactionCard({ transaction, incomeHint = false }: Transaction
       initial="enter"
       animate="center"
       exit="exit"
-      className="absolute inset-0 flex flex-col justify-between rounded-card-lg bg-surface p-5 shadow-float will-change-transform"
-      aria-label={`${transaction.counterparty}, ${formatSignedEuro(transaction.amount)}, ${formatDay(transaction.bookingDate)}`}
+      className="absolute inset-0 flex cursor-pointer flex-col justify-between rounded-card-lg bg-surface p-5 text-left shadow-float will-change-transform"
+      aria-label={`${transaction.counterparty}, ${formatSignedEuro(transaction.amount)}, ${formatLongDay(transaction.bookingDate)}. Tik voor de banktekst.`}
+      role="button"
+      tabIndex={0}
+      onClick={onOpenDetails}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpenDetails();
+        }
+      }}
     >
-      <div className="flex items-center justify-between gap-3 text-sm text-text-muted">
-        <span>{formatDay(transaction.bookingDate)}</span>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-base font-medium">
+          {formatLongDay(transaction.bookingDate)}
+          {transaction.bookingTime && <span className="text-text-muted"> · {transaction.bookingTime}</span>}
+        </p>
         {transaction.skippedCount > 0 && (
-          <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-medium">
-            Eerder op later gezet
+          <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-0.5 text-xs font-medium text-text-muted">
+            Eerder op later
           </span>
         )}
       </div>
 
       <div className="min-w-0">
-        <h2 className="line-clamp-2 text-2xl font-semibold leading-tight tracking-tight">
-          {transaction.counterparty}
-        </h2>
+        <h2 className="line-clamp-2 text-2xl font-semibold leading-tight tracking-tight">{transaction.counterparty}</h2>
         <p
           className={cn(
             "mt-1.5 text-3xl font-semibold tabular-nums tracking-tight",
-            isIncoming ? "text-positive" : "text-negative",
+            isIncoming ? "text-positive" : "text-text",
           )}
         >
           {formatSignedEuro(transaction.amount)}
         </p>
       </div>
 
-      <div className="min-h-5 text-sm text-text-muted">
-        {incomeHint && isIncoming ? (
-          <p>Inkomend geld. Kies Inkomen, of het potje waarvan dit een terugbetaling is.</p>
-        ) : (
-          transaction.description && <p className="line-clamp-2">{transaction.description}</p>
+      <div className="flex min-h-5 items-end justify-between gap-3 text-sm text-text-muted">
+        <p className="line-clamp-2 min-w-0 flex-1">{transaction.description ?? ""}</p>
+        {transaction.balanceAfter !== null && (
+          <p className="shrink-0 tabular-nums">Saldo erna {formatEuro(transaction.balanceAfter)}</p>
         )}
       </div>
     </motion.article>

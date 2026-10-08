@@ -10,6 +10,8 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_CATEGORIES } from "../lib/categories/defaults";
+import { VOORGESCHOTEN_CATEGORY } from "../lib/categories/types";
+import { cleanCounterparty, cleanDescription, extractTime } from "../lib/transactions/clean";
 import { dedupeHash } from "../lib/transactions/dedupe";
 import type { Database, SwipeDirection } from "../lib/supabase/types";
 import { toISODate } from "../lib/format";
@@ -137,7 +139,7 @@ async function main() {
 
   await supabase
     .from("profiles")
-    .upsert({ id: userId, display_name: "Test", onboarding_done: true }, { onConflict: "id" });
+    .upsert({ id: userId, display_name: "Test", onboarding_done: true, salary_day: 25, coach_step: 3 }, { onConflict: "id" });
 
   // Potjes
   const directions: Record<string, SwipeDirection> = {
@@ -148,8 +150,8 @@ async function main() {
   };
   const { data: categories, error: catError } = await supabase
     .from("categories")
-    .insert(
-      DEFAULT_CATEGORIES.map((c, i) => ({
+    .insert([
+      ...DEFAULT_CATEGORIES.map((c, i) => ({
         user_id: userId,
         name: c.name,
         icon: c.icon,
@@ -158,7 +160,16 @@ async function main() {
         sort_order: i,
         swipe_direction: directions[c.key] ?? null,
       })),
-    )
+      {
+        user_id: userId,
+        name: VOORGESCHOTEN_CATEGORY.name,
+        icon: VOORGESCHOTEN_CATEGORY.icon,
+        color: VOORGESCHOTEN_CATEGORY.color,
+        is_income: false,
+        sort_order: 999,
+        system_key: VOORGESCHOTEN_CATEGORY.systemKey,
+      },
+    ])
     .select("id, name");
   if (catError || !categories) throw catError;
 
@@ -200,18 +211,31 @@ async function main() {
     date.setDate(today.getDate() - daysAgo);
     const bookingDate = toISODate(date);
     const categorize = categoryKey !== null && daysAgo > 21; // oudere transacties zijn al gelabeld
+    // Ruwe banktekst zoals ING die stuurt, met tijd bij pinbetalingen.
+    const isPin = description === "Betaalautomaat";
+    const hh = String(8 + Math.floor(rand() * 13)).padStart(2, "0");
+    const mm = String(Math.floor(rand() * 60)).padStart(2, "0");
+    const [y, m, d] = bookingDate.split("-");
+    const rawCounterparty = isPin ? `${counterparty.toUpperCase()} NLD` : counterparty;
+    const rawDescription = isPin
+      ? `Pasvolgnr: 003 ${d}-${m}-${y} ${hh}:${mm} Transactie: ${Math.random().toString(36).slice(2, 8).toUpperCase()} Term: 1A2B3C`
+      : description;
+    const time = extractTime(rawDescription);
     rows.push({
       user_id: userId,
       account_id: account.id,
       booking_date: bookingDate,
+      booking_time: time ? `${time}:00` : null,
       amount,
       currency: "EUR",
-      counterparty,
-      description,
+      counterparty: cleanCounterparty(rawCounterparty),
+      description: cleanDescription(rawDescription),
+      raw_counterparty: rawCounterparty,
+      raw_description: rawDescription,
       dedupe_hash: dedupeHash({ bookingDate, amount, counterparty, description }),
       category_id: categorize ? (categoryIdByKey.get(categoryKey) ?? null) : null,
       categorized_at: categorize ? new Date(date.getTime() + 36e5 * 6).toISOString() : null,
-      source: "csv",
+      source: "bank",
     });
   };
 
@@ -247,11 +271,19 @@ async function main() {
     addRow(daysAgo, amount, t.counterparty, t.description, t.categoryKey);
   }
 
+  // Saldo na elke transactie, chronologisch opgebouwd vanaf het huidige saldo.
+  const sorted = [...rows].sort((a, b) => (a.booking_date < b.booking_date ? 1 : a.booking_date > b.booking_date ? -1 : 0));
+  let balance = 1243.57;
+  for (const row of sorted) {
+    row.balance_after = Math.round(balance * 100) / 100;
+    balance -= row.amount;
+  }
+
   const { error: txError } = await supabase.from("transactions").insert(rows);
   if (txError) throw txError;
 
   const open = rows.filter((r) => !r.category_id).length;
-  console.log(`Klaar: ${categories.length} potjes, ${rows.length} transacties (${open} nog te swipen).`);
+  console.log(`Klaar: ${categories.length - 1} potjes (+ Voorgeschoten), ${rows.length} transacties (${open} nog te doen).`);
   console.log(`Inloggen: ${seedEmail} / ${seedPassword}`);
 }
 

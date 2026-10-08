@@ -5,22 +5,13 @@ import { requireUser } from "@/lib/auth";
 import { MAX_CATEGORIES, MAX_CATEGORY_NAME_LENGTH } from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON, isCategoryIcon } from "@/lib/categories/icons";
 import { isCategoryColor } from "@/lib/categories/palette";
+import { ensureVoorgeschotenCategory } from "@/lib/categories/system";
+import type { CategoryDraft } from "@/lib/categories/types";
 import { createClient } from "@/lib/supabase/server";
-import type { SwipeDirection } from "@/lib/supabase/types";
 
-export interface CategoryDraft {
-  /** Aanwezig als het potje al in de database staat. */
-  id?: string;
-  name: string;
-  icon: string;
-  color: string;
-  isIncome: boolean;
-  enabled: boolean;
-}
+export type { CategoryDraft } from "@/lib/categories/types";
 
 export type SaveCategoriesResult = { error: string } | undefined;
-
-const DEFAULT_DIRECTION_ORDER: readonly SwipeDirection[] = ["right", "left", "up", "down"];
 
 function isValidDraft(value: unknown): value is CategoryDraft {
   if (typeof value !== "object" || value === null) return false;
@@ -67,29 +58,18 @@ export async function saveOnboardingCategories(
 
   const { data: existing, error: loadError } = await supabase
     .from("categories")
-    .select("id, swipe_direction")
-    .eq("user_id", user.id);
+    .select("id")
+    .eq("user_id", user.id)
+    .is("system_key", null);
   if (loadError) return { error: "Je potjes konden niet worden geladen." };
 
   const existingIds = new Set((existing ?? []).map((c) => c.id));
-  const hasAnyDirection = (existing ?? []).some((c) => c.swipe_direction !== null);
-
-  // Standaard krijgen de eerste vier aangezette uitgavepotjes een swipe-richting,
-  // alleen als er nog geen richtingen zijn gekozen. Aanpassen kan in fase 2.
-  let directionIndex = 0;
-  const directionFor = (draft: CategoryDraft): SwipeDirection | null => {
-    if (hasAnyDirection || draft.isIncome || !draft.enabled) return null;
-    if (directionIndex >= DEFAULT_DIRECTION_ORDER.length) return null;
-    return DEFAULT_DIRECTION_ORDER[directionIndex++];
-  };
 
   let sortOrder = 0;
   for (const draft of cleaned) {
     const isExisting = draft.id !== undefined && existingIds.has(draft.id);
 
     if (!draft.enabled && !isExisting) continue;
-
-    const direction = directionFor(draft);
 
     if (isExisting) {
       const { error } = await supabase
@@ -100,9 +80,7 @@ export async function saveOnboardingCategories(
           color: draft.color,
           is_income: draft.isIncome,
           archived: !draft.enabled,
-          sort_order: draft.enabled ? sortOrder : 999,
-          ...(direction ? { swipe_direction: direction } : {}),
-          ...(draft.enabled ? {} : { swipe_direction: null }),
+          sort_order: draft.enabled ? sortOrder : 998,
         })
         .eq("id", draft.id!)
         .eq("user_id", user.id);
@@ -115,7 +93,6 @@ export async function saveOnboardingCategories(
         color: draft.color,
         is_income: draft.isIncome,
         sort_order: sortOrder,
-        swipe_direction: direction,
       });
       if (error) return { error: "Opslaan lukte niet. Probeer het opnieuw." };
     }
@@ -123,6 +100,23 @@ export async function saveOnboardingCategories(
     if (draft.enabled) sortOrder++;
   }
 
+  // Het ingebouwde potje voor geld dat je terugkrijgt.
+  await ensureVoorgeschotenCategory(supabase, user.id);
+
+  redirect("/onboarding/salarisdag");
+}
+
+/** Slaat de salarisdag op (null = wisselt of onbekend: dan geldt de kalendermaand). */
+export async function saveSalaryDay(day: number | null): Promise<{ error: string } | undefined> {
+  const user = await requireUser();
+  if (day !== null && (!Number.isInteger(day) || day < 1 || day > 31)) {
+    return { error: "Kies een dag tussen 1 en 31." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .upsert({ id: user.id, salary_day: day }, { onConflict: "id" });
+  if (error) return { error: "Opslaan lukte niet. Probeer het opnieuw." };
   redirect("/onboarding/bron");
 }
 

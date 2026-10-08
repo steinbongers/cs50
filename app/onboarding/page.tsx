@@ -12,7 +12,9 @@ export default async function OnboardingIndexPage() {
   const { count } = await supabase
     .from("categories")
     .select("id", { count: "exact", head: true })
-    .eq("archived", false);
+    .eq("archived", false)
+    .is("system_key", null);
 
-  redirect((count ?? 0) > 0 ? "/onboarding/bron" : "/onboarding/potjes");
+  if ((count ?? 0) === 0) redirect("/onboarding/potjes");
+  redirect(profile.salary_day === null ? "/onboarding/salarisdag" : "/onboarding/bron");
 }

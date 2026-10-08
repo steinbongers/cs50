@@ -7,6 +7,8 @@ export type SwipeDirection = "left" | "right" | "up" | "down";
 export type ConnectionProvider = "enablebanking" | "csv";
 export type ConnectionStatus = "active" | "expiring" | "expired" | "revoked";
 export type TransactionSource = "bank" | "csv";
+export type ShareStatus = "open" | "received" | "settled_elsewhere";
+export type CategorySystemKey = "voorgeschoten";
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -16,7 +18,9 @@ export type ProfileRow = {
   created_at: string;
   onboarding_done: boolean;
   notifications_enabled: boolean;
-}
+  salary_day: number | null;
+  coach_step: number;
+};
 
 export type CategoryRow = {
   id: string;
@@ -29,8 +33,9 @@ export type CategoryRow = {
   monthly_budget: number | null;
   is_income: boolean;
   archived: boolean;
+  system_key: CategorySystemKey | null;
   created_at: string;
-}
+};
 
 export type BankConnectionRow = {
   id: string;
@@ -41,7 +46,7 @@ export type BankConnectionRow = {
   valid_until: string | null;
   status: ConnectionStatus;
   created_at: string;
-}
+};
 
 export type AccountRow = {
   id: string;
@@ -54,7 +59,7 @@ export type AccountRow = {
   last_balance: number | null;
   last_synced_at: string | null;
   created_at: string;
-}
+};
 
 export type TransactionRow = {
   id: string;
@@ -71,8 +76,26 @@ export type TransactionRow = {
   categorized_at: string | null;
   skipped_count: number;
   source: TransactionSource;
+  booking_time: string | null;
+  balance_after: number | null;
+  raw_counterparty: string | null;
+  raw_description: string | null;
+  own_share: number | null;
+  is_internal_transfer: boolean;
   created_at: string;
-}
+};
+
+export type TransactionShareRow = {
+  id: string;
+  user_id: string;
+  transaction_id: string;
+  person_name: string | null;
+  amount: number;
+  status: ShareStatus;
+  received_transaction_id: string | null;
+  received_at: string | null;
+  created_at: string;
+};
 
 export type CategoryRuleRow = {
   id: string;
@@ -80,7 +103,7 @@ export type CategoryRuleRow = {
   counterparty_match: string;
   category_id: string;
   created_at: string;
-}
+};
 
 export type EventRow = {
   id: number;
@@ -88,7 +111,7 @@ export type EventRow = {
   type: string;
   payload: Json;
   created_at: string;
-}
+};
 
 type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
@@ -106,7 +129,12 @@ export type Database = {
         ProfileRow,
         WithOptional<
           ProfileRow,
-          "display_name" | "created_at" | "onboarding_done" | "notifications_enabled"
+          | "display_name"
+          | "created_at"
+          | "onboarding_done"
+          | "notifications_enabled"
+          | "salary_day"
+          | "coach_step"
         >
       >;
       categories: Table<
@@ -121,6 +149,7 @@ export type Database = {
           | "monthly_budget"
           | "is_income"
           | "archived"
+          | "system_key"
           | "created_at"
         >
       >;
@@ -157,7 +186,20 @@ export type Database = {
           | "category_id"
           | "categorized_at"
           | "skipped_count"
+          | "booking_time"
+          | "balance_after"
+          | "raw_counterparty"
+          | "raw_description"
+          | "own_share"
+          | "is_internal_transfer"
           | "created_at"
+        >
+      >;
+      transaction_shares: Table<
+        TransactionShareRow,
+        WithOptional<
+          TransactionShareRow,
+          "id" | "person_name" | "status" | "received_transaction_id" | "received_at" | "created_at"
         >
       >;
       category_rules: Table<CategoryRuleRow, WithOptional<CategoryRuleRow, "id" | "created_at">>;
