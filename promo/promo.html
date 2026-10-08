@@ -1,7 +1,7 @@
 <title>nicetohaveyou welkomstpakket</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,500;9..40,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;700&display=swap">
 <style>
 :root{
   /* Layout: studio-hero met het pakket in 3D naast de belofte; daaronder argumenten, inhoud, werkwijze en prijs in één smalle kolom met brede beeldmomenten */
@@ -50,10 +50,12 @@ p{margin:0}
 .stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:pan-y;cursor:grab}
 .stage canvas:active{cursor:grabbing}
 .stage-knoppen{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:4px;padding:4px;border-radius:999px;background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(8px);box-shadow:0 2px 10px rgb(0 0 0 / .12);z-index:2}
-.stage-knoppen button{font:inherit;font-size:.86rem;font-weight:600;border:0;border-radius:999px;padding:7px 14px;background:transparent;color:var(--ink);cursor:pointer}
+.stage-knoppen button{white-space:nowrap;font:inherit;font-size:.86rem;font-weight:600;border:0;border-radius:999px;padding:7px 14px;background:transparent;color:var(--ink);cursor:pointer}
 .stage-knoppen button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .stage-hint{position:absolute;right:14px;top:12px;font-family:var(--f-mono);font-size:.7rem;color:var(--muted);letter-spacing:.04em;z-index:2}
 .stage-noot{position:absolute;left:14px;top:12px;font-family:var(--f-mono);font-size:.7rem;color:var(--muted);letter-spacing:.04em;z-index:2}
+.stage-noot{max-width:calc(100% - 170px)}
+@media (max-width:640px){.stage-hint{display:none}.stage-noot{max-width:calc(100% - 28px)}}
 .geen3d{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--muted)}
 
 section{padding-block:72px 0}
@@ -126,6 +128,7 @@ section{padding-block:72px 0}
   <section aria-labelledby="h-inhoud">
     <span class="label">Wat erin zit</span>
     <h2 class="kop2" id="h-inhoud">Drie dingen die elke dag op het bureau staan.</h2>
+    <p class="extra" style="margin-top:14px">Een Stanley-fles, een Leuchtturm1917-notitieboek en een Caran d'Ache-pen: drie dingen die je nieuwe collega elke werkdag gebruikt, van merken die mensen ook voor zichzelf kopen.</p>
     <div class="inhoud">
       <article class="item">
         <h3>Drinkfles</h3>
@@ -143,19 +146,20 @@ section{padding-block:72px 0}
         <div class="spec"><span>mat zwart</span><span>naam op de huls, gegraveerd</span></div>
       </article>
     </div>
-    <p class="extra" id="extra">Alles ligt in een witte magneetdoos met vloeipapier, dichtgemaakt met jullie logo. Bovenop ligt een kaartje met een welkomstwoord van de eigen manager.</p>
+    <p class="extra" id="extra">Alles ligt in een witte magneetdoos met vloeipapier, dichtgemaakt met een sticker met jullie logo. Bovenop ligt een kaartje met de naam en een welkomstwoord van de eigen manager. Jullie logo staat klein op de fles; de naam staat op alle drie, met accenten en tussenvoegsels precies goed.</p>
   </section>
 
   <section aria-labelledby="h-werk">
     <span class="label">Zo werkt het</span>
     <h2 class="kop2" id="h-werk">Jullie geven een naam door. De rest regelen wij.</h2>
+    <p class="extra" style="margin-top:14px">Het is bewust één vast pakket. We doen liever één ding perfect dan tien dingen half: jullie hoeven niets te kiezen of samen te stellen.</p>
     <div class="stappen" id="stappen"></div>
   </section>
 
   <div class="prijsblok">
     <div>
       <h2>Eén pakket, één vaste prijs.</h2>
-      <p id="prijs-uitleg">Inclusief gravure van naam en logo, doos, kaartje en levering op kantoor vóór de startdatum.</p>
+      <p id="prijs-uitleg">Inclusief gravure van naam en logo, doos, kaartje en levering op kantoor vóór de startdatum. Geen staffels, geen opstartkosten.</p>
     </div>
     <div class="bedrag" id="bedrag">€ —<small>per nieuwe collega, excl. btw</small></div>
   </div>
@@ -165,7 +169,7 @@ section{padding-block:72px 0}
     <span class="pil licht">nicetohaveyou</span>
   </div>
 
-  <p class="voet" id="voet">Impressie: de weergave is een 3D-model, geen foto. De naam Zoë van der Meer en het klantlogo zijn voorbeelden. Stanley, Leuchtturm1917 en Caran d'Ache zijn merken van hun eigenaren; nicetohaveyou is niet aan die merken verbonden.</p>
+  <p class="voet" id="voet">Impressie: de weergave is een 3D-model, geen foto. De naam Zoë van der Meer en Voorbeeld Labs zijn fictief. De prijs is een indicatie, excl. 21% btw. Stanley, Leuchtturm1917 en Caran d'Ache zijn merken van hun eigenaren; nicetohaveyou is niet aan die merken verbonden.</p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -174,10 +178,8 @@ section{padding-block:72px 0}
   /* ---------- inhoud ---------- */
   const DEMO = {
     naam: 'Zoë van der Meer', roepnaam: 'Zoë',
-    klant: 'Voorbeeld', klantKleur: '#2B44D6',
-    prijs: null,
-    kaartTekst: 'Fijn dat je er bent. We hebben naar je uitgekeken.',
-    kaartAfzender: 'Sanne, je teamleider'
+    klant: 'Voorbeeld Labs', klantKleur: '#F2542D',
+    prijs: 169
   };
   const ARG = [
     ['Een welkom dat bij jullie merk past', 'Je nieuwe collega ziet op dag één meteen: hier hebben ze op mij gerekend.'],
@@ -258,7 +260,7 @@ section{padding-block:72px 0}
   function schaduw(o){ o.traverse(m => { if (m.isMesh){ m.castShadow = true; m.receiveShadow = true; } }); return o; }
 
   /* tekst op textuur */
-  const FONT_GRAV = '"DM Sans", "Helvetica Neue", Arial, sans-serif';
+  const FONT_GRAV = '"Inter", "Helvetica Neue", Arial, sans-serif';
   const FONT_KAART = '"Familjen Grotesk", "Helvetica Neue", Arial, sans-serif';
   function textuur(w, h, teken){
     const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -267,11 +269,20 @@ section{padding-block:72px 0}
     herteken(); return {tex, herteken};
   }
   const hertekenen = [];
-  function logoTekenen(ctx, x, y, s, kleur, metTekst){
-    ctx.save(); ctx.fillStyle = kleur; ctx.strokeStyle = kleur;
-    ctx.lineWidth = s*0.11; ctx.beginPath(); ctx.arc(x, y, s*0.5, 0, Math.PI*2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(x, y, s*0.18, 0, Math.PI*2); ctx.fill();
-    if (metTekst){ ctx.font = '700 ' + (s*0.62) + 'px ' + FONT_GRAV; ctx.textBaseline = 'middle'; ctx.fillText(DEMO.klant.toLowerCase(), x + s*0.75, y + s*0.03); }
+  // fictief woordmerk 'voorbeeld labs': gevulde cirkel, 'voorbeeld' vet, 'labs' regular (Mika)
+  function logoTekenen(ctx, x, y, s, kleur, metTekst, midden){
+    ctx.save(); ctx.fillStyle = kleur; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+    const em = s, kap = em*0.73, r = kap/2;
+    ctx.font = '700 ' + em + 'px ' + FONT_GRAV; const w1 = ctx.measureText('voorbeeld').width;
+    ctx.font = '400 ' + em + 'px ' + FONT_GRAV; const w2 = ctx.measureText(' labs').width;
+    const totaal = metTekst ? kap + em*0.35 + w1 + w2 : kap;
+    let x0 = midden ? x - totaal/2 : x;
+    ctx.beginPath(); ctx.arc(x0 + r, y - r, r, 0, Math.PI*2); ctx.fill();
+    if (metTekst){
+      const tx = x0 + kap + em*0.35;
+      ctx.font = '700 ' + em + 'px ' + FONT_GRAV; ctx.fillText('voorbeeld', tx, y);
+      ctx.font = '400 ' + em + 'px ' + FONT_GRAV; ctx.fillText(' labs', tx + w1, y);
+    }
     ctx.restore();
   }
 
@@ -304,7 +315,7 @@ section{padding-block:72px 0}
   vloei(13, B - 2, -B/2 - 0.2, 0, 0, 6);
   vloei(13, B - 2, B/2 + 0.2, 0, Math.PI, 6);
   // sluitsticker
-  const sticker = textuur(256, 256, (ctx, w) => { ctx.fillStyle = DEMO.klantKleur; ctx.beginPath(); ctx.arc(w/2, w/2, w/2 - 2, 0, Math.PI*2); ctx.fill(); logoTekenen(ctx, w/2, w/2, w*0.42, '#ffffff', false); });
+  const sticker = textuur(512, 512, (ctx, w) => { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(w/2, w/2, w/2 - 2, 0, Math.PI*2); ctx.fill(); logoTekenen(ctx, w/2, w/2 + 18, 46, DEMO.klantKleur, true, true); });
   hertekenen.push(sticker.herteken);
   const stickerM = new T.Mesh(new T.CircleGeometry(2, 40), new T.MeshStandardMaterial({map: sticker.tex, roughness: 0.6, transparent: true}));
   stickerM.rotation.x = -Math.PI/2; stickerM.position.set(-B/2 - 3.2, 2.6, 8); stickerM.rotation.y = 0; doos.add(stickerM);
@@ -324,8 +335,8 @@ section{padding-block:72px 0}
     const boog = 1.25; // radialen voor de tekst
     const grav = textuur(1024, 512, (ctx, w, h) => {
       ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = '700 96px ' + FONT_GRAV; ctx.fillText(DEMO.naam, w/2, h*0.36);
-      logoTekenen(ctx, w/2 - 150, h*0.72, 88, '#ffffff', true);
+      ctx.font = '500 104px ' + FONT_GRAV; ctx.fillText(DEMO.naam, w/2, h*0.38);
+      logoTekenen(ctx, w/2, h*0.74, 58, '#ffffff', true, true);
     });
     hertekenen.push(grav.herteken);
     const gravM = new T.MeshStandardMaterial({color: lin('#cfd3d8'), metalness: 1, roughness: 0.32, alphaMap: grav.tex, transparent: true, emissive: 0x6f7680, emissiveMap: grav.tex, emissiveIntensity: 0.12});
@@ -341,7 +352,7 @@ section{padding-block:72px 0}
     const blad = new T.Mesh(new T.BoxGeometry(14.0, 1.3, 20.5), std('#efece2', 0.95, 0)); blad.position.set(0.2, 0.8, 0); g.add(blad);
     const elastiek = new T.Mesh(new T.BoxGeometry(0.5, 1.7, 21.1), std('#0c0c0d', 0.6, 0)); elastiek.position.set(5.6, 0.82, 0); g.add(elastiek);
     const lint = new T.Mesh(new T.BoxGeometry(0.6, 0.05, 3), std('#1d1d22', 0.7, 0)); lint.position.set(-2, 0.4, 11.4); g.add(lint);
-    const grav = textuur(1024, 256, (ctx, w, h) => { ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '700 104px ' + FONT_GRAV; ctx.fillText(DEMO.naam, w/2, h/2); });
+    const grav = textuur(1024, 256, (ctx, w, h) => { ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '500 104px ' + FONT_GRAV; ctx.fillText(DEMO.naam, w/2, h/2); });
     hertekenen.push(grav.herteken);
     const gravM = new T.MeshStandardMaterial({color: lin('#a59f93'), roughness: 0.9, alphaMap: grav.tex, transparent: true, emissive: 0x5b564d, emissiveMap: grav.tex, emissiveIntensity: 0.1});
     const vlak = new T.Mesh(new T.PlaneGeometry(10.5, 2.6), gravM); vlak.rotation.x = -Math.PI/2; vlak.position.set(-0.6, 1.62, 5.6); g.add(vlak);
@@ -367,12 +378,9 @@ section{padding-block:72px 0}
     const g = new T.Group();
     const kaart = textuur(840, 1184, (ctx, w, h) => {
       ctx.fillStyle = '#fbfbf8'; ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = '#121316'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-      ctx.font = '700 104px ' + FONT_KAART; ctx.fillText('Welkom,', 70, 300); ctx.fillText(DEMO.roepnaam + '.', 70, 410);
-      ctx.font = '400 40px ' + FONT_KAART; ctx.fillStyle = '#3c3f45';
-      wrap(ctx, DEMO.kaartTekst, 70, 520, w - 140, 54);
-      ctx.fillStyle = '#5b5f67'; ctx.font = '400 34px ' + FONT_KAART; ctx.fillText('— ' + DEMO.kaartAfzender, 70, 760);
-      logoTekenen(ctx, 100, h - 120, 56, DEMO.klantKleur, true);
+      ctx.fillStyle = '#1A1A1A'; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      ctx.font = '500 96px ' + FONT_GRAV; ctx.fillText('Welkom, ' + DEMO.roepnaam, w/2, h*0.44);
+      logoTekenen(ctx, w/2, h - 110, 40, DEMO.klantKleur, true, true);
     });
     hertekenen.push(kaart.herteken);
     const m = new T.Mesh(new T.BoxGeometry(10.5, 0.08, 14.8), [papier, papier, new T.MeshStandardMaterial({map: kaart.tex, roughness: 0.85}), papier, papier, papier]);
@@ -463,15 +471,15 @@ section{padding-block:72px 0}
     const ie = 1 - Math.pow(1 - intro, 3);
     const u = stand === 'uit' ? overgang : 1 - overgang;
     camUit += ((stand === 'uit' ? 1 : 0) - camUit)*Math.min(1, dt*2.5);
-    const r = (118 - ie*44) + camUit*30;
-    const hoogte = (96 - ie*10) - camUit*22;
+    const r = (104 - ie*46) + camUit*46;
+    const hoogte = (90 - ie*12) - camUit*14;
     camera.position.set(0, hoogte, r);
     camera.lookAt(0, 3 + camUit*3, 2 + camUit*7);
     renderer.render(scene, camera);
   }
   requestAnimationFrame(frame);
   if (document.fonts && document.fonts.load){
-    Promise.all([document.fonts.load('700 96px "DM Sans"'), document.fonts.load('700 96px "Familjen Grotesk"'), document.fonts.load('400 40px "Familjen Grotesk"')]).then(() => hertekenen.forEach(f => f())).catch(() => {});
+    Promise.all([document.fonts.load('500 96px "Inter"'), document.fonts.load('700 40px "Inter"'), document.fonts.load('400 40px "Inter"'), document.fonts.load('700 96px "Familjen Grotesk"'), document.fonts.load('400 40px "Familjen Grotesk"')]).then(() => hertekenen.forEach(f => f())).catch(() => {});
   }
   window.__demo = DEMO; window.__kies = kies; window.__herteken = () => { hertekenen.forEach(f => f()); vulPrijs(); };
 })();
