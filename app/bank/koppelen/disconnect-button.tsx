@@ -27,22 +27,22 @@ export function DisconnectButton() {
         disabled={isPending}
         className="min-h-11 text-sm font-medium text-negative disabled:opacity-60"
       >
-        Koppeling verwijderen
+        Bank ontkoppelen
       </button>
       {error && <p className="text-sm text-negative">{error}</p>}
 
       <Sheet
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        title="Bankkoppeling verwijderen?"
-        description="Je transacties blijven bewaard; er komen alleen geen nieuwe meer binnen."
+        title="Bank ontkoppelen?"
+        description="Je kaartjes blijven bewaard. Er komen alleen geen nieuwe meer binnen."
       >
         <div className="flex gap-2">
           <Button variant="ghost" fullWidth onClick={() => setConfirmOpen(false)}>
             Toch niet
           </Button>
           <Button variant="danger" fullWidth onClick={run} loading={isPending}>
-            Verwijderen
+            Ontkoppelen
           </Button>
         </div>
       </Sheet>

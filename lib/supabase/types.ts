@@ -43,6 +43,7 @@ export type CategoryRow = {
   sort_order: number;
   swipe_direction: SwipeDirection | null;
   monthly_budget: number | null;
+  goal_amount: number | null;
   is_income: boolean;
   archived: boolean;
   system_key: CategorySystemKey | null;
@@ -111,6 +112,7 @@ export type TransactionRow = {
   raw_description: string | null;
   own_share: number | null;
   is_internal_transfer: boolean;
+  note: string | null;
   created_at: string;
 };
 
@@ -139,6 +141,14 @@ export type EventRow = {
   user_id: string;
   type: string;
   payload: Json;
+  created_at: string;
+};
+
+/** Anonieme regel per verwijderd account: geen user_id, alleen cohort en duur. */
+export type ChurnLogRow = {
+  id: number;
+  cohort_week: string;
+  days_since_signup: number;
   created_at: string;
 };
 
@@ -179,6 +189,7 @@ export type Database = {
           | "sort_order"
           | "swipe_direction"
           | "monthly_budget"
+          | "goal_amount"
           | "is_income"
           | "archived"
           | "system_key"
@@ -235,6 +246,7 @@ export type Database = {
           | "raw_description"
           | "own_share"
           | "is_internal_transfer"
+          | "note"
           | "created_at"
         >
       >;
@@ -248,6 +260,7 @@ export type Database = {
       category_rules: Table<CategoryRuleRow, WithOptional<CategoryRuleRow, "id" | "created_at">>;
       events: Table<EventRow, WithOptional<EventRow, "id" | "payload" | "created_at">>;
       invite_codes: Table<InviteCodeRow, WithOptional<InviteCodeRow, "note" | "max_uses" | "uses" | "created_at" | "expires_at">>;
+      churn_log: Table<ChurnLogRow, WithOptional<ChurnLogRow, "id" | "created_at">>;
       push_subscriptions: Table<
         PushSubscriptionRow,
         WithOptional<PushSubscriptionRow, "id" | "user_agent" | "created_at" | "last_used_at">

@@ -14,6 +14,9 @@ import { logEvent } from "@/lib/events";
 import { createClient } from "@/lib/supabase/server";
 import { BANK_AUTH_COOKIE, type BankAuthCookie } from "@/lib/bank/auth-cookie";
 
+/** Ook gebruikt op /bank/koppelen als de koppeling niet aanstaat. */
+const BANK_NOT_CONFIGURED = "Bank koppelen kan nu even niet. We zijn ermee bezig.";
+
 /** Toestemming vragen voor 90 dagen (het maximum bij de meeste Nederlandse banken). */
 const CONSENT_DAYS = 90;
 
@@ -42,9 +45,14 @@ export async function startBankConnection(
   reconnect = false,
 ): Promise<{ url: string } | { error: string }> {
   await requireUser();
-  if (!isEnableBankingConfigured()) return { error: "De bankkoppeling is nog niet ingesteld op deze server." };
+  if (!isEnableBankingConfigured()) {
+    await logEvent("bank_connect_failed", { reason: "niet_ingesteld" });
+    return { error: BANK_NOT_CONFIGURED };
+  }
   const name = typeof aspspName === "string" ? aspspName.trim().slice(0, 80) : "";
-  if (!name) return { error: "Kies een bank." };
+  if (!name) return { error: "Kies eerst je bank." };
+  const isReconnect = reconnect === true;
+  await logEvent("bank_connect_started", { reconnect: isReconnect });
 
   const state = randomUUID();
   const origin = await appOrigin();
@@ -62,11 +70,12 @@ export async function startBankConnection(
     });
     url = response.url;
   } catch {
-    return { error: "De bank is nu niet bereikbaar. Probeer het zo nog eens." };
+    await logEvent("bank_connect_failed", { reason: "start" });
+    return { error: "Je bank is nu even niet bereikbaar. Probeer het zo nog eens." };
   }
 
   const cookieStore = await cookies();
-  const payload: BankAuthCookie = { state, aspsp: name, next: safeNext(next), reconnect };
+  const payload: BankAuthCookie = { state, aspsp: name, next: safeNext(next), reconnect: isReconnect };
   cookieStore.set(BANK_AUTH_COOKIE, JSON.stringify(payload), {
     httpOnly: true,
     sameSite: "lax",
@@ -82,14 +91,19 @@ export type RefreshResult =
   | { ok: true; inserted: number }
   | { ok: false; error: string; retryInMinutes?: number };
 
-/** Handmatig verversen, hoogstens eens per 15 minuten. */
+/** Handmatig verversen, hoogstens eens per 15 minuten. Bij een fout: `sync_failed` met een vaste reden. */
 export async function refreshConnection(): Promise<RefreshResult> {
   const user = await requireUser();
   const supabase = await createClient();
   const connection = await getPrimaryConnection(supabase, user.id);
-  if (!connection) return { ok: false, error: "Er is nog geen bank gekoppeld." };
-  if (statusFor(connection) !== "active" && statusFor(connection) !== "expiring") {
-    return { ok: false, error: "De bankkoppeling is verlopen. Koppel opnieuw." };
+  if (!connection) {
+    await logEvent("sync_failed", { reason: "geen_koppeling" });
+    return { ok: false, error: "Je hebt nog geen bank gekoppeld." };
+  }
+  const status = statusFor(connection);
+  if (status !== "active" && status !== "expiring") {
+    await logEvent("sync_failed", { reason: "ontkoppeld" });
+    return { ok: false, error: "Je bank is ontkoppeld. Koppel opnieuw om te verversen." };
   }
 
   if (connection.last_manual_sync_at) {
@@ -101,12 +115,23 @@ export async function refreshConnection(): Promise<RefreshResult> {
   }
 
   if (!(await verifyCredentials())) {
-    return { ok: false, error: "De bankkoppeling is tijdelijk niet beschikbaar. Probeer het later." };
+    await logEvent("sync_failed", { reason: "niet_bereikbaar" });
+    return { ok: false, error: "Je bank is nu even niet bereikbaar. Probeer het later nog eens." };
   }
 
   const result = await syncConnection(supabase, connection, { manual: true });
   refresh();
-  if (result.error) return { ok: false, error: result.error };
+  if (result.error) {
+    const disconnected = result.expired === true || result.status === "expired" || result.status === "revoked";
+    // Geen banktekst in de meting of op het scherm: alleen een vaste reden.
+    await logEvent("sync_failed", { reason: disconnected ? "verlopen" : "sync" });
+    return {
+      ok: false,
+      error: disconnected
+        ? "Je bank is ontkoppeld. Koppel opnieuw om te verversen."
+        : "Verversen lukte niet. Probeer het zo nog eens.",
+    };
+  }
   return { ok: true, inserted: result.inserted };
 }
 
@@ -115,7 +140,7 @@ export async function disconnectBank(): Promise<{ ok: true } | { ok: false; erro
   const user = await requireUser();
   const supabase = await createClient();
   const connection = await getPrimaryConnection(supabase, user.id);
-  if (!connection) return { ok: false, error: "Er is geen bankkoppeling." };
+  if (!connection) return { ok: false, error: "Je hebt geen bank gekoppeld." };
 
   if (connection.session_id) {
     try {

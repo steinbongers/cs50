@@ -4,7 +4,7 @@ import { getSupabaseEnv, isSupabaseConfigured } from "./env";
 
 /** Paden die zonder sessie bereikbaar zijn. */
 const PUBLIC_PATHS = ["/welkom", "/login", "/registreren", "/privacy"];
-const PUBLIC_PREFIXES = ["/auth/", "/api/cron"];
+const PUBLIC_PREFIXES = ["/auth/", "/api/cron", "/api/events/"];
 
 /** Paden waar een ingelogde gebruiker niets te zoeken heeft. */
 const AUTH_ONLY_PATHS = ["/welkom", "/login", "/registreren"];

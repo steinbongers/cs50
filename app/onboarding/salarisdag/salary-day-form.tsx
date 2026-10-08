@@ -3,10 +3,12 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { saveSalaryDay } from "../actions";
+import { StepFooter } from "../steps";
+import { submitSalaryDay } from "./actions";
 
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
+/** Kies zelf je salarisdag, of de kalendermaand. Er staat niets voorgeselecteerd. */
 export function SalaryDayForm({ initialDay }: { initialDay: number | null }) {
   const [day, setDay] = useState<number | null>(initialDay);
   const [unknown, setUnknown] = useState(false);
@@ -16,7 +18,7 @@ export function SalaryDayForm({ initialDay }: { initialDay: number | null }) {
   function save() {
     setError(null);
     startTransition(async () => {
-      const result = await saveSalaryDay(unknown ? null : day);
+      const result = await submitSalaryDay(unknown ? null : day);
       if (result?.error) setError(result.error);
     });
   }
@@ -24,7 +26,7 @@ export function SalaryDayForm({ initialDay }: { initialDay: number | null }) {
   return (
     <div className="flex flex-1 flex-col">
       <div className="px-4">
-        <div className="grid grid-cols-7 gap-1.5 rounded-card bg-surface p-3 shadow-card" role="radiogroup" aria-label="Dag van de maand">
+        <div className="grid grid-cols-7 gap-1.5" role="radiogroup" aria-label="Dag van de maand">
           {DAYS.map((d) => {
             const selected = !unknown && day === d;
             return (
@@ -38,8 +40,8 @@ export function SalaryDayForm({ initialDay }: { initialDay: number | null }) {
                   setUnknown(false);
                 }}
                 className={cn(
-                  "flex aspect-square min-h-11 items-center justify-center rounded-xl text-sm font-medium tabular-nums transition-colors duration-150",
-                  selected ? "bg-primary text-on-primary" : "hover:bg-surface-muted",
+                  "flex h-11 items-center justify-center rounded-full text-[15px] font-medium tabular-nums transition-[background-color,color,transform] duration-150 active:scale-[0.96]",
+                  selected ? "bg-primary text-on-primary" : "text-text hover:bg-surface-muted",
                 )}
               >
                 {d}
@@ -47,32 +49,33 @@ export function SalaryDayForm({ initialDay }: { initialDay: number | null }) {
             );
           })}
         </div>
-        <p className="mt-2 px-1 text-xs text-text-muted">
-          Valt de dag in het weekend, dan rekenen we met de vrijdag ervoor.
+        <p className="mt-3 px-1 text-[13px] leading-[18px] text-text-muted">
+          Valt die dag in het weekend? Dan tellen we vanaf de vrijdag ervoor.
         </p>
 
         <button
           type="button"
-          role="checkbox"
-          aria-checked={unknown}
+          aria-pressed={unknown}
           onClick={() => setUnknown((u) => !u)}
-          className="mt-4 flex min-h-12 w-full items-center justify-between gap-3 rounded-card bg-surface px-4 py-2 text-left shadow-card"
+          className="mt-5 flex min-h-[52px] w-full items-center justify-between gap-3 rounded-card bg-surface px-4 py-2.5 text-left shadow-card"
         >
           <span>
-            <span className="block text-sm font-medium">Wisselt, of weet ik niet</span>
-            <span className="block text-xs text-text-muted">Dan rekenen we gewoon met de kalendermaand.</span>
+            <span className="block text-[15px] font-medium">Wisselt, of weet ik niet</span>
+            <span className="block text-[13px] leading-[18px] text-text-muted">Dan gewoon de kalendermaand.</span>
           </span>
           <span
             className={cn(
-              "flex size-6 shrink-0 items-center justify-center rounded-full border-2",
+              "flex size-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-150",
               unknown ? "border-primary bg-primary" : "border-border",
             )}
             aria-hidden
-          />
+          >
+            {unknown && <span className="size-2 rounded-full bg-on-primary" />}
+          </span>
         </button>
       </div>
 
-      <div className="safe-bottom mt-auto px-4 pt-6 pb-5">
+      <StepFooter>
         {error && (
           <p className="mb-3 rounded-control bg-negative-soft px-4 py-3 text-sm text-negative" role="alert">
             {error}
@@ -81,7 +84,7 @@ export function SalaryDayForm({ initialDay }: { initialDay: number | null }) {
         <Button size="lg" fullWidth onClick={save} loading={isPending} disabled={!unknown && day === null}>
           Verder
         </Button>
-      </div>
+      </StepFooter>
     </div>
   );
 }

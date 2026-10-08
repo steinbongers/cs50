@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/ui/page-header";
 import { ensureProfile, requireUser } from "@/lib/auth";
-import { spentPerCategory, weeklySeries } from "@/lib/insights/compute";
+import { logEvent } from "@/lib/events";
+import { spendOf, spentPerCategory, weeklySeries, type CatLite } from "@/lib/insights/compute";
 import { loadInsightData } from "@/lib/insights/queries";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { createClient } from "@/lib/supabase/server";
 import { PotjeDetail, type DetailTransaction } from "./potje-detail";
 
 export const metadata: Metadata = { title: "Potje" };
+
+const round2 = (value: number) => Math.round(value * 100) / 100;
 
 export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id]">) {
   const { id } = await params;
@@ -24,13 +27,74 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
   ]);
   if (!category || category.system_key || category.archived) notFound();
 
+  const goalAmount = category.goal_amount === null ? null : Number(category.goal_amount);
+  const monthlyBudget = category.monthly_budget === null ? null : Number(category.monthly_budget);
+
   const catMap = new Map(insight.cats.map((c) => [c.id, c]));
-  const spent = spentPerCategory(insight.txs, catMap, period.startISO, period.endISO).get(category.id) ?? 0;
   const series = weeklySeries(insight.txs, catMap, category.id, today);
+
+  // Inkomen telt niet als uitgave; daar tonen we wat er deze maand binnenkwam.
+  const spent = category.is_income
+    ? round2(
+        insight.txs
+          .filter(
+            (t) =>
+              t.categoryId === category.id &&
+              !t.isInternal &&
+              t.bookingDate >= period.startISO &&
+              t.bookingDate < period.endISO,
+          )
+          .reduce((sum, t) => sum + t.amount, 0),
+      )
+    : (spentPerCategory(insight.txs, catMap, period.startISO, period.endISO).get(category.id) ?? 0);
+
+  // Gespaard = alles wat ooit in dit potje is gestopt, net zoals spendOf eigen delen telt.
+  let saved: number | null = null;
+  if (goalAmount !== null && !category.is_income) {
+    const own: CatLite = {
+      id: category.id,
+      name: category.name,
+      icon: category.icon,
+      color: category.color,
+      isIncome: false,
+      systemKey: null,
+      monthlyBudget: null,
+      goalAmount,
+    };
+    const ownMap = new Map([[own.id, own]]);
+    const all = await fetchAll((from, to) =>
+      supabase
+        .from("transactions")
+        .select("id, booking_date, amount, own_share, created_at, categorized_at, is_internal_transfer")
+        .eq("category_id", category.id)
+        .order("id")
+        .range(from, to),
+    );
+    saved = round2(
+      all.reduce(
+        (sum, row) =>
+          sum +
+          spendOf(
+            {
+              id: row.id,
+              bookingDate: row.booking_date,
+              amount: Number(row.amount),
+              ownShare: row.own_share === null ? null : Number(row.own_share),
+              categoryId: category.id,
+              createdAt: row.created_at,
+              categorizedAt: row.categorized_at,
+              isInternal: row.is_internal_transfer,
+            },
+            ownMap,
+          ),
+        0,
+      ),
+    );
+  }
 
   const { data: rows } = await supabase
     .from("transactions")
-    .select("id, booking_date, amount, own_share, counterparty, description")
+    .select("id, booking_date, amount, own_share, counterparty, description, raw_counterparty, raw_description, note")
     .eq("category_id", category.id)
     .order("booking_date", { ascending: false })
     .limit(60);
@@ -41,32 +105,37 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
     amount: Number(t.amount),
     ownShare: t.own_share === null ? null : Number(t.own_share),
     counterparty: t.counterparty ?? "Onbekende tegenpartij",
-    description: t.description,
+    bankText: [t.raw_counterparty ?? t.counterparty, t.raw_description ?? t.description]
+      .filter((part): part is string => typeof part === "string" && part.trim() !== "")
+      .join("\n"),
+    note: t.note,
     inPeriod: t.booking_date >= period.startISO && t.booking_date < period.endISO,
   }));
 
-  const others = insight.cats
-    .filter((c) => c.id !== category.id && !c.systemKey)
+  const pickable = insight.cats
+    .filter((c) => !c.systemKey)
     .map((c) => ({ id: c.id, name: c.name, icon: c.icon, color: c.color }));
 
+  // Alleen dat het detail bekeken is; geen bedragen of namen.
+  await logEvent("category_detail_viewed", {});
+
   return (
-    <>
-      <PageHeader title={category.name} backHref="/overzicht" />
-      <PotjeDetail
-        category={{
-          id: category.id,
-          name: category.name,
-          icon: category.icon,
-          color: category.color,
-          isIncome: category.is_income,
-          monthlyBudget: category.monthly_budget === null ? null : Number(category.monthly_budget),
-        }}
-        spent={spent}
-        periodLabel={period.label}
-        series={series}
-        transactions={transactions}
-        otherCategories={others}
-      />
-    </>
+    <PotjeDetail
+      category={{
+        id: category.id,
+        name: category.name,
+        icon: category.icon,
+        color: category.color,
+        isIncome: category.is_income,
+        monthlyBudget,
+        goalAmount,
+      }}
+      spent={spent}
+      saved={saved}
+      periodLabel={period.label}
+      series={series}
+      transactions={transactions}
+      pickableCategories={pickable}
+    />
   );
 }

@@ -1,9 +1,12 @@
 @import "tailwindcss";
 
+/* Lage schermen (iPhone SE en kleiner, of liggend): `compact:h-16`, `compact:hidden`. */
+@custom-variant compact (@media (max-height: 700px));
+
 /*
  * Design tokens
  * De waarden komen uit de Voorgeschoten-huisstijl (voorgeschoten.com):
- * accent #0075ff / #005fd1, achtergrond #f6f7f9, inkt #131417, muted #7b8194,
+ * accent #0075ff / #005fd1, achtergrond #f6f7f9, inkt #131417, muted #7b8194 (hier #6b7183, AA),
  * groen #00915a, rood #d43d51, amber #b76e00, border #ebedf1.
  * Dark mode gebruikt dezelfde tokens met andere waarden.
  * Gebruik in componenten uitsluitend Tailwind-klassen op basis van deze tokens.
@@ -16,7 +19,7 @@
   --surface-muted: #eef0f4;
   --border: #ebedf1;
   --text: #131417;
-  --text-muted: #7b8194;
+  --text-muted: #6b7183; /* Voorgeschoten #7b8194, donkerder voor AA-contrast */
 
   --primary: #0075ff;
   --primary-strong: #005fd1;
@@ -53,7 +56,7 @@
     color-scheme: dark;
 
     --bg: #0f1115;
-    --surface: #171a20;
+    --surface: #1a1d24;
     --surface-muted: #1f232b;
     --border: #262b34;
     --text: #f2f3f5;
@@ -73,7 +76,9 @@
     --negative-soft: #3a1a20;
 
     --focus: #78b3ff;
-    --shadow-elev: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+    /* Inset-rand houdt kaarten en tegels zichtbaar op de donkere achtergrond. */
+    --shadow-elev: 0 0 0 1px rgba(255, 255, 255, 0.06) inset, 0 1px 2px rgba(0, 0, 0, 0.3),
+      0 4px 16px rgba(0, 0, 0, 0.35);
     --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
 
     --cat-blauw: #9cc6ff;   --cat-blauw-soft: #13284a;
@@ -93,7 +98,7 @@
   color-scheme: dark;
 
   --bg: #0f1115;
-  --surface: #171a20;
+  --surface: #1a1d24;
   --surface-muted: #1f232b;
   --border: #262b34;
   --text: #f2f3f5;
@@ -113,7 +118,9 @@
   --negative-soft: #3a1a20;
 
   --focus: #78b3ff;
-  --shadow-elev: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+  /* Inset-rand houdt kaarten en tegels zichtbaar op de donkere achtergrond. */
+  --shadow-elev: 0 0 0 1px rgba(255, 255, 255, 0.06) inset, 0 1px 2px rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.35);
   --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
 
   --cat-blauw: #9cc6ff;   --cat-blauw-soft: #13284a;

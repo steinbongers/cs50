@@ -25,7 +25,7 @@ export async function loadInsightData(supabase: SupabaseClient<Database>, today 
     ),
     supabase
       .from("categories")
-      .select("id, name, icon, color, is_income, system_key, monthly_budget")
+      .select("id, name, icon, color, is_income, system_key, monthly_budget, goal_amount")
       .eq("archived", false)
       .order("sort_order", { ascending: true }),
   ]);
@@ -55,6 +55,7 @@ export async function loadInsightData(supabase: SupabaseClient<Database>, today 
     isIncome: c.is_income,
     systemKey: c.system_key,
     monthlyBudget: c.monthly_budget === null ? null : Number(c.monthly_budget),
+    goalAmount: c.goal_amount === null ? null : Number(c.goal_amount),
   }));
 
   return { txs, cats };

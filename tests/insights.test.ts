@@ -1,21 +1,24 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  categoryDeviations,
   compareWithAverage,
+  pickStandout,
   dailyStreak,
   monthReview,
   spentPerCategory,
   totalSpent,
   weeklySeries,
   type CatLite,
+  type CategoryDeviation,
   type TxLite,
 } from "../lib/insights/compute";
 
 const cats: CatLite[] = [
-  { id: "bood", name: "Boodschappen", icon: "shopping-cart", color: "groen", isIncome: false, systemKey: null, monthlyBudget: 200 },
-  { id: "uit", name: "Uit eten", icon: "utensils", color: "oranje", isIncome: false, systemKey: null, monthlyBudget: null },
-  { id: "ink", name: "Inkomen", icon: "banknote", color: "groen", isIncome: true, systemKey: null, monthlyBudget: null },
-  { id: "vg", name: "Voorgeschoten", icon: "hand-coins", color: "geel", isIncome: false, systemKey: "voorgeschoten", monthlyBudget: null },
+  { id: "bood", name: "Boodschappen", icon: "shopping-cart", color: "groen", isIncome: false, systemKey: null, monthlyBudget: 200, goalAmount: null },
+  { id: "uit", name: "Uit eten", icon: "utensils", color: "oranje", isIncome: false, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "ink", name: "Inkomen", icon: "banknote", color: "groen", isIncome: true, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "vg", name: "Voorgeschoten", icon: "hand-coins", color: "geel", isIncome: false, systemKey: "voorgeschoten", monthlyBudget: null, goalAmount: null },
 ];
 const catMap = new Map(cats.map((c) => [c.id, c]));
 
@@ -158,7 +161,94 @@ test("jouw maand: alleen salaris in de afgelopen periode is geen maand om te ton
 
 test("uitgegeven wordt nooit negatief, ook met alleen terugbetalingen", async () => {
   const { totalSpent } = await import("../lib/insights/compute");
-  const cats = new Map([["c1", { id: "c1", name: "Overig", icon: "package", color: "grijs", isIncome: false, systemKey: null, monthlyBudget: null }]]);
+  const cats = new Map([["c1", { id: "c1", name: "Overig", icon: "package", color: "grijs", isIncome: false, systemKey: null, monthlyBudget: null, goalAmount: null }]]);
   const refund = { id: "t1", bookingDate: "2026-10-02", amount: 40, ownShare: null, categoryId: "c1", createdAt: "2026-10-02T10:00:00Z", categorizedAt: "2026-10-02T11:00:00Z", isInternal: false };
   assert.equal(totalSpent([refund], cats, "2026-10-01", "2026-11-01"), 0);
+});
+
+test("afwijking per potje: deze periode tegenover gemiddelde op hetzelfde punt", () => {
+  // salarisdag 25, vandaag 8 oktober: 14 dagen onderweg
+  const txs = [
+    tx({ bookingDate: "2026-09-26", amount: -150, categoryId: "bood" }), // nu
+    tx({ bookingDate: "2026-09-27", amount: -20, categoryId: "uit" }), // nu
+    tx({ bookingDate: "2026-08-26", amount: -60, categoryId: "bood" }), // vorige, binnen 14 dagen
+    tx({ bookingDate: "2026-09-20", amount: -400, categoryId: "bood" }), // vorige, na 14 dagen: telt niet
+    tx({ bookingDate: "2026-07-27", amount: -40, categoryId: "bood" }), // twee terug
+    tx({ bookingDate: "2026-07-28", amount: -30, categoryId: "uit" }),
+    tx({ bookingDate: "2026-09-28", amount: 2500, categoryId: "ink" }), // inkomen: geen rij
+    tx({ bookingDate: "2026-09-29", amount: 12, categoryId: "vg" }), // systeempotje: geen rij
+  ];
+  const rows = categoryDeviations(txs, cats, 25, new Date(2026, 9, 8));
+  assert.deepEqual(
+    rows.map((r) => r.categoryId),
+    ["bood", "uit"],
+  );
+  assert.deepEqual(rows[0], { categoryId: "bood", current: 150, average: 50, diff: 100, periodsUsed: 2 });
+  assert.deepEqual(rows[1], { categoryId: "uit", current: 20, average: 15, diff: 5, periodsUsed: 2 });
+  // Werkt ook met een Map en met minder periodes.
+  const one = categoryDeviations(txs, catMap, 25, new Date(2026, 9, 8), { maxPeriods: 1 });
+  assert.equal(one[0].periodsUsed, 1);
+  assert.equal(one[0].average, 60);
+});
+
+test("afwijking: sortering op grootste verschil, ook als het minder is", () => {
+  const txs = [
+    tx({ bookingDate: "2026-09-26", amount: -10, categoryId: "bood" }),
+    tx({ bookingDate: "2026-09-26", amount: -45, categoryId: "uit" }),
+    tx({ bookingDate: "2026-08-26", amount: -200, categoryId: "bood" }),
+    tx({ bookingDate: "2026-08-26", amount: -40, categoryId: "uit" }),
+  ];
+  const rows = categoryDeviations(txs, cats, 25, new Date(2026, 9, 8));
+  assert.equal(rows[0].categoryId, "bood");
+  assert.equal(rows[0].diff, -190);
+});
+
+test("afwijking: zonder vorige periodes is het gemiddelde 0 en springt niets eruit", () => {
+  const txs = [tx({ bookingDate: "2026-09-26", amount: -300, categoryId: "bood" })];
+  const rows = categoryDeviations(txs, cats, 25, new Date(2026, 9, 8));
+  assert.deepEqual(rows, [{ categoryId: "bood", current: 300, average: 0, diff: 300, periodsUsed: 0 }]);
+  assert.equal(pickStandout(rows, 14), null);
+});
+
+test("afwijking: potjes die nu en eerder 0 zijn vallen weg", () => {
+  assert.deepEqual(categoryDeviations([], cats, 25, new Date(2026, 9, 8)), []);
+});
+
+const dev = (p: Partial<CategoryDeviation>): CategoryDeviation => ({
+  categoryId: "x",
+  current: 0,
+  average: 0,
+  diff: 0,
+  periodsUsed: 3,
+  ...p,
+});
+
+test("opvaller: drempels voor bedrag, aandeel, periodes en dagen", () => {
+  const big = dev({ categoryId: "a", current: 150, average: 100, diff: 50 });
+  assert.equal(pickStandout([big], 14), big);
+  // Minder dan 7 dagen onderweg: nog niets zeggen.
+  assert.equal(pickStandout([big], 6), null);
+  assert.equal(pickStandout([big], 7), big);
+  // Onder € 25 verschil.
+  assert.equal(pickStandout([dev({ current: 44, average: 20, diff: 24 })], 14), null);
+  // Wel € 25, maar minder dan 25% van het gemiddelde.
+  assert.equal(pickStandout([dev({ current: 430, average: 400, diff: 30 })], 14), null);
+  // Precies op beide drempels telt.
+  const edge = dev({ current: 125, average: 100, diff: 25 });
+  assert.equal(pickStandout([edge], 14), edge);
+  // Minder uitgeven telt ook.
+  const less = dev({ current: 50, average: 100, diff: -50 });
+  assert.equal(pickStandout([less], 14), less);
+});
+
+test("opvaller: gemiddelde 0 met een vorige periode is een opvaller vanaf € 25", () => {
+  const fresh = dev({ current: 30, average: 0, diff: 30, periodsUsed: 1 });
+  assert.equal(pickStandout([fresh], 10), fresh);
+});
+
+test("opvaller: neemt het eerste item dat aan alle drempels voldoet", () => {
+  const noHistory = dev({ categoryId: "a", diff: 300, current: 300, average: 0, periodsUsed: 0 });
+  const second = dev({ categoryId: "b", current: 180, average: 100, diff: 80 });
+  assert.equal(pickStandout([noHistory, second], 14), second);
+  assert.equal(pickStandout([], 14), null);
 });

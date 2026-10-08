@@ -1,77 +1,96 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { CategoryBadge } from "@/components/categories/category-badge";
+import { useMemo, useState, useTransition } from "react";
 import { CategoryEditor } from "@/components/categories/category-editor";
+import { CategoryAddTile, CategoryPickerGrid } from "@/components/categories/category-picker-grid";
 import { Button } from "@/components/ui/button";
-import { IconCheck, IconPencil, IconPlus } from "@/components/ui/icons";
 import { Sheet } from "@/components/ui/sheet";
-import { MAX_CATEGORIES } from "@/lib/categories/defaults";
+import { MAX_CATEGORIES, type QuickSuggestionKey } from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON } from "@/lib/categories/icons";
-import { CATEGORY_COLORS, categoryColorClasses } from "@/lib/categories/palette";
+import { CATEGORY_COLORS } from "@/lib/categories/palette";
 import type { CategoryDraft } from "@/lib/categories/types";
-import { cn } from "@/lib/utils";
-import { saveOnboardingCategories } from "../actions";
+import { saveOnboardingCategories, type OnboardingCategoryDraft } from "../actions";
 
-type DraftWithKey = CategoryDraft & { key: string; isCustom?: boolean };
+type PickerDraft = CategoryDraft & {
+  key: string;
+  isCustom: boolean;
+  suggestion: QuickSuggestionKey | null;
+};
+
+function isOverig(draft: CategoryDraft) {
+  return draft.name.trim().toLocaleLowerCase("nl-NL") === "overig";
+}
 
 export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft[] }) {
-  const [drafts, setDrafts] = useState<DraftWithKey[]>(() =>
-    initialDrafts.map((d, i) => ({ ...d, key: d.id ?? `new-${i}` })),
+  const [drafts, setDrafts] = useState<PickerDraft[]>(() =>
+    initialDrafts.map((d, i) => ({ ...d, key: d.id ?? `start-${i}`, isCustom: false, suggestion: null })),
   );
-  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [newDraft, setNewDraft] = useState<PickerDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const enabledCount = drafts.filter((d) => d.enabled).length;
-  const editing = drafts.find((d) => d.key === editingKey) ?? null;
+  const enabled = drafts.filter((d) => d.enabled);
+  const enabledCount = enabled.length;
+  const hasExpense = enabled.some((d) => !d.isIncome);
+  const atMax = enabledCount >= MAX_CATEGORIES;
 
-  function update(key: string, patch: Partial<CategoryDraft>) {
-    setDrafts((prev) => prev.map((d) => (d.key === key ? { ...d, ...patch } : d)));
-  }
+  const toggledOff = useMemo(() => new Set(drafts.filter((d) => !d.enabled).map((d) => d.key)), [drafts]);
+  const tiles = useMemo(
+    () => drafts.map((d) => ({ id: d.key, name: d.name, icon: d.icon, color: d.color })),
+    [drafts],
+  );
 
   function toggle(key: string) {
-    const current = drafts.find((d) => d.key === key);
-    if (!current) return;
-    update(key, { enabled: !current.enabled });
+    setDrafts((prev) =>
+      prev.map((d) => {
+        if (d.key !== key) return d;
+        // Bij het maximum kun je niets meer aanzetten, wel uitzetten.
+        if (!d.enabled && atMax) return d;
+        return { ...d, enabled: !d.enabled };
+      }),
+    );
   }
 
-  function addCategory() {
-    if (enabledCount >= MAX_CATEGORIES) return;
-    const key = `new-${Date.now()}`;
+  function openNew() {
+    if (atMax) return;
     const usedColors = new Set(drafts.map((d) => d.color));
     const color = CATEGORY_COLORS.find((c) => !usedColors.has(c)) ?? "grijs";
-    setDrafts((prev) => [
-      ...prev,
-      { key, name: "", icon: DEFAULT_CATEGORY_ICON, color, isIncome: false, enabled: true, isCustom: true },
-    ]);
-    setEditingKey(key);
+    setNewDraft({
+      key: `eigen-${Date.now()}`,
+      name: "",
+      icon: DEFAULT_CATEGORY_ICON,
+      color,
+      isIncome: false,
+      enabled: true,
+      isCustom: true,
+      suggestion: null,
+    });
   }
 
-  function removeDraft(key: string) {
-    setDrafts((prev) => prev.filter((d) => d.key !== key));
-    setEditingKey(null);
-  }
-
-  function closeEditor() {
-    // Een nieuw potje zonder naam heeft geen zin: gooi het weg.
-    if (editing && editing.isCustom && editing.name.trim() === "") {
-      removeDraft(editing.key);
-      return;
-    }
-    setEditingKey(null);
+  function addNew() {
+    if (!newDraft || newDraft.name.trim() === "") return;
+    const added = { ...newDraft, name: newDraft.name.trim() };
+    setDrafts((prev) => {
+      // Eigen potjes komen vóór Overig; Overig blijft als laatste staan.
+      const overigIndex = prev.findIndex(isOverig);
+      if (overigIndex === -1) return [...prev, added];
+      return [...prev.slice(0, overigIndex), added, ...prev.slice(overigIndex)];
+    });
+    setNewDraft(null);
   }
 
   function save() {
     setError(null);
     startTransition(async () => {
-      const payload: CategoryDraft[] = drafts.map((d) => ({
+      const payload: OnboardingCategoryDraft[] = drafts.map((d) => ({
         id: d.id,
         name: d.name,
         icon: d.icon,
         color: d.color,
         isIncome: d.isIncome,
         enabled: d.enabled,
+        isCustom: d.isCustom,
+        suggestion: d.suggestion,
       }));
       const result = await saveOnboardingCategories(payload);
       if (result?.error) setError(result.error);
@@ -80,85 +99,44 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
 
   return (
     <div className="flex flex-1 flex-col">
-      <ul className="flex flex-col gap-2 px-4">
-        {drafts.map((draft) => {
-          const colors = categoryColorClasses(draft.color);
-          return (
-            <li
-              key={draft.key}
-              className={cn(
-                "flex items-center gap-2 rounded-card bg-surface pr-1 shadow-card transition-opacity duration-150",
-                !draft.enabled && "opacity-60",
-              )}
-            >
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={draft.enabled}
-                onClick={() => toggle(draft.key)}
-                className="flex min-h-14 flex-1 items-center gap-3 rounded-card py-2 pl-3 text-left"
-              >
-                <CategoryBadge icon={draft.icon} color={draft.color} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">
-                    {draft.name || <span className="text-text-muted">Naam ontbreekt</span>}
-                  </span>
-                  {draft.isIncome && (
-                    <span className="block text-xs text-text-muted">Inkomend geld</span>
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    "flex size-6 items-center justify-center rounded-full border-2 transition-colors duration-150",
-                    draft.enabled ? cn("border-transparent", colors.solid, "text-bg") : "border-border",
-                  )}
-                  aria-hidden
-                >
-                  {draft.enabled && <IconCheck size={14} strokeWidth={3} />}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditingKey(draft.key)}
-                aria-label={`${draft.name || "Potje"} bewerken`}
-                className="flex size-11 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface-muted hover:text-text"
-              >
-                <IconPencil size={18} />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-
-      <div className="px-4 pt-3">
-        <Button variant="ghost" fullWidth onClick={addCategory} disabled={enabledCount >= MAX_CATEGORIES}>
-          <IconPlus size={20} />
-          Eigen potje toevoegen
-        </Button>
+      <div className="px-4">
+        <CategoryPickerGrid
+          label="Potjes"
+          categories={tiles}
+          onPick={toggle}
+          toggledOff={toggledOff}
+          renderAddTile={<CategoryAddTile onClick={openNew} label="Eigen potje" disabled={atMax} />}
+        />
+        <p className="mt-4 px-1 text-sm text-text-muted">
+          Voorgeschoten zit er altijd bij. Daar houden we bij wat je nog terugkrijgt.
+        </p>
       </div>
 
-      <div className="safe-bottom sticky bottom-0 mt-auto bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6 pb-5">
+      <div className="sticky bottom-0 mt-auto bg-bg/95 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur">
         {error && (
           <p className="mb-3 rounded-control bg-negative-soft px-4 py-3 text-sm text-negative" role="alert">
             {error}
           </p>
         )}
-        <Button size="lg" fullWidth onClick={save} loading={isPending} disabled={enabledCount === 0}>
+        {!hasExpense && (
+          <p className="mb-3 text-center text-sm text-text-muted" role="status">
+            Zet minstens één potje voor je uitgaven aan.
+          </p>
+        )}
+        <Button size="lg" fullWidth onClick={save} loading={isPending} disabled={!hasExpense}>
           {enabledCount === 1 ? "Verder met 1 potje" : `Verder met ${enabledCount} potjes`}
         </Button>
       </div>
 
-      <Sheet
-        open={editing !== null}
-        onClose={closeEditor}
-        title={editing?.isCustom && editing.name.trim() === "" ? "Nieuw potje" : "Potje bewerken"}
-      >
-        {editing && (
+      <Sheet open={newDraft !== null} onClose={() => setNewDraft(null)} title="Eigen potje">
+        {newDraft && (
           <CategoryEditor
-            draft={editing}
-            onChange={(patch) => update(editing.key, patch)}
-            onDone={closeEditor}
-            onRemove={editing.isCustom ? () => removeDraft(editing.key) : undefined}
+            isNew
+            draft={newDraft}
+            onChange={(patch) => setNewDraft((d) => (d ? { ...d, ...patch } : d))}
+            onSuggestionUsed={(suggestion) => setNewDraft((d) => (d ? { ...d, suggestion } : d))}
+            onDone={addNew}
+            doneLabel="Potje toevoegen"
           />
         )}
       </Sheet>

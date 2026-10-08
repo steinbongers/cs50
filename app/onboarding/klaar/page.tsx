@@ -1,48 +1,50 @@
 import { Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import { SubmitButton } from "@/components/ui/submit-button";
+import { ACTION_VERB } from "@/config/app";
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { ACTION_VERB } from "@/config/app";
 import { finishOnboarding } from "../actions";
+import { StepFooter } from "../steps";
 
-export const metadata: Metadata = { title: "Klaar om te beginnen" };
+export const metadata: Metadata = { title: "Klaar" };
 
 export default async function OnboardingKlaarPage() {
   await requireUser();
   const supabase = await createClient();
 
-  const [{ count: categoryCount }, { count: openCount }] = await Promise.all([
-    supabase.from("categories").select("id", { count: "exact", head: true }).eq("archived", false),
-    supabase.from("transactions").select("id", { count: "exact", head: true }).is("category_id", null),
-  ]);
-
-  const potjes = categoryCount ?? 0;
+  const { count: openCount } = await supabase
+    .from("transactions")
+    .select("id", { count: "exact", head: true })
+    .is("category_id", null);
   const open = openCount ?? 0;
 
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
         <div
-          className="mb-5 flex size-20 items-center justify-center rounded-full bg-primary-soft text-primary"
+          className="mb-5 flex size-16 items-center justify-center rounded-full bg-primary-soft text-primary"
           aria-hidden
         >
-          <Sparkles size={32} />
+          <Sparkles size={28} strokeWidth={1.75} />
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Je bent er klaar voor</h1>
-        <p className="mt-2 max-w-xs text-text-muted">
-          Je hebt {potjes === 1 ? "1 potje" : `${potjes} potjes`} klaarstaan.{" "}
-          {open > 0
-            ? `Er zoeken ${open} transacties nog een potje. Elke keuze is een klein moment van aandacht voor je geld (en een beetje voldoening).`
-            : `Zodra er transacties binnenkomen, stop je ze één voor één in het juiste potje.`}
-        </p>
+        <h1 className="text-[28px] leading-[34px] font-semibold tracking-[-0.02em]">
+          {open > 0 ? "Klaar. Tijd voor je eerste kaartje." : "Klaar. Je kaartjes komen zo."}
+        </h1>
+        {open > 0 && (
+          <p className="mt-2 max-w-xs text-[15px] leading-5 text-text-muted">
+            {open === 1 ? "1 kaartje wacht op je." : `${open} kaartjes wachten op je.`} Eén tik per kaartje.
+          </p>
+        )}
       </div>
 
-      <form action={finishOnboarding} className="safe-bottom px-4 pt-6 pb-5">
-        <SubmitButton size="lg" fullWidth>
-          {open > 0 ? `Begin met ${ACTION_VERB}` : "Naar de app"}
-        </SubmitButton>
-      </form>
+      <StepFooter>
+        <form action={finishOnboarding}>
+          <SubmitButton size="lg" fullWidth>
+            {open > 0 ? `Begin met ${ACTION_VERB}` : "Naar de app"}
+          </SubmitButton>
+        </form>
+      </StepFooter>
     </div>
   );
 }

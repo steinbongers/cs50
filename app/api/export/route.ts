@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
+import { logEvent } from "@/lib/events";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,7 +23,7 @@ export async function GET() {
     fetchAll((from, to) =>
       supabase
         .from("transactions")
-        .select("booking_date, booking_time, amount, own_share, currency, counterparty, description, raw_counterparty, raw_description, category_id, categorized_at, is_internal_transfer, balance_after")
+        .select("booking_date, booking_time, amount, own_share, currency, counterparty, description, raw_counterparty, raw_description, category_id, categorized_at, is_internal_transfer, balance_after, note")
         .order("booking_date", { ascending: false })
         .order("id")
         .range(from, to),
@@ -34,7 +35,7 @@ export async function GET() {
   const nameById = new Map((categories ?? []).map((c) => [c.id, c.name]));
   const header = [
     "datum", "tijd", "bedrag", "jouw_deel", "valuta", "tegenpartij", "omschrijving", "tegenpartij_bank", "omschrijving_bank",
-    "potje", "in_potje_gezet_op", "eigen_overboeking", "saldo_erna",
+    "potje", "in_potje_gezet_op", "eigen_overboeking", "saldo_erna", "notitie",
   ];
   const lines = [header.join(";")];
   for (const t of transactions) {
@@ -53,6 +54,7 @@ export async function GET() {
         t.categorized_at ?? "",
         t.is_internal_transfer ? "ja" : "nee",
         t.balance_after === null ? "" : String(t.balance_after).replace(".", ","),
+        t.note ?? "",
       ]
         .map(csvField)
         .join(";"),
@@ -66,6 +68,11 @@ export async function GET() {
       lines.push([s.transaction_id, s.person_name ?? "", String(s.amount).replace(".", ","), s.status].map(csvField).join(";"));
     }
   }
+
+  const rows = transactions.length;
+  await logEvent("export_downloaded", {
+    rows_bucket: rows === 0 ? "0" : rows <= 100 ? "1-100" : rows <= 1000 ? "101-1000" : "1000+",
+  });
 
   const body = "﻿" + lines.join("\r\n");
   const date = new Date().toISOString().slice(0, 10);

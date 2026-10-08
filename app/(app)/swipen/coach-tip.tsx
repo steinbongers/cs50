@@ -1,52 +1,82 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { IconSparkle } from "@/components/ui/icons";
 import { UNDO_WINDOW_MS } from "@/config/app";
+import { cn } from "@/lib/utils";
 
-export const COACH_STEPS = [
+/** Waar het pijltje van de ballon naar wijst: midden (de tegels), links (de schakelaar), rechts (Later). */
+export type CoachArrow = "center" | "left" | "right";
+
+export const COACH_STEPS: ReadonlyArray<{ title: string; text?: string; arrow: CoachArrow }> = [
   {
-    title: "Dit is één uitgave van je rekening",
-    text: "Tik hieronder op het potje waar hij hoort. Jij beslist, de app vult niets voor je in.",
+    title: "Elk kaartje is één betaling",
+    text: "Tik op het potje waar hij hoort. Jij beslist, wij vullen niets in.",
+    arrow: "center",
   },
   {
-    title: "Verkeerd potje? Geen stress",
-    text: `Je hebt ${UNDO_WINDOW_MS / 1000} seconden om het ongedaan te maken. Even geen zin in deze? Zet hem op Later.`,
+    title: `Je hebt ${UNDO_WINDOW_MS / 1000} seconden voor Ongedaan maken. Geen zin in deze? Tik op Later.`,
+    arrow: "right",
   },
   {
-    title: "Betaald voor anderen?",
-    text: "Zet 'Ik krijg geld terug' aan. De app rekent jouw deel uit en houdt bij wie je nog wat schuldig is.",
+    title: "Samen betaald? Zet ‘Ik krijg geld terug’ aan. De app rekent jouw deel uit en onthoudt wie jou nog wat moet.",
+    arrow: "left",
   },
-] as const;
+];
+
+export const COACH_DONE_TEXT = "Je kent het nu. Succes.";
 
 interface CoachTipProps {
-  step: number;
-  onDismiss: () => void;
+  /** Stap uit COACH_STEPS, of "done" voor het korte afscheid. */
+  step: number | "done";
+  onDismiss?: () => void;
 }
 
-/** Begeleiding bij de eerste drie kaarten. Daarna nooit meer. */
+const arrowPosition: Record<CoachArrow, string> = {
+  center: "left-1/2 -translate-x-1/2",
+  left: "left-8",
+  right: "right-10",
+};
+
+/**
+ * Begeleiding bij de eerste drie kaarten, als zwevende ballon met een pijltje.
+ * Neemt geen hoogte in de layout in: de ouder plaatst hem `absolute`.
+ */
 export function CoachTip({ step, onDismiss }: CoachTipProps) {
   const reduce = useReducedMotion();
-  const content = COACH_STEPS[step];
-  if (!content) return null;
+  const content = step === "done" ? null : COACH_STEPS[step];
+  if (step !== "done" && !content) return null;
+  const arrow: CoachArrow = content?.arrow ?? "center";
 
   return (
     <motion.aside
-      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8 }}
+      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="flex items-start gap-3 rounded-card bg-primary-soft px-4 py-3 text-primary"
+      exit={{ opacity: 0 }}
+      transition={{ duration: reduce ? 0.12 : 0.2 }}
+      className="pointer-events-auto relative rounded-card bg-text px-4 py-3 text-bg shadow-float"
       aria-live="polite"
     >
-      <IconSparkle size={20} className="mt-0.5 shrink-0" />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold">{content.title}</p>
-        <p className="mt-0.5 text-sm text-text">{content.text}</p>
-      </div>
-      <Button variant="ghost" onClick={onDismiss} className="-mr-2 min-h-11 shrink-0 px-3 text-primary">
-        Snap ik
-      </Button>
+      {content ? (
+        <div className="flex items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] leading-5 font-semibold">{content.title}</p>
+            {content.text && <p className="mt-0.5 text-[13px] leading-[18px] text-bg/80">{content.text}</p>}
+          </div>
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="-mr-2 -mb-1.5 min-h-11 shrink-0 rounded-control px-3 text-[15px] font-semibold text-bg"
+          >
+            Snap ik
+          </button>
+        </div>
+      ) : (
+        <p className="text-[15px] leading-5 font-semibold">{COACH_DONE_TEXT}</p>
+      )}
+      <span
+        aria-hidden
+        className={cn("absolute -bottom-1.5 size-3 rotate-45 rounded-[2px] bg-text", arrowPosition[arrow])}
+      />
     </motion.aside>
   );
 }

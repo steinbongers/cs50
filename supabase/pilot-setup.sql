@@ -470,3 +470,23 @@ $$;
 --    gedeactiveerd in plaats van verwijderd (transacties blijven bewaard).
 alter table public.accounts
   add column active boolean not null default true;
+
+-- =============================================================================
+-- 20261014000000_afwerkronde.sql (idempotent)
+-- =============================================================================
+
+alter table public.transactions
+  add column if not exists note text check (note is null or char_length(note) <= 140);
+
+alter table public.categories
+  add column if not exists goal_amount numeric(12,2) check (goal_amount is null or goal_amount > 0);
+
+create table if not exists public.churn_log (
+  id                bigint generated always as identity primary key,
+  cohort_week       date not null,
+  days_since_signup integer not null check (days_since_signup >= 0),
+  created_at        timestamptz not null default now()
+);
+
+alter table public.churn_log enable row level security;
+revoke all on public.churn_log from anon, authenticated;

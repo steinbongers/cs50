@@ -5,13 +5,16 @@ import { CategoryIcon } from "./category-icon";
 interface CategoryBadgeProps {
   icon: string;
   color: string;
-  size?: "sm" | "md" | "lg";
+  /** sm 32 · rij 36 · md 40 · kop 44 · lg 56 */
+  size?: "sm" | "row" | "md" | "header" | "lg";
   className?: string;
 }
 
 const sizeClasses = {
   sm: { box: "size-8 rounded-lg", icon: 16 },
+  row: { box: "size-9 rounded-[10px]", icon: 18 },
   md: { box: "size-10 rounded-xl", icon: 20 },
+  header: { box: "size-11 rounded-xl", icon: 22 },
   lg: { box: "size-14 rounded-2xl", icon: 28 },
 };
 

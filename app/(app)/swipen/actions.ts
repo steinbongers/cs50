@@ -2,7 +2,12 @@
 
 import { requireUser } from "@/lib/auth";
 import { ensureVoorgeschotenCategory } from "@/lib/categories/system";
-import { MAX_CATEGORIES, MAX_CATEGORY_NAME_LENGTH } from "@/lib/categories/defaults";
+import {
+  MAX_CATEGORIES,
+  MAX_CATEGORY_NAME_LENGTH,
+  isQuickSuggestionKey,
+  type QuickSuggestionKey,
+} from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON, isCategoryIcon } from "@/lib/categories/icons";
 import { isCategoryColor } from "@/lib/categories/palette";
 import type { CategoryDraft } from "@/lib/categories/types";
@@ -26,6 +31,17 @@ export interface SplitInput {
   /** Optionele namen van de anderen, in volgorde. */
   names?: string[];
 }
+
+/** Extra context voor de meting: stond er een coachtip open bij deze kaart? */
+export interface SwipeMeta {
+  coach?: boolean;
+}
+
+function coachFlag(meta: unknown): boolean {
+  return typeof meta === "object" && meta !== null && (meta as SwipeMeta).coach === true;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function isUuid(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value);
@@ -54,6 +70,7 @@ export async function assignCategory(
   categoryId: string,
   durationMs: number,
   split?: SplitInput,
+  meta?: SwipeMeta,
 ): Promise<AssignResult> {
   const user = await requireUser();
   if (!isUuid(transactionId) || !isUuid(categoryId)) return { ok: false, error: GENERIC_ERROR };
@@ -114,7 +131,7 @@ export async function assignCategory(
           status,
         })),
       )
-      .select("id, person_name, amount");
+      .select("id, person_name, amount, created_at");
     if (sharesError || !inserted) {
       // Terugdraaien: liever een kaart opnieuw op de stapel dan een halve verdeling.
       await supabase
@@ -132,6 +149,7 @@ export async function assignCategory(
         amount: Number(s.amount),
         counterparty: transaction.counterparty?.trim() || "Onbekende tegenpartij",
         bookingDate: transaction.booking_date,
+        createdAt: s.created_at,
       }));
     }
   }
@@ -143,6 +161,8 @@ export async function assignCategory(
     skipped_before: transaction.skipped_count,
     split_persons: useSplit ? split.persons : null,
     split_method: useSplit ? split.method : null,
+    coach: coachFlag(meta),
+    flow: "normal",
   });
 
   return { ok: true, shares };
@@ -157,6 +177,7 @@ export async function settleSharesWithTransaction(
   transactionId: string,
   shareIds: string[],
   durationMs: number,
+  meta?: SwipeMeta,
 ): Promise<ActionResult> {
   const user = await requireUser();
   if (!isUuid(transactionId) || !Array.isArray(shareIds) || shareIds.length === 0 || !shareIds.every(isUuid)) {
@@ -177,7 +198,7 @@ export async function settleSharesWithTransaction(
 
   const { data: shares } = await supabase
     .from("transaction_shares")
-    .select("id")
+    .select("id, created_at")
     .eq("user_id", user.id)
     .eq("status", "open")
     .in("id", shareIds);
@@ -207,7 +228,20 @@ export async function settleSharesWithTransaction(
     category_id: voorgeschotenId,
     duration_ms: Math.max(0, Math.round(Number.isFinite(durationMs) ? durationMs : 0)),
     repayment_shares: shareIds.length,
+    coach: coachFlag(meta),
+    flow: "repayment",
   });
+
+  // Per deel alleen hoe en hoe oud; nooit bedrag of naam.
+  const nowMs = Date.parse(now);
+  await Promise.all(
+    shares.map((share) =>
+      logEvent("share_settled", {
+        how: "repayment_tile",
+        age_days: Math.max(0, Math.floor((nowMs - Date.parse(share.created_at)) / DAY_MS)),
+      }),
+    ),
+  );
 
   return { ok: true };
 }
@@ -269,6 +303,7 @@ export async function skipTransaction(transactionId: string): Promise<ActionResu
 /** Nieuw potje vanaf het hoofdscherm. Geeft het potje terug als tegel. */
 export async function createCategory(
   draft: Omit<CategoryDraft, "id" | "enabled">,
+  suggestion: QuickSuggestionKey | null = null,
 ): Promise<{ ok: true; category: CategoryOption } | { ok: false; error: string }> {
   const user = await requireUser();
 
@@ -306,6 +341,12 @@ export async function createCategory(
 
   if (error || !data) return { ok: false, error: GENERIC_ERROR };
 
+  // Alleen de bron en de gekozen suggestie; nooit de naam.
+  await logEvent("potje_created", {
+    source: "plus_tile",
+    suggestion: isQuickSuggestionKey(suggestion) ? suggestion : null,
+  });
+
   return {
     ok: true,
     category: {
@@ -316,6 +357,8 @@ export async function createCategory(
       isIncome: data.is_income,
       systemKey: data.system_key,
       spentThisPeriod: 0,
+      monthlyBudget: null,
+      goalAmount: null,
     },
   };
 }
@@ -326,6 +369,17 @@ export async function setCoachStep(step: number): Promise<void> {
   const value = Math.min(Math.max(Math.round(step), 0), 9);
   const supabase = await createClient();
   await supabase.from("profiles").update({ coach_step: value }).eq("id", user.id);
+}
+
+/** Begeleide eerste kaarten afgerond: stand opslaan en één keer meten. */
+export async function completeCoach(stepsSeen: number): Promise<void> {
+  const user = await requireUser();
+  const steps = Math.min(Math.max(Math.round(Number(stepsSeen) || 0), 0), 9);
+  const supabase = await createClient();
+  const { data: profile } = await supabase.from("profiles").select("coach_step").eq("id", user.id).maybeSingle();
+  await supabase.from("profiles").update({ coach_step: Math.max(steps, profile?.coach_step ?? 0) }).eq("id", user.id);
+  // Alleen meten als de coach nog niet eerder als afgerond stond.
+  if ((profile?.coach_step ?? 0) < steps) await logEvent("coach_completed", { steps_seen: steps });
 }
 
 /** Registreert het einde van een ronde (alle geladen kaarten verwerkt). */

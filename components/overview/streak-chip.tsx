@@ -1,20 +1,17 @@
 import { Flame } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 /** Dagstreak als getal met vlammetje. Verschijnt pas vanaf één dag. */
-export function StreakChip({ days, todayDone }: { days: number; todayDone: boolean }) {
+export function StreakChip({ days }: { days: number; todayDone?: boolean }) {
   if (days <= 0) return null;
+  const label = `${days} ${days === 1 ? "dag" : "dagen"} op rij alles in een potje`;
   return (
     <span
-      className={cn(
-        "flex h-9 items-center gap-1 rounded-full px-2.5 text-sm font-semibold tabular-nums",
-        todayDone ? "bg-accent-soft text-accent" : "bg-surface-muted text-text-muted",
-      )}
-      title={`${days} ${days === 1 ? "dag" : "dagen"} op rij alles in een potje`}
+      className="inline-flex h-8 items-center gap-1 rounded-full bg-accent-soft px-2.5 text-[13px] font-semibold tabular-nums text-accent"
+      title={label}
     >
-      <Flame size={16} aria-hidden />
-      {days}
-      <span className="sr-only"> {days === 1 ? "dag" : "dagen"} op rij alles in een potje</span>
+      <Flame size={14} aria-hidden />
+      <span aria-hidden>{days}</span>
+      <span className="sr-only">{label}</span>
     </span>
   );
 }

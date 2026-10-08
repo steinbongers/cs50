@@ -1,8 +1,15 @@
 "use client";
 
 import { useState, useSyncExternalStore, useTransition } from "react";
-import { disableNotifications, removePushSubscription, savePushSubscription } from "@/app/(app)/instellingen/actions";
-import { cn } from "@/lib/utils";
+import { Bell } from "lucide-react";
+import {
+  disableNotifications,
+  logPushPermission,
+  removePushSubscription,
+  savePushSubscription,
+} from "@/app/(app)/instellingen/actions";
+import { ListRow } from "@/components/ui/list-group";
+import { Switch } from "@/components/ui/switch";
 
 type Support = "unknown" | "ok" | "no-sw" | "ios-not-installed" | "denied";
 
@@ -27,48 +34,60 @@ function detectSupport(): Support {
   return "ok";
 }
 
+const NOT_CONFIGURED = "Meldingen werken nog niet. We zijn ermee bezig.";
+const DENIED = "Meldingen staan uit in je telefooninstellingen.";
+
 const supportListeners = new Set<() => void>();
 function subscribeSupport(listener: () => void) {
   supportListeners.add(listener);
   return () => supportListeners.delete(listener);
 }
 
-/** Meldingen aan of uit: registreert de service worker en een push-abonnement voor dit apparaat. */
+/** Avondmelding aan of uit: registreert de service worker en een push-abonnement voor dit apparaat. */
 export function PushToggle({ enabled, vapidPublicKey }: { enabled: boolean; vapidPublicKey: string | null }) {
   const support = useSyncExternalStore(subscribeSupport, detectSupport, () => "unknown" as Support);
   const [on, setOn] = useState(enabled);
   const [message, setMessage] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [isPending, startTransition] = useTransition();
   const refreshSupport = () => supportListeners.forEach((listener) => listener());
 
   async function enable() {
     if (!vapidPublicKey) {
-      setMessage("Meldingen zijn op deze server nog niet ingesteld.");
+      setMessage(NOT_CONFIGURED);
       return;
     }
     setMessage(null);
-    const registration = await navigator.serviceWorker.register("/sw.js");
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      refreshSupport();
-      setMessage("Je hebt geen toestemming gegeven. Dat kun je in je browser-instellingen aanpassen.");
-      return;
-    }
-    const subscription =
-      (await registration.pushManager.getSubscription()) ??
-      (await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-      }));
-    startTransition(async () => {
-      const result = await savePushSubscription(subscription.toJSON());
-      if (!result.ok) {
-        setMessage(result.error);
+    setBusy(true);
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js");
+      const permission = await Notification.requestPermission();
+      void logPushPermission(permission);
+      if (permission !== "granted") {
+        refreshSupport();
+        if (permission === "denied") setMessage(DENIED);
         return;
       }
-      setOn(true);
-      setMessage("Aan. Elke avond om 20:00 hoor je het als er kaartjes liggen.");
-    });
+      const subscription =
+        (await registration.pushManager.getSubscription()) ??
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        }));
+      startTransition(async () => {
+        const result = await savePushSubscription(subscription.toJSON());
+        if (!result.ok) {
+          setMessage(result.error);
+          return;
+        }
+        setOn(true);
+        setMessage("Aan. Liggen er kaartjes, dan hoor je het om 20:00.");
+      });
+    } catch {
+      setMessage("Aanzetten lukte niet. Probeer het zo nog eens.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function disable() {
@@ -86,37 +105,45 @@ export function PushToggle({ enabled, vapidPublicKey }: { enabled: boolean; vapi
       const result = endpoint ? await removePushSubscription(endpoint) : await disableNotifications();
       if (result.ok) {
         setOn(false);
-        setMessage("Uit. Je hoort niets meer van ons.");
+        setMessage("Uit. Je hoort 's avonds niets meer van ons.");
       }
     });
   }
 
-  const unavailable = support === "no-sw" || support === "ios-not-installed" || support === "denied";
+  const unavailable = !vapidPublicKey || support === "no-sw" || support === "ios-not-installed" || support === "denied";
+
+  const note = !vapidPublicKey
+    ? NOT_CONFIGURED
+    : support === "denied"
+      ? DENIED
+      : support === "ios-not-installed"
+        ? "Op de iPhone werkt dit als je de app op je beginscherm zet. Tik op Delen en kies Zet op beginscherm."
+        : support === "no-sw"
+          ? "Deze browser kan geen meldingen tonen."
+          : null;
+  const shown = message ?? (on ? null : note);
 
   return (
-    <div className="flex flex-col gap-2">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        disabled={isPending || (unavailable && !on)}
-        onClick={() => (on ? disable() : enable())}
-        className="flex min-h-12 w-full items-center justify-between gap-3 text-left disabled:opacity-60"
-      >
-        <span>
-          <span className="block font-medium">Meldingen</span>
-          <span className="block text-sm text-text-muted">Elke avond om 20:00 als er kaartjes liggen</span>
-        </span>
-        <span aria-hidden className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors duration-150", on ? "bg-primary" : "bg-border")}>
-          <span className={cn("absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform duration-150", on ? "translate-x-[1.125rem]" : "translate-x-0.5")} />
-        </span>
-      </button>
-      {support === "ios-not-installed" && (
-        <p className="text-xs text-text-muted">Op iPhone werkt dit alleen als je de app op je beginscherm zet (Delen → Zet op beginscherm).</p>
+    <>
+      <ListRow
+        icon={Bell}
+        iconClass="bg-cat-rood-soft text-cat-rood"
+        label="Avondmelding"
+        value="20:00"
+        trailing={
+          <Switch
+            checked={on}
+            onCheckedChange={(next) => (next ? enable() : disable())}
+            label="Avondmelding om 20:00"
+            disabled={busy || isPending || (unavailable && !on)}
+          />
+        }
+      />
+      {shown && (
+        <p className="px-4 pt-1 pb-3 text-[13px] leading-[18px] text-text-muted" role="status">
+          {shown}
+        </p>
       )}
-      {support === "no-sw" && <p className="text-xs text-text-muted">Deze browser ondersteunt geen meldingen.</p>}
-      {support === "denied" && <p className="text-xs text-text-muted">Meldingen zijn geblokkeerd in je browser-instellingen.</p>}
-      {message && <p className="text-xs text-text-muted">{message}</p>}
-    </div>
+    </>
   );
 }

@@ -31,8 +31,11 @@ export async function GET(request: NextRequest) {
   }
 
   const next = pending?.next ?? "/overzicht";
-  const fail = (reason: string) =>
-    NextResponse.redirect(`${origin}/bank/koppelen?error=${reason}&next=${encodeURIComponent(next)}`);
+  // Eén keer loggen, hier en niet op de foutpagina (die kan herladen worden).
+  const fail = async (reason: string) => {
+    await logEvent("bank_connect_failed", { reason });
+    return NextResponse.redirect(`${origin}/bank/koppelen?error=${reason}&next=${encodeURIComponent(next)}`);
+  };
 
   if (!pending || !state || pending.state !== state) return fail("state");
   if (bankError || !code) return fail("geweigerd");

@@ -11,6 +11,8 @@ export function BalanceButton({ accounts }: { accounts: AccountBalance[] }) {
   const [open, setOpen] = useState(false);
   if (accounts.length === 0) return null;
 
+  // Een totaal klopt alleen als we van elke rekening het saldo kennen.
+  const allKnown = accounts.every((a) => a.balance !== null);
   const total = accounts.reduce((sum, a) => sum + (a.balance ?? 0), 0);
   const synced = accounts.map((a) => a.lastSyncedAt).filter(Boolean).sort().at(-1) ?? null;
 
@@ -33,15 +35,17 @@ export function BalanceButton({ accounts }: { accounts: AccountBalance[] }) {
                 {account.ibanMasked && <p className="text-xs text-text-muted">{account.ibanMasked}</p>}
               </div>
               <p className="text-base font-semibold tabular-nums">
-                {account.balance === null ? "–" : formatEuro(account.balance)}
+                {account.balance === null ? <span className="text-sm font-normal text-text-muted">Niet bekend</span> : formatEuro(account.balance)}
               </p>
             </li>
           ))}
         </ul>
         {accounts.length > 1 && (
           <div className="mt-2 flex items-center justify-between border-t pt-3">
-            <p className="text-sm text-text-muted">Samen</p>
-            <p className="font-semibold tabular-nums">{formatEuro(total)}</p>
+            <p className="text-sm text-text-muted">Totaal</p>
+            <p className="font-semibold tabular-nums">
+              {allKnown ? formatEuro(total) : <span className="text-sm font-normal text-text-muted">Niet bekend</span>}
+            </p>
           </div>
         )}
         {synced && (

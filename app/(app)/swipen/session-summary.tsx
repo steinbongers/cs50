@@ -2,9 +2,11 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { CategoryBadge } from "@/components/categories/category-badge";
 import { formatEuroAbs } from "@/lib/format";
+import { success } from "@/lib/haptics";
 import { categoryColorClasses } from "@/lib/categories/palette";
 import type { CategoryOption, OpenTransaction } from "@/lib/transactions/queries";
 import { cn } from "@/lib/utils";
@@ -22,18 +24,29 @@ interface SessionSummaryProps {
   remaining: number;
 }
 
-function headline(count: number): string {
+export function headline(count: number): string {
   if (count === 0) return "Niets gekozen, wel gekeken";
-  if (count === 1) return "Eén gedaan. Klein maar fijn.";
-  if (count < 5) return "Dat ging vlot. Alles heeft een plek.";
-  if (count < 15) return "Stapel weg. Alles zit in een potje.";
-  return "Zo. Dat was een flinke stapel.";
+  if (count === 1) return "Eén kaartje, klein maar fijn";
+  if (count < 5) return "Dat ging vlot";
+  if (count <= 15) return "Stapel weg. Lekker bezig.";
+  return "Zo, dat was een flinke stapel";
+}
+
+/** "12 kaartjes in een potje, 3 op Later" */
+export function summaryLine(assigned: number, skipped: number): string {
+  const cards = assigned === 1 ? "1 kaartje" : `${assigned} kaartjes`;
+  return skipped > 0 ? `${cards} in een potje, ${skipped} op Later` : `${cards} in een potje`;
 }
 
 /** Rustig afrondmoment met een korte samenvatting van deze ronde. */
 export function SessionSummary({ decisions, skipped, remaining }: SessionSummaryProps) {
   const router = useRouter();
   const reduce = useReducedMotion();
+
+  // Lege stapel: één keer een succestrilling (waar het toestel dat kan).
+  useEffect(() => {
+    if (remaining === 0) success();
+  }, [remaining]);
 
   const totals = new Map<string, { category: CategoryOption; spent: number; count: number }>();
   for (const { transaction, category, ownShare } of decisions) {
@@ -71,7 +84,7 @@ export function SessionSummary({ decisions, skipped, remaining }: SessionSummary
         </motion.svg>
       </div>
 
-      <h2 className="text-2xl font-semibold tracking-tight">{headline(decisions.length)}</h2>
+      <h2 className="text-[22px] leading-7 font-semibold tracking-[-0.02em]">{headline(decisions.length)}</h2>
 
       <div className="mt-4 flex w-full flex-col gap-2">
         {top && top.spent > 0 && colors && (
@@ -86,10 +99,7 @@ export function SessionSummary({ decisions, skipped, remaining }: SessionSummary
             </div>
           </div>
         )}
-        <p className="text-sm text-text-muted">
-          {decisions.length === 1 ? "1 transactie" : `${decisions.length} transacties`} in een potje gestopt
-          {skipped > 0 && `, ${skipped} keer op later gezet`}.
-        </p>
+        <p className="text-[15px] leading-5 text-text-muted tabular-nums">{summaryLine(decisions.length, skipped)}</p>
       </div>
 
       <div className="mt-8 flex w-full flex-col gap-2">
@@ -99,15 +109,13 @@ export function SessionSummary({ decisions, skipped, remaining }: SessionSummary
               Volgende stapel ({remaining})
             </Button>
             <ButtonLink href="/overzicht" variant="ghost" size="lg" fullWidth>
-              Genoeg voor nu
+              Straks verder
             </ButtonLink>
           </>
         ) : (
-          <>
-            <ButtonLink href="/overzicht" size="lg" fullWidth>
-              Naar het overzicht
-            </ButtonLink>
-          </>
+          <ButtonLink href="/overzicht" size="lg" fullWidth>
+            Naar je overzicht
+          </ButtonLink>
         )}
       </div>
     </div>
@@ -116,17 +124,20 @@ export function SessionSummary({ decisions, skipped, remaining }: SessionSummary
 
 const SPARKLE_COLORS = ["bg-cat-blauw", "bg-cat-oranje", "bg-cat-groen", "bg-cat-roze", "bg-cat-geel", "bg-cat-paars"];
 
+/** Maximaal aantal deeltjes; het hele feestje duurt 600 ms. */
+const SPARKLE_COUNT = 12;
+
 /** Klein feestmoment: een handvol stipjes die kort opspatten. Geen confettikanon. */
 function Sparkles() {
-  const dots = Array.from({ length: 12 }, (_, i) => {
-    const angle = (i / 12) * Math.PI * 2;
+  const dots = Array.from({ length: SPARKLE_COUNT }, (_, i) => {
+    const angle = (i / SPARKLE_COUNT) * Math.PI * 2;
     const distance = 70 + (i % 3) * 22;
     return {
       x: Math.cos(angle) * distance,
       y: Math.sin(angle) * distance - 30,
       color: SPARKLE_COLORS[i % SPARKLE_COLORS.length],
       size: 5 + (i % 3) * 2,
-      delay: (i % 4) * 0.04,
+      delay: (i % 4) * 0.025,
     };
   });
 
@@ -139,7 +150,8 @@ function Sparkles() {
           style={{ width: dot.size, height: dot.size }}
           initial={{ x: 0, y: 0, opacity: 0, scale: 0.4 }}
           animate={{ x: dot.x, y: dot.y, opacity: [0, 1, 0], scale: [0.4, 1, 0.6] }}
-          transition={{ duration: 0.9, delay: 0.1 + dot.delay, ease: [0.22, 1, 0.36, 1] }}
+          // Langste deeltje: 0,5 s + 0,075 s vertraging, dus binnen 600 ms klaar.
+          transition={{ duration: 0.5, delay: dot.delay, ease: [0.22, 1, 0.36, 1] }}
         />
       ))}
     </div>

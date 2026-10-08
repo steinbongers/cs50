@@ -2,18 +2,30 @@
 
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { MAX_CATEGORIES, MAX_CATEGORY_NAME_LENGTH } from "@/lib/categories/defaults";
+import {
+  isQuickSuggestionKey,
+  MAX_CATEGORIES,
+  MAX_CATEGORY_NAME_LENGTH,
+  type QuickSuggestionKey,
+} from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON, isCategoryIcon } from "@/lib/categories/icons";
 import { isCategoryColor } from "@/lib/categories/palette";
 import { ensureVoorgeschotenCategory } from "@/lib/categories/system";
 import type { CategoryDraft } from "@/lib/categories/types";
+import { logEvent } from "@/lib/events";
 import { createClient } from "@/lib/supabase/server";
 
 export type { CategoryDraft } from "@/lib/categories/types";
 
+/** Potje uit de onboarding: met of het een eigen potje is en welke snelle suggestie het leverde. */
+export type OnboardingCategoryDraft = CategoryDraft & {
+  isCustom?: boolean;
+  suggestion?: QuickSuggestionKey | null;
+};
+
 export type SaveCategoriesResult = { error: string } | undefined;
 
-function isValidDraft(value: unknown): value is CategoryDraft {
+function isValidDraft(value: unknown): value is OnboardingCategoryDraft {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
@@ -22,19 +34,21 @@ function isValidDraft(value: unknown): value is CategoryDraft {
     typeof v.icon === "string" &&
     typeof v.color === "string" &&
     typeof v.isIncome === "boolean" &&
-    typeof v.enabled === "boolean"
+    typeof v.enabled === "boolean" &&
+    (v.isCustom === undefined || typeof v.isCustom === "boolean") &&
+    (v.suggestion === undefined || v.suggestion === null || isQuickSuggestionKey(v.suggestion))
   );
 }
 
 /**
- * Slaat de potjeskeuze uit de onboarding op.
+ * Slaat de potjeskeuze uit de onboarding op, in de volgorde van de lijst.
  * - nieuwe, aangezette potjes worden toegevoegd
  * - bestaande potjes worden bijgewerkt; uitgezette worden gearchiveerd
  * - uitgezette potjes uit de startset worden niet opgeslagen
  * Daarna gaat de gebruiker door naar de volgende stap.
  */
 export async function saveOnboardingCategories(
-  drafts: CategoryDraft[],
+  drafts: OnboardingCategoryDraft[],
 ): Promise<SaveCategoriesResult> {
   const user = await requireUser();
 
@@ -50,7 +64,9 @@ export async function saveOnboardingCategories(
   }));
 
   const enabled = cleaned.filter((d) => d.enabled);
-  if (enabled.length === 0) return { error: "Kies minimaal één potje." };
+  if (!enabled.some((d) => !d.isIncome)) {
+    return { error: "Zet minstens één potje voor je uitgaven aan." };
+  }
   if (enabled.length > MAX_CATEGORIES) return { error: `Kies maximaal ${MAX_CATEGORIES} potjes.` };
   if (enabled.some((d) => d.name.length === 0)) return { error: "Elk potje heeft een naam nodig." };
 
@@ -103,6 +119,17 @@ export async function saveOnboardingCategories(
   // Het ingebouwde potje voor geld dat je terugkrijgt.
   await ensureVoorgeschotenCategory(supabase, user.id);
 
+  // Meting: alleen aantallen en vaste sleutels, nooit namen.
+  const custom = enabled.filter((d) => d.isCustom === true && d.id === undefined);
+  await logEvent("onboarding_step_done", {
+    step: "potjes",
+    potjes_count: enabled.length,
+    defaults_kept: enabled.filter((d) => d.isCustom !== true && d.id === undefined).length,
+  });
+  for (const draft of custom) {
+    await logEvent("potje_created", { source: "onboarding", suggestion: draft.suggestion ?? null });
+  }
+
   redirect("/onboarding/salarisdag");
 }
 
@@ -120,7 +147,7 @@ export async function saveSalaryDay(day: number | null): Promise<{ error: string
   redirect("/onboarding/bron");
 }
 
-/** Rondt de onboarding af en start de eerste swipe-sessie. */
+/** Rondt de onboarding af; het startscherm (/) kiest zelf Swipen of Overzicht. */
 export async function finishOnboarding(): Promise<void> {
   const user = await requireUser();
   const supabase = await createClient();
@@ -131,5 +158,5 @@ export async function finishOnboarding(): Promise<void> {
 
   if (error) throw new Error("Onboarding kon niet worden afgerond.");
 
-  redirect("/swipen");
+  redirect("/");
 }

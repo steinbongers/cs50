@@ -5,7 +5,7 @@
 export const APP_NAME = "[Appnaam]";
 
 export const APP_DESCRIPTION =
-  "Stop elke uitgave zelf in een potje en krijg grip op je geld.";
+  "Elke betaling zelf in een potje. Zo weet je waar je geld heen gaat.";
 
 /**
  * Naam van de hoofdactie: transacties één voor één in een potje stoppen.

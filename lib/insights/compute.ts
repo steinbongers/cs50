@@ -24,6 +24,7 @@ export interface CatLite {
   isIncome: boolean;
   systemKey: string | null;
   monthlyBudget: number | null;
+  goalAmount: number | null;
 }
 
 /**
@@ -141,6 +142,88 @@ export function compareWithAverage(
     periodsUsed: samples.length,
     daysElapsed,
   };
+}
+
+export interface CategoryDeviation {
+  categoryId: string;
+  /** Uitgegeven in dit potje deze periode, tot en met vandaag. */
+  current: number;
+  /** Gemiddelde van de vorige periodes na even veel dagen (0 als er geen vorige periodes zijn). */
+  average: number;
+  /** current - average: positief is meer dan gewoonlijk. */
+  diff: number;
+  periodsUsed: number;
+}
+
+export interface DeviationOptions {
+  /** Hoeveel vorige periodes maximaal meetellen (standaard 3). */
+  maxPeriods?: number;
+}
+
+/**
+ * Per potje (zonder Inkomen en systeempotjes): uitgegeven deze periode tot en met
+ * vandaag, tegenover het gemiddelde van de vorige periodes op hetzelfde punt.
+ * Zelfde mechanisme als `compareWithAverage`: periodes zonder meetellende
+ * uitgaven tellen niet mee. Gesorteerd op grootste afwijking (|diff|) eerst.
+ * Potjes die nu en eerder op 0 staan, vallen weg.
+ */
+export function categoryDeviations(
+  txs: TxLite[],
+  cats: CatLite[] | Map<string, CatLite>,
+  salaryDay: number | null,
+  today: Date,
+  opts: DeviationOptions = {},
+): CategoryDeviation[] {
+  const catList = cats instanceof Map ? [...cats.values()] : cats;
+  const catMap = cats instanceof Map ? cats : new Map(cats.map((c) => [c.id, c]));
+  const maxPeriods = Math.max(0, Math.floor(opts.maxPeriods ?? 3));
+
+  const period = currentPeriod(salaryDay, today);
+  const daysElapsed = daysBetween(period.startISO, toISODate(today)) + 1;
+  const currentPer = spentPerCategory(txs, catMap, period.startISO, addDays(period.startISO, daysElapsed));
+
+  const samples: Map<string, number>[] = [];
+  for (const prev of previousPeriods(salaryDay, today, maxPeriods)) {
+    if (!hasSpending(txs, catMap, prev.startISO, prev.endISO)) continue;
+    const until = addDays(prev.startISO, daysElapsed);
+    samples.push(spentPerCategory(txs, catMap, prev.startISO, until < prev.endISO ? until : prev.endISO));
+  }
+
+  const rows: CategoryDeviation[] = [];
+  for (const cat of catList) {
+    if (cat.isIncome || cat.systemKey) continue;
+    const current = Math.max(0, currentPer.get(cat.id) ?? 0);
+    const average = samples.length
+      ? round2(samples.reduce((sum, m) => sum + Math.max(0, m.get(cat.id) ?? 0), 0) / samples.length)
+      : 0;
+    if (current === 0 && average === 0) continue;
+    rows.push({ categoryId: cat.id, current, average, diff: round2(current - average), periodsUsed: samples.length });
+  }
+  return rows.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+}
+
+/** Vanaf welk verschil (in euro's) een potje opvalt. */
+export const STANDOUT_MIN_DIFF = 25;
+/** Vanaf welk deel van het gemiddelde een potje opvalt. */
+export const STANDOUT_MIN_RATIO = 0.25;
+/** Pas na zoveel dagen in de periode is een vergelijking zinnig. */
+export const STANDOUT_MIN_DAYS = 7;
+
+/**
+ * Het ene potje dat het noemen waard is, of null. Eerste item (lijst is al op
+ * grootste afwijking gesorteerd) met |diff| ≥ € 25 én ≥ 25% van het gemiddelde,
+ * minstens één vorige periode, en minstens 7 dagen onderweg.
+ */
+export function pickStandout(deviations: CategoryDeviation[], daysElapsed: number): CategoryDeviation | null {
+  if (daysElapsed < STANDOUT_MIN_DAYS) return null;
+  for (const d of deviations) {
+    const size = Math.abs(d.diff);
+    if (d.periodsUsed < 1) continue;
+    if (size < STANDOUT_MIN_DIFF) continue;
+    if (size < STANDOUT_MIN_RATIO * d.average) continue;
+    return d;
+  }
+  return null;
 }
 
 export interface Streak {

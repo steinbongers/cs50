@@ -1,216 +1,203 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useId } from "react";
+import { Minus, Plus } from "lucide-react";
+import { useId, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Segmented } from "@/components/ui/segmented";
+import { Sheet } from "@/components/ui/sheet";
 import { formatEuro } from "@/lib/format";
 import { MAX_SPLIT_PERSONS, MIN_SPLIT_PERSONS, splitEqually } from "@/lib/transactions/split";
 import { cn } from "@/lib/utils";
 
+export type SplitMethod = "bank" | "other";
+
 export interface SplitState {
   enabled: boolean;
+  /** Totaal aantal personen, jij meegeteld. */
   persons: number;
-  method: "bank" | "other";
+  /** Hoe het geld terugkomt. Leeg tot de gebruiker kiest: we kiezen niet voor hem. */
+  method: SplitMethod | null;
   names: string[];
-  showNames: boolean;
-  /** Getalveld voor meer dan zes personen. */
-  customPersons: boolean;
 }
 
 export const EMPTY_SPLIT: SplitState = {
   enabled: false,
-  persons: 2,
-  method: "bank",
+  persons: MIN_SPLIT_PERSONS,
+  method: null,
   names: [],
-  showNames: false,
-  customPersons: false,
 };
 
-interface SplitPanelProps {
+const METHOD_OPTIONS = [
+  { value: "bank", label: "Via de bank" },
+  { value: "other", label: "Buiten de bank" },
+] as const;
+
+interface SplitRowProps {
+  open: boolean;
   amountAbs: number;
   state: SplitState;
   onChange: (patch: Partial<SplitState>) => void;
-  /** Eerder gebruikte namen, als suggesties (datalist) bij de naamvelden. */
+  /** Eerder gebruikte namen, als suggesties bij de naamvelden. */
   knownNames?: string[];
+  /** Kleurt de keuze via/buiten de bank als die nog ontbreekt. */
+  methodMissing?: boolean;
 }
 
-const QUICK_PERSONS = [2, 3, 4, 5, 6];
+const roundButton =
+  "flex size-11 shrink-0 items-center justify-center rounded-full bg-surface shadow-card text-text " +
+  "transition-[transform,background-color] duration-100 active:scale-[0.96] active:bg-surface-muted " +
+  "disabled:opacity-40 disabled:active:scale-100";
 
 /**
- * "Ik krijg geld terug": met hoeveel personen was je, en hoe komt het terug?
- * Jouw deel gaat naar het potje; de rest naar Voorgeschoten of is direct geregeld.
+ * De regel die inschuift als "Ik krijg geld terug" aan staat: met hoeveel waren
+ * jullie, via of buiten de bank, en (optioneel) namen in een sheet.
  */
-export function SplitPanel({ amountAbs, state, onChange, knownNames = [] }: SplitPanelProps) {
+export function SplitRow({ open, amountAbs, state, onChange, knownNames = [], methodMissing = false }: SplitRowProps) {
   const reduce = useReducedMotion();
-  const namesListId = useId();
-  const result = splitEqually(amountAbs, state.persons);
-  const othersTotal = Math.round(result.otherShares.reduce((a, b) => a + b, 0) * 100) / 100;
+  const [namesOpen, setNamesOpen] = useState(false);
 
   return (
-    <div className="rounded-card bg-surface shadow-card">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={state.enabled}
-        onClick={() => onChange({ enabled: !state.enabled })}
-        className="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-2 text-left"
-      >
-        <span className="text-sm font-medium">Ik krijg geld terug</span>
-        <span
-          aria-hidden
-          className={cn(
-            "relative h-6 w-10 shrink-0 rounded-full transition-colors duration-150",
-            state.enabled ? "bg-primary" : "bg-border",
-          )}
-        >
-          <span
-            className={cn(
-              "absolute top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform duration-150",
-              state.enabled ? "translate-x-[1.125rem]" : "translate-x-0.5",
-            )}
-          />
-        </span>
-      </button>
-
+    <>
       <AnimatePresence initial={false}>
-        {state.enabled && (
+        {open && (
           <motion.div
-            key="split-body"
+            key="split-row"
             initial={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
-            animate={reduce ? { opacity: 1 } : { height: "auto", opacity: 1 }}
-            exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            animate={reduce ? { opacity: 1, transition: { duration: 0.12 } } : { height: 52, opacity: 1 }}
+            exit={reduce ? { opacity: 0, transition: { duration: 0.12 } } : { height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="flex flex-col gap-3 px-4 pb-4">
-              <div>
-                <p className="mb-1.5 text-xs font-medium text-text-muted">Met hoeveel personen was je, jij meegeteld?</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {QUICK_PERSONS.map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => onChange({ persons: n, customPersons: false })}
-                      aria-pressed={!state.customPersons && state.persons === n}
-                      className={cn(
-                        "flex size-11 items-center justify-center rounded-full text-sm font-semibold tabular-nums transition-colors duration-150",
-                        !state.customPersons && state.persons === n
-                          ? "bg-primary text-on-primary"
-                          : "bg-surface-muted text-text hover:bg-border",
-                      )}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                  {state.customPersons ? (
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      aria-label="Aantal personen"
-                      min={MIN_SPLIT_PERSONS}
-                      max={MAX_SPLIT_PERSONS}
-                      value={state.persons}
-                      autoFocus
-                      onChange={(e) => {
-                        const value = Number(e.target.value);
-                        if (Number.isInteger(value) && value >= MIN_SPLIT_PERSONS && value <= MAX_SPLIT_PERSONS) {
-                          onChange({ persons: value });
-                        }
-                      }}
-                      className="h-11 w-16 rounded-full border bg-surface px-3 text-center text-sm font-semibold tabular-nums focus:border-primary focus:outline-none"
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onChange({ customPersons: true, persons: Math.max(state.persons, 7) })}
-                      className="flex h-11 items-center justify-center rounded-full bg-surface-muted px-3 text-sm font-medium text-text hover:bg-border"
-                    >
-                      Meer
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <p className="mb-1.5 text-xs font-medium text-text-muted">Hoe krijg je het terug?</p>
-                <div className="grid grid-cols-2 gap-1 rounded-control bg-surface-muted p-1" role="radiogroup">
-                  {(
-                    [
-                      { value: "bank", label: "Via mijn rekening" },
-                      { value: "other", label: "Anders (WBW, contant)" },
-                    ] as const
-                  ).map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={state.method === option.value}
-                      onClick={() => onChange({ method: option.value })}
-                      className={cn(
-                        "min-h-11 rounded-[0.625rem] px-2 text-xs font-medium transition-colors duration-150",
-                        state.method === option.value ? "bg-surface text-text shadow-card" : "text-text-muted hover:text-text",
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <p className="text-sm">
-                Jouw deel <strong className="tabular-nums">{formatEuro(result.ownShare)}</strong>
-                <span className="text-text-muted"> · </span>
-                {state.method === "bank" ? "terug te krijgen" : "voor de anderen"}{" "}
-                <strong className="tabular-nums">{formatEuro(othersTotal)}</strong>
-                <span className="text-text-muted">
-                  {" "}
-                  ({result.otherShares.length} × {formatEuro(result.otherShares[0] ?? 0)})
+            <div className="mt-2 flex h-11 items-center gap-1.5">
+              <div
+                role="group"
+                aria-label="Met hoeveel waren jullie? (jij telt mee)"
+                className="flex shrink-0 items-center gap-0.5"
+              >
+                <button
+                  type="button"
+                  className={roundButton}
+                  aria-label="Eén persoon minder"
+                  disabled={state.persons <= MIN_SPLIT_PERSONS}
+                  onClick={() => onChange({ persons: Math.max(MIN_SPLIT_PERSONS, state.persons - 1) })}
+                >
+                  <Minus size={16} strokeWidth={2} aria-hidden />
+                </button>
+                <span className="w-5 text-center text-[15px] font-semibold tabular-nums" aria-live="polite">
+                  {state.persons}
                 </span>
-              </p>
+                <button
+                  type="button"
+                  className={roundButton}
+                  aria-label="Eén persoon meer"
+                  disabled={state.persons >= MAX_SPLIT_PERSONS}
+                  onClick={() => onChange({ persons: Math.min(MAX_SPLIT_PERSONS, state.persons + 1) })}
+                >
+                  <Plus size={16} strokeWidth={2} aria-hidden />
+                </button>
+              </div>
 
-              {state.method === "bank" && (
-                <div>
-                  {state.showNames ? (
-                    <div className="flex flex-col gap-1.5">
-                      {knownNames.length > 0 && (
-                        <datalist id={namesListId}>
-                          {knownNames.map((name) => (
-                            <option key={name} value={name} />
-                          ))}
-                        </datalist>
-                      )}
-                      {result.otherShares.map((_, index) => (
-                        <Input
-                          key={index}
-                          aria-label={`Naam persoon ${index + 1}`}
-                          placeholder={`Persoon ${index + 1}`}
-                          value={state.names[index] ?? ""}
-                          maxLength={60}
-                          list={knownNames.length > 0 ? namesListId : undefined}
-                          className="h-11 text-sm"
-                          onChange={(e) => {
-                            const names = [...state.names];
-                            names[index] = e.target.value;
-                            onChange({ names });
-                          }}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onChange({ showNames: true })}
-                      className="min-h-11 text-sm font-medium text-primary"
-                    >
-                      Namen toevoegen (optioneel)
-                    </button>
-                  )}
-                </div>
-              )}
+              <Segmented
+                options={METHOD_OPTIONS}
+                value={state.method}
+                onChange={(method) => onChange({ method })}
+                ariaLabel="Hoe krijg je het terug?"
+                className={cn(
+                  "min-w-0 flex-1 [&_button]:px-1 [&_button]:text-[12px] [&_button]:leading-[14px] [&_button]:whitespace-normal",
+                  methodMissing && "ring-2 ring-accent ring-inset",
+                )}
+              />
+
+              <button
+                type="button"
+                onClick={() => setNamesOpen(true)}
+                className="h-11 min-w-11 shrink-0 text-[15px] font-medium text-primary"
+              >
+                Namen
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+
+      <NamesSheet
+        open={open && namesOpen}
+        onClose={() => setNamesOpen(false)}
+        amountAbs={amountAbs}
+        state={state}
+        onChange={onChange}
+        knownNames={knownNames}
+      />
+    </>
+  );
+}
+
+interface NamesSheetProps {
+  open: boolean;
+  onClose: () => void;
+  amountAbs: number;
+  state: SplitState;
+  onChange: (patch: Partial<SplitState>) => void;
+  knownNames: string[];
+}
+
+/** Namen van de anderen invullen (optioneel), met suggesties uit eerdere namen. */
+function NamesSheet({ open, onClose, amountAbs, state, onChange, knownNames }: NamesSheetProps) {
+  const namesListId = useId();
+  const result = splitEqually(amountAbs, state.persons);
+  const othersTotal = Math.round(result.otherShares.reduce((a, b) => a + b, 0) * 100) / 100;
+  const open_ = state.method === "bank" ? othersTotal : 0;
+  const settled = state.method === "other" ? othersTotal : 0;
+
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Wie waren erbij?"
+      description={`Jouw deel is ${formatEuro(result.ownShare)}. Namen zijn niet verplicht.`}
+    >
+      <div className="flex flex-col gap-4">
+        {knownNames.length > 0 && (
+          <datalist id={namesListId}>
+            {knownNames.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
+        )}
+        <div className="flex flex-col gap-2">
+          {result.otherShares.map((share, index) => (
+            <div key={index} className="flex items-center gap-3">
+              <Input
+                aria-label={`Naam persoon ${index + 1}`}
+                placeholder={`Persoon ${index + 1}`}
+                value={state.names[index] ?? ""}
+                maxLength={60}
+                autoComplete="off"
+                list={knownNames.length > 0 ? namesListId : undefined}
+                className="h-11 flex-1 text-[15px]"
+                onChange={(e) => {
+                  const names = [...state.names];
+                  names[index] = e.target.value;
+                  onChange({ names });
+                }}
+              />
+              <span className="w-20 shrink-0 text-right text-[15px] tabular-nums text-text-muted">{formatEuro(share)}</span>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-[13px] leading-[18px] text-text-muted">Buiten de bank: WieBetaaltWat of contant</p>
+
+        <p className="text-[13px] leading-[18px] tabular-nums">
+          Nog te krijgen {formatEuro(open_)} · Al geregeld {formatEuro(settled)}
+        </p>
+
+        <Button size="lg" fullWidth onClick={onClose}>
+          Klaar
+        </Button>
+      </div>
+    </Sheet>
   );
 }

@@ -16,12 +16,15 @@ export const metadata: Metadata = { title: "Bank koppelen" };
 
 const PRIORITY = ["ING", "Rabobank", "ABN AMRO", "bunq", "ASN", "SNS", "Knab", "Triodos"];
 
+/** Foutcodes van /api/bank/callback, in gewone taal. */
 const ERRORS: Record<string, string> = {
-  state: "De terugkeer van de bank klopte niet met je poging. Probeer het opnieuw.",
-  geweigerd: "De koppeling is bij de bank afgebroken. Je kunt het opnieuw proberen.",
-  sessie: "De bank gaf geen geldige sessie terug. Probeer het nog eens.",
-  opslaan: "De koppeling kon niet worden opgeslagen. Probeer het nog eens.",
+  state: "Er ging iets mis op de terugweg van je bank. Probeer het nog een keer.",
+  geweigerd: "Je bank heeft het koppelen afgebroken. Probeer het nog een keer.",
+  sessie: "Je bank gaf geen akkoord terug. Probeer het nog een keer.",
+  opslaan: "Het koppelen lukte bijna, maar niet helemaal. Probeer het nog een keer.",
 };
+
+const NOT_CONFIGURED = "Bank koppelen kan nu even niet. We zijn ermee bezig.";
 
 function sortBanks(aspsps: EbAspsp[]): EbAspsp[] {
   const rank = (a: EbAspsp) => {
@@ -37,8 +40,10 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
   const user = await requireUser();
   const params = await searchParams;
   const next = typeof params.next === "string" && params.next.startsWith("/") ? params.next : "/overzicht";
-  const errorKey = typeof params.error === "string" ? params.error : null;
+  const errorKey = typeof params.error === "string" && Object.hasOwn(ERRORS, params.error) ? params.error : null;
   const reconnect = params.reconnect === "1";
+
+  // bank_connect_failed wordt al eenmalig gelogd in /api/bank/callback.
 
   const supabase = await createClient();
   const connection = await getPrimaryConnection(supabase, user.id);
@@ -51,13 +56,13 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
     try {
       banks = sortBanks((await listAspsps("NL")).aspsps ?? []);
     } catch {
-      loadError = "De lijst met banken kon niet worden geladen. Probeer het zo nog eens.";
+      loadError = "We konden de lijst met banken niet ophalen. Probeer het zo nog eens.";
     }
   }
 
   return (
     <div className="safe-top mx-auto flex min-h-dvh w-full max-w-md flex-1 flex-col pb-8">
-      <header className="flex items-center gap-2 px-4 pt-4">
+      <header className="mt-1 flex h-11 items-center gap-2 px-4">
         <Link
           href={next}
           aria-label="Terug"
@@ -69,17 +74,17 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
       </header>
 
       <div className="px-5 pt-4 pb-3">
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-[28px] leading-[34px] font-semibold tracking-[-0.02em]">
           {connection && status === "active" && !reconnect ? "Je bankkoppeling" : "Koppel je bank"}
         </h1>
-        <p className="mt-1 text-text-muted">
-          Je logt in bij je eigen bank en geeft toestemming om transacties te lezen. Wij kunnen niets
-          overmaken of wijzigen. Na 90 dagen vraagt je bank opnieuw om toestemming.
+        <p className="mt-2 text-[15px] leading-5 text-text-muted">
+          Je logt in bij je eigen bank en geeft toestemming om mee te lezen. Wij kunnen nooit geld overmaken. Af en
+          toe vraagt je bank opnieuw om toestemming. Wij laten het je op tijd weten.
         </p>
       </div>
 
       <div className="flex flex-col gap-4 px-4">
-        {errorKey && ERRORS[errorKey] && (
+        {errorKey && (
           <p className="rounded-control bg-negative-soft px-4 py-3 text-sm text-negative" role="alert">
             {ERRORS[errorKey]}
           </p>
@@ -90,6 +95,7 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
             aspspName={connection.aspsp_name ?? "je bank"}
             status={status}
             daysLeft={daysUntil(connection.valid_until)}
+            validUntil={connection.valid_until}
             lastSyncedAt={connection.last_synced_at}
             lastError={connection.last_error}
             showReconnect={status !== "active" && !reconnect}
@@ -98,9 +104,7 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
         )}
 
         {!configured ? (
-          <Card className="text-sm text-text-muted">
-            De bankkoppeling staat nog niet aan voor deze omgeving. Probeer het later.
-          </Card>
+          <Card className="text-sm text-text-muted">{NOT_CONFIGURED}</Card>
         ) : loadError ? (
           <Card className="text-sm text-negative">{loadError}</Card>
         ) : banks.length > 0 ? (
@@ -108,8 +112,7 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
         ) : null}
 
         <p className="px-1 text-xs text-text-muted">
-          Je kunt één bank koppelen; alle rekeningen van die bank komen mee. Overboekingen tussen je
-          eigen rekeningen slaan we automatisch over.
+          Je koppelt één bank, met al je rekeningen daar. Geld dat je naar jezelf overmaakt, slaan we over.
         </p>
       </div>
     </div>

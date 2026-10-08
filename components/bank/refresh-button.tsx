@@ -6,7 +6,10 @@ import { Spinner } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-/** "Ververs": haalt nieuwe transacties op, hoogstens eens per 15 minuten. */
+/**
+ * "Verversen": haalt nieuwe kaartjes op, hoogstens eens per 15 minuten.
+ * Een mislukte poging logt `sync_failed` in de server action (refreshConnection).
+ */
 export function RefreshButton({ lastSyncedAt }: { lastSyncedAt: string | null }) {
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -23,8 +26,8 @@ export function RefreshButton({ lastSyncedAt }: { lastSyncedAt: string | null })
         result.inserted === 0
           ? "Niets nieuws. Je bent helemaal bij."
           : result.inserted === 1
-            ? "1 nieuwe transactie opgehaald."
-            : `${result.inserted} nieuwe transacties opgehaald.`,
+            ? "1 nieuw kaartje binnen."
+            : `${result.inserted} nieuwe kaartjes binnen.`,
       );
     });
   }
@@ -43,7 +46,7 @@ export function RefreshButton({ lastSyncedAt }: { lastSyncedAt: string | null })
         className={cn("flex min-h-11 shrink-0 items-center gap-1.5 rounded-full px-3 font-medium text-primary hover:bg-primary-soft", isPending && "opacity-60")}
       >
         {isPending && <Spinner className="size-3.5" />}
-        Ververs
+        Verversen
       </button>
     </div>
   );

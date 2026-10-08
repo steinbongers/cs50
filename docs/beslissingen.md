@@ -169,3 +169,17 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 - **Reikwijdte:** afwerken én grotere nieuwe functies, zolang ze het principe versterken (zelf indelen,
   niets automatisch). Doel: mooi, strak, simpel en concurrerend.
 - **Terugbetalingen:** blijven via de tegel Terugbetaling (inkomend geld afboeken tegen openstaande delen).
+
+## Integratie golf 2 (8 oktober 2026, nacht)
+
+- **Via de bank of buiten de bank is niet voorgeselecteerd.** Met "Ik krijg geld terug" aan kies je zelf;
+  tik je zonder keuze op een potje, dan vraagt de app eerst die keuze. Het aantal personen begint op 2
+  (een teller kan niet leeg zijn). Stein kan terug naar "via de bank" als standaard.
+- **Zoeken (F7):** `/transacties` met zoekveld, chips voor maand en potje, en per kaartje de banktekst,
+  een notitie en "Naar ander potje". Kaartjes die nog op de stapel liggen verplaats je daar niet;
+  die deel je in op Swipen. Gemeten wordt alleen een bucket van het aantal resultaten, nooit de zoekterm.
+- **Na de onboarding** gaat de knop op het klaar-scherm naar `/`; het slimme startscherm kiest.
+- **Badge op Swipen** ververst als je de stapel verlaat (niet tijdens het swipen, zodat de stapel stil blijft).
+- **Meting:** `bank_connect_failed` logt één keer in de bank-callback; handmatig afgevinkte delen loggen
+  `share_settled {how: 'manual_check'}`; `month_viewed` blijft `{ months_back }`.
+

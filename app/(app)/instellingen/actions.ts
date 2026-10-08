@@ -3,11 +3,13 @@
 import { refresh } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth";
+import { getUser, requireUser } from "@/lib/auth";
 import { getPrimaryConnection } from "@/lib/bank/connections";
 import { deleteSession } from "@/lib/enablebanking/client";
+import { logEvent } from "@/lib/events";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { churnEntry } from "./churn";
 
 type Result = { ok: true } | { ok: false; error: string };
 
@@ -75,36 +77,72 @@ export async function removePushSubscription(endpoint: string | null): Promise<R
   return { ok: true };
 }
 
-/** Naam en salarisdag aanpassen. */
-export async function updateProfileSettings(input: { displayName: string; salaryDay: number | null }): Promise<Result> {
+/** Naam aanpassen. Leeg mag: dan staat er "Geen naam ingevuld". */
+export async function updateDisplayName(displayName: string): Promise<Result> {
   const user = await requireUser();
-  const displayName = typeof input.displayName === "string" ? input.displayName.trim().slice(0, 60) : "";
-  const salaryDay = input.salaryDay;
-  if (salaryDay !== null && (!Number.isInteger(salaryDay) || salaryDay < 1 || salaryDay > 31)) {
-    return { ok: false, error: "Kies een dag tussen 1 en 31." };
-  }
+  const name = typeof displayName === "string" ? displayName.trim().slice(0, 60) : "";
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ display_name: displayName || null, salary_day: salaryDay })
+    .update({ display_name: name || null })
     .eq("id", user.id);
   if (error) return { ok: false, error: "Opslaan lukte niet. Probeer het nog eens." };
   refresh();
   return { ok: true };
 }
 
-/**
- * Account verwijderen: direct en definitief. De banktoestemming wordt
- * ingetrokken, daarna verwijdert de service role de gebruiker; alle tabellen
- * hangen met on delete cascade aan auth.users.
- */
-export async function deleteAccount(confirmation: string): Promise<Result> {
+/** Salarisdag (1 t/m 31) of null voor de gewone kalendermaand. */
+export async function updateSalaryDay(salaryDay: number | null): Promise<Result> {
   const user = await requireUser();
-  if (confirmation.trim().toUpperCase() !== "VERWIJDER") {
-    return { ok: false, error: "Typ VERWIJDER om te bevestigen." };
+  if (salaryDay !== null && (!Number.isInteger(salaryDay) || salaryDay < 1 || salaryDay > 31)) {
+    return { ok: false, error: "Kies een dag tussen 1 en 31." };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ salary_day: salaryDay }).eq("id", user.id);
+  if (error) return { ok: false, error: "Opslaan lukte niet. Probeer het nog eens." };
+  refresh();
+  return { ok: true };
+}
+
+const PERMISSION_RESULTS = ["granted", "denied", "default"] as const;
+type PermissionResult = (typeof PERMISSION_RESULTS)[number];
+
+/** Meting: wat koos iemand bij de toestemmingsvraag voor meldingen (alleen de uitkomst). */
+export async function logPushPermission(result: unknown): Promise<void> {
+  if (!PERMISSION_RESULTS.includes(result as PermissionResult)) return;
+  await logEvent("push_permission", { result: result as PermissionResult, context: "settings" });
+}
+
+const DELETE_UNAVAILABLE = "Verwijderen lukt nu even niet. Mail ons, dan regelen we het.";
+
+/**
+ * Account verwijderen: direct en definitief na één bevestiging in de app.
+ * Alleen voor de ingelogde gebruiker zelf (sessie wordt hier op de server gecontroleerd).
+ * Eerst één anonieme regel in churn_log, dan de banktoestemming intrekken, dan
+ * verwijdert de service role de gebruiker; alle tabellen hangen met on delete
+ * cascade aan auth.users.
+ */
+export async function deleteAccount(): Promise<Result> {
+  const user = await getUser();
+  if (!user) redirect("/login");
+
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
+    return { ok: false, error: DELETE_UNAVAILABLE };
   }
 
   const supabase = await createClient();
+
+  // Anonieme churn-regel: cohortweek en aantal dagen, geen user_id.
+  let churnId: number | null = null;
+  const { data: profile } = await supabase.from("profiles").select("created_at").eq("id", user.id).maybeSingle();
+  if (profile?.created_at) {
+    const { data } = await admin.from("churn_log").insert(churnEntry(profile.created_at)).select("id").maybeSingle();
+    churnId = data?.id ?? null;
+  }
+
   const connection = await getPrimaryConnection(supabase, user.id);
   if (connection?.session_id) {
     try {
@@ -114,16 +152,14 @@ export async function deleteAccount(confirmation: string): Promise<Result> {
     }
   }
 
-  let admin;
-  try {
-    admin = createAdminClient();
-  } catch {
-    return { ok: false, error: "Verwijderen is op deze server niet ingesteld." };
-  }
   const { error } = await admin.auth.admin.deleteUser(user.id);
-  if (error) return { ok: false, error: "Verwijderen lukte niet. Probeer het nog eens of mail ons." };
+  if (error) {
+    // Niet verwijderd: dan ook geen churn-regel laten staan.
+    if (churnId !== null) await admin.from("churn_log").delete().eq("id", churnId);
+    return { ok: false, error: DELETE_UNAVAILABLE };
+  }
 
-  await supabase.auth.signOut();
+  await supabase.auth.signOut().catch(() => undefined);
   redirect("/welkom?verwijderd=1");
 }
 

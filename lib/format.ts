@@ -19,15 +19,24 @@ function zeroSafe(amount: number): number {
   return Math.abs(amount) < 0.005 ? 0 : amount;
 }
 
-/** € 12,34 — altijd met twee decimalen. */
-export function formatEuro(amount: number): string {
-  return currencyFormatter.format(zeroSafe(amount));
+const MINUS = "\u2212"; // echte minus (−), geen streepje
+const NBSP = "\u00a0"; // vaste spatie: teken en bedrag breken nooit over twee regels
+
+/** Zet een eventueel minteken vóór het euroteken: "− € 12,50" in plaats van "€ -12,50". */
+function withSign(formatter: Intl.NumberFormat, amount: number): string {
+  const text = formatter.format(Math.abs(amount));
+  return amount < 0 ? `${MINUS}${NBSP}${text}` : text;
 }
 
-/** € 12 — zonder decimalen, voor grote cijfers op het overzicht. */
+/** € 12,34 — altijd met twee decimalen. Negatief: "− € 12,34". */
+export function formatEuro(amount: number): string {
+  return withSign(currencyFormatter, zeroSafe(amount));
+}
+
+/** € 12 — zonder decimalen, voor grote cijfers op het overzicht. Negatief: "− € 12". */
 export function formatEuroWhole(amount: number): string {
   // Alles wat op € 0 afrondt, ook -0,4, tonen als € 0 zonder minteken.
-  return wholeCurrencyFormatter.format(Math.round(amount) === 0 ? 0 : amount);
+  return withSign(wholeCurrencyFormatter, Math.round(amount) === 0 ? 0 : amount);
 }
 
 /** Bedrag zonder teken, voor weergave naast een kleur die het teken al aangeeft. */
@@ -35,10 +44,11 @@ export function formatEuroAbs(amount: number): string {
   return currencyFormatter.format(Math.abs(zeroSafe(amount)));
 }
 
-/** "− € 23,45" of "+ € 12,50": expliciet teken, echte minus. */
+/** "− € 23,45" of "+ € 12,50": expliciet teken, echte minus, vaste spatie. */
 export function formatSignedEuro(amount: number): string {
-  const sign = amount < 0 ? "\u2212 " : amount > 0 ? "+ " : "";
-  return `${sign}${currencyFormatter.format(Math.abs(amount))}`;
+  const value = zeroSafe(amount);
+  const sign = value < 0 ? `${MINUS}${NBSP}` : value > 0 ? `+${NBSP}` : "";
+  return `${sign}${currencyFormatter.format(Math.abs(value))}`;
 }
 
 const dayFormatter = new Intl.DateTimeFormat(LOCALE, {

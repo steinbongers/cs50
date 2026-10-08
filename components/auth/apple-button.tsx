@@ -3,8 +3,12 @@
 import { useState, useTransition } from "react";
 import { startAppleSignIn } from "@/app/auth/actions";
 import { Spinner } from "@/components/ui/button";
+import { friendlyAuthError } from "./friendly-error";
 
-/** Zwarte Apple-knop volgens de richtlijnen van Apple; navigeert naar de Apple-login. */
+/**
+ * Apple-knop volgens de richtlijnen van Apple: zwart in licht, wit in donker.
+ * Via de tokens `bg-text`/`text-bg`, zodat ook een handmatig gekozen thema klopt.
+ */
 export function AppleButton({ next, inviteCode, label }: { next: string; inviteCode?: string; label: string }) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -14,7 +18,7 @@ export function AppleButton({ next, inviteCode, label }: { next: string; inviteC
     startTransition(async () => {
       const result = await startAppleSignIn(next, inviteCode);
       if ("error" in result) {
-        setError(result.error);
+        setError(friendlyAuthError(result.error) ?? result.error);
         return;
       }
       window.location.assign(result.url);
@@ -27,7 +31,7 @@ export function AppleButton({ next, inviteCode, label }: { next: string; inviteC
         type="button"
         onClick={go}
         disabled={isPending}
-        className="flex h-13 min-h-13 w-full items-center justify-center gap-2 rounded-control bg-black text-base font-semibold text-white transition-opacity duration-150 hover:opacity-90 disabled:opacity-60"
+        className="flex h-13 min-h-13 w-full items-center justify-center gap-2 rounded-control bg-text text-base font-semibold text-bg transition-[opacity,transform] duration-150 select-none hover:opacity-90 active:enabled:scale-[0.98] disabled:opacity-60"
       >
         {isPending ? (
           <Spinner />

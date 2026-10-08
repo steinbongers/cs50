@@ -15,6 +15,8 @@ export interface OpenTransaction {
   rawDescription: string | null;
   balanceAfter: number | null;
   skippedCount: number;
+  /** Eigen notitie (maximaal 140 tekens), of null. */
+  note: string | null;
 }
 
 export interface CategoryOption {
@@ -26,6 +28,8 @@ export interface CategoryOption {
   systemKey: CategorySystemKey | null;
   /** Netto bedrag in deze periode (eigen deel van uitgaven, min terugbetalingen). */
   spentThisPeriod: number;
+  monthlyBudget: number | null;
+  goalAmount: number | null;
 }
 
 export interface OpenShare {
@@ -35,6 +39,8 @@ export interface OpenShare {
   amount: number;
   counterparty: string;
   bookingDate: string;
+  /** Wanneer het deel is aangemaakt (ISO-tijdstempel), voor de leeftijd van een open deel. */
+  createdAt: string;
 }
 
 export const OPEN_BATCH_SIZE = 40;
@@ -49,7 +55,7 @@ export async function getOpenTransactions(limit = OPEN_BATCH_SIZE): Promise<Open
   const { data, error } = await supabase
     .from("transactions")
     .select(
-      "id, booking_date, booking_time, amount, counterparty, description, raw_counterparty, raw_description, balance_after, skipped_count",
+      "id, booking_date, booking_time, amount, counterparty, description, raw_counterparty, raw_description, balance_after, skipped_count, note",
     )
     .is("category_id", null)
     .eq("is_internal_transfer", false)
@@ -71,6 +77,7 @@ export async function getOpenTransactions(limit = OPEN_BATCH_SIZE): Promise<Open
     rawDescription: t.raw_description,
     balanceAfter: t.balance_after === null ? null : Number(t.balance_after),
     skippedCount: t.skipped_count,
+    note: t.note,
   }));
 }
 
@@ -95,7 +102,7 @@ export async function getActiveCategories(period: Period): Promise<CategoryOptio
   const [{ data: categories, error }, { data: rows }] = await Promise.all([
     supabase
       .from("categories")
-      .select("id, name, icon, color, is_income, system_key")
+      .select("id, name, icon, color, is_income, system_key, monthly_budget, goal_amount")
       .eq("archived", false)
       .order("sort_order", { ascending: true }),
     supabase
@@ -131,6 +138,8 @@ export async function getActiveCategories(period: Period): Promise<CategoryOptio
     isIncome: c.is_income,
     systemKey: c.system_key,
     spentThisPeriod: Math.round((totals.get(c.id) ?? 0) * 100) / 100,
+    monthlyBudget: c.monthly_budget === null ? null : Number(c.monthly_budget),
+    goalAmount: c.goal_amount === null ? null : Number(c.goal_amount),
   }));
 }
 
@@ -139,7 +148,7 @@ export async function getOpenShares(): Promise<OpenShare[]> {
   const supabase = await createClient();
   const { data: shares, error } = await supabase
     .from("transaction_shares")
-    .select("id, transaction_id, person_name, amount")
+    .select("id, transaction_id, person_name, amount, created_at")
     .eq("status", "open")
     .order("created_at", { ascending: true });
 
@@ -162,6 +171,7 @@ export async function getOpenShares(): Promise<OpenShare[]> {
       amount: Number(s.amount),
       counterparty: t?.counterparty?.trim() || "Onbekende tegenpartij",
       bookingDate: t?.booking_date ?? "",
+      createdAt: s.created_at,
     };
   });
 }

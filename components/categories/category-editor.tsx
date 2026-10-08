@@ -4,7 +4,13 @@ import { CategoryBadge } from "@/components/categories/category-badge";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
-import { MAX_CATEGORY_NAME_LENGTH } from "@/lib/categories/defaults";
+import {
+  hintForName,
+  MAX_CATEGORY_NAME_LENGTH,
+  QUICK_SUGGESTIONS,
+  type QuickSuggestion,
+  type QuickSuggestionKey,
+} from "@/lib/categories/defaults";
 import { CATEGORY_ICON_KEYS, CATEGORY_ICON_LABELS } from "@/lib/categories/icons";
 import { CATEGORY_COLORS, categoryColorClasses, type CategoryColor } from "@/lib/categories/palette";
 import type { CategoryDraft } from "@/lib/categories/types";
@@ -18,6 +24,22 @@ interface CategoryEditorProps {
   doneLabel?: string;
   pending?: boolean;
   error?: string | null;
+  /**
+   * Nieuw potje: toont bovenaan "Snel toevoegen" met de snelle suggesties.
+   * Niet zetten bij het bewerken van een bestaand potje.
+   */
+  isNew?: boolean;
+  /**
+   * Meldt welke snelle suggestie de naam nu levert (of null als de gebruiker de naam
+   * daarna veranderde), zodat de aanroeper `potje_created { suggestion }` kan loggen.
+   */
+  onSuggestionUsed?: (suggestion: QuickSuggestionKey | null) => void;
+}
+
+/** De suggestie waar dit concept nog precies op lijkt, anders null. */
+export function suggestionForDraft(draft: Pick<CategoryDraft, "name">): QuickSuggestionKey | null {
+  const name = draft.name.trim().toLocaleLowerCase("nl-NL");
+  return QUICK_SUGGESTIONS.find((s) => s.name.toLocaleLowerCase("nl-NL") === name)?.key ?? null;
 }
 
 /** Naam, icoon, kleur en inkomend-geld van één potje. Gebruikt in onboarding en hoofdscherm. */
@@ -29,12 +51,63 @@ export function CategoryEditor({
   doneLabel = "Klaar",
   pending = false,
   error = null,
+  isNew = false,
+  onSuggestionUsed,
 }: CategoryEditorProps) {
   const canSave = draft.name.trim().length > 0;
   const colors = categoryColorClasses(draft.color);
+  const hint = hintForName(draft.name);
+  const activeSuggestion = isNew ? suggestionForDraft(draft) : null;
+
+  function applySuggestion(suggestion: QuickSuggestion) {
+    // Vult alleen het formulier in; opslaan doet de gebruiker zelf.
+    onChange({ name: suggestion.name, icon: suggestion.icon, color: suggestion.color });
+    onSuggestionUsed?.(suggestion.key);
+  }
+
+  function changeName(name: string) {
+    onChange({ name });
+    if (onSuggestionUsed && activeSuggestion !== null) {
+      const next = suggestionForDraft({ name });
+      if (next !== activeSuggestion) onSuggestionUsed(next);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-5">
+      {isNew && (
+        <section className="flex flex-col gap-1" aria-labelledby="category-suggestions">
+          <h3 id="category-suggestions" className="text-sm font-medium">
+            Snel toevoegen
+          </h3>
+          <div className="flex flex-wrap gap-x-2">
+            {QUICK_SUGGESTIONS.map((suggestion) => {
+              const pressed = activeSuggestion === suggestion.key;
+              const chipColors = categoryColorClasses(suggestion.color);
+              return (
+                <button
+                  key={suggestion.key}
+                  type="button"
+                  onClick={() => applySuggestion(suggestion)}
+                  aria-pressed={pressed}
+                  className="group flex min-h-11 items-center rounded-full focus-visible:outline-none"
+                >
+                  <span
+                    className={cn(
+                      "flex h-9 items-center gap-1.5 rounded-full bg-surface-muted px-3 text-sm font-medium transition-colors duration-150 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-primary",
+                      pressed && cn("ring-2 ring-inset", chipColors.ring),
+                    )}
+                  >
+                    <CategoryIcon icon={suggestion.icon} size={16} className={chipColors.text} />
+                    {suggestion.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       <div className="flex items-center gap-3">
         <CategoryBadge icon={draft.icon} color={draft.color} size="lg" />
         <div className="flex-1">
@@ -42,13 +115,19 @@ export function CategoryEditor({
             <Input
               id="category-name"
               value={draft.name}
-              onChange={(e) => onChange({ name: e.target.value })}
+              onChange={(e) => changeName(e.target.value)}
               maxLength={MAX_CATEGORY_NAME_LENGTH}
-              placeholder="Bijvoorbeeld Huisdier"
+              placeholder="Bijvoorbeeld Sport"
+              aria-describedby={hint ? "category-name-hint" : undefined}
               autoFocus={draft.name === ""}
               autoComplete="off"
             />
           </Field>
+          {hint && (
+            <p id="category-name-hint" className="mt-1 text-xs text-text-muted">
+              {hint}
+            </p>
+          )}
         </div>
       </div>
 

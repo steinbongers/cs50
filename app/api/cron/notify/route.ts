@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     let message: { title: string; body: string; url: string; tag: string } | null = null;
 
     if (period.startISO === dateISO && profile.month_review_seen_for !== period.startISO) {
-      message = { ...monthReviewMessage(), url: "/overzicht?maand=1", tag: "jouw-maand" };
+      message = { ...monthReviewMessage(), url: "/overzicht?maand=1&ref=push&tag=jouw-maand", tag: "jouw-maand" };
     } else {
       const { count } = await admin
         .from("transactions")
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
         .eq("user_id", profile.id)
         .is("category_id", null)
         .eq("is_internal_transfer", false);
-      if ((count ?? 0) > 0) message = { ...openCardsMessage(count ?? 0, dayIndex), url: "/swipen", tag: "kaartjes" };
+      if ((count ?? 0) > 0) message = { ...openCardsMessage(count ?? 0, dayIndex), url: "/swipen?ref=push&tag=kaartjes", tag: "kaartjes" };
     }
 
     if (!message) {
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
   for (const connection of connections ?? []) {
     const days = daysUntil(connection.valid_until);
     if (days === null || days > CONNECTION_EXPIRY_WARNING_DAYS) continue;
-    const delivered = await sendPushToUser(admin, connection.user_id, { ...expiringMessage(days), url: "/bank/koppelen?reconnect=1", tag: "bank-verloopt" });
+    const delivered = await sendPushToUser(admin, connection.user_id, { ...expiringMessage(days), url: "/bank/koppelen?reconnect=1&ref=push&tag=bank-verloopt", tag: "bank-verloopt" });
     // Pas als 'gemeld' markeren wanneer er echt een apparaat is bereikt; anders de volgende keer opnieuw.
     await admin
       .from("bank_connections")

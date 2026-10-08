@@ -21,8 +21,8 @@ export function PageHeader({ title, subtitle, backHref, action }: PageHeaderProp
           <IconChevronLeft />
         </Link>
       )}
-      <div className="min-w-0 flex-1 pt-1.5">
-        <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
+      <div className="min-w-0 flex-1 pt-1">
+        <h1 className="truncate text-[28px] leading-[34px] font-semibold tracking-[-0.02em]">{title}</h1>
         {subtitle && <p className="mt-0.5 text-sm text-text-muted">{subtitle}</p>}
       </div>
       {action && <div className="shrink-0 pt-0.5">{action}</div>}

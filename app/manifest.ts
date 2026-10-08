@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: APP_NAME,
     description: APP_DESCRIPTION,
     lang: "nl",
-    start_url: "/overzicht",
+    start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

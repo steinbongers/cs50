@@ -1,115 +1,138 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import type { ReactNode } from "react";
+import { CircleHelp, Download, Info, Landmark, LayoutGrid, ShieldCheck } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
+import { HapticsToggle } from "@/components/push/haptics-toggle";
 import { PushToggle } from "@/components/push/push-toggle";
 import { ThemeToggle } from "@/components/push/theme-toggle";
-import { Card } from "@/components/ui/card";
-import { IconBank, IconChevronRight, IconJar, IconLogout, IconMail } from "@/components/ui/icons";
-import { PageHeader } from "@/components/ui/page-header";
-import { SubmitButton } from "@/components/ui/submit-button";
+import { ListGroup, ListRow } from "@/components/ui/list-group";
 import { APP_NAME, SUPPORT_EMAIL } from "@/config/app";
 import { ensureProfile, requireUser } from "@/lib/auth";
+import { daysUntil, getPrimaryConnection, statusFor } from "@/lib/bank/connections";
+import { createClient } from "@/lib/supabase/server";
+import type { BankConnectionRow } from "@/lib/supabase/types";
+import { cn } from "@/lib/utils";
 import pkg from "@/package.json";
-import { Info, ShieldCheck } from "lucide-react";
-import { ProfileSettings } from "./profile-settings";
+import { DeleteAccountRow, ProfileCard, SalaryDayRow } from "./profile-settings";
+import { AnchorRow, ROW_FOCUS, RowLabel } from "./rows";
 
 export const metadata: Metadata = { title: "Instellingen" };
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-2">
-      <h2 className="px-1 text-sm font-medium text-text-muted">{title}</h2>
-      {children}
-    </section>
-  );
-}
+/** "0.1.0" wordt "0.1": de patchversie zegt een gebruiker niets. */
+const VERSION = pkg.version.split(".").slice(0, 2).join(".");
 
-function Row({ href, icon, label, hint, external }: { href: string; icon: ReactNode; label: string; hint?: string; external?: boolean }) {
-  const className = "flex min-h-14 items-center gap-3 px-4 py-2 hover:bg-surface-muted";
-  const content = (
-    <>
-      <span className="text-text-muted" aria-hidden>
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-medium">{label}</span>
-        {hint && <span className="block truncate text-sm text-text-muted">{hint}</span>}
-      </span>
-      <IconChevronRight size={18} className="text-text-muted" />
-    </>
-  );
-  return external ? (
-    <a href={href} className={className}>
-      {content}
-    </a>
-  ) : (
-    <Link href={href} className={className}>
-      {content}
-    </Link>
-  );
+function bankValue(connection: BankConnectionRow | null): { text: string; warn: boolean } {
+  if (!connection) return { text: "Niet gekoppeld", warn: false };
+  const status = statusFor(connection);
+  const bank = connection.aspsp_name ?? "Bank";
+  if (status === "active") return { text: `${bank} · actief`, warn: false };
+  if (status === "expiring") {
+    const days = Math.max(0, daysUntil(connection.valid_until) ?? 0);
+    return { text: days === 0 ? "verloopt vandaag" : `verloopt over ${days} ${days === 1 ? "dag" : "dagen"}`, warn: true };
+  }
+  if (status === "expired") return { text: "verlopen", warn: true };
+  return { text: "Niet gekoppeld", warn: false };
 }
 
 export default async function InstellingenPage() {
   const user = await requireUser();
-  const profile = await ensureProfile(user);
+  const supabase = await createClient();
+  const [profile, connection, potjes] = await Promise.all([
+    ensureProfile(user),
+    getPrimaryConnection(supabase, user.id),
+    supabase
+      .from("categories")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("archived", false)
+      .is("system_key", null),
+  ]);
+  const bank = bankValue(connection);
 
   return (
-    <>
-      <PageHeader title="Instellingen" />
-      <div className="flex flex-col gap-6 px-4">
-        <Card className="flex items-center gap-4">
-          <div
-            className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary-soft text-lg font-semibold text-primary"
-            aria-hidden
-          >
-            {(profile.display_name ?? user.email ?? "?").slice(0, 1).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate font-semibold">{profile.display_name ?? "Zonder naam"}</p>
-            <p className="truncate text-sm text-text-muted">{user.email}</p>
-          </div>
-        </Card>
+    <div className="safe-top flex flex-col gap-7 px-4 pt-6 pb-8">
+      <h1 className="text-[28px] leading-[34px] font-semibold tracking-[-0.02em]">Instellingen</h1>
 
-        <Section title="Je account">
-          <ProfileSettings displayName={profile.display_name ?? ""} salaryDay={profile.salary_day} />
-        </Section>
+      <ProfileCard displayName={profile.display_name?.trim() ?? ""} email={user.email} />
 
-        <Section title="Potjes en bank">
-          <Card padding="none" className="divide-y">
-            <Row href="/potjes/beheren" icon={<IconJar size={20} />} label="Potjes beheren" hint="Volgorde, namen en kleuren" />
-            <Row href="/bank/koppelen?next=/instellingen" icon={<IconBank size={20} />} label="Bankkoppeling" hint="Koppelen, verversen of verwijderen" />
-          </Card>
-        </Section>
+      <ListGroup title="Geld">
+        <ListRow
+          href="/potjes/beheren"
+          icon={LayoutGrid}
+          iconClass="bg-primary-soft text-primary"
+          label={<RowLabel label="Potjes beheren" hint="Volgorde en gearchiveerde potjes" />}
+          value={potjes.count ?? undefined}
+          className={ROW_FOCUS}
+        />
+        <SalaryDayRow salaryDay={profile.salary_day} />
+        <ListRow
+          href="/bank/koppelen?next=/instellingen"
+          icon={Landmark}
+          iconClass="bg-cat-mint-soft text-cat-mint"
+          label="Bank"
+          value={<span className={cn(bank.warn && "text-accent")}>{bank.text}</span>}
+          className={ROW_FOCUS}
+        />
+      </ListGroup>
 
-        <Section title="Meldingen en weergave">
-          <Card className="flex flex-col gap-4">
-            <PushToggle enabled={profile.notifications_enabled} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
-            <div className="border-t pt-4">
-              <ThemeToggle />
-            </div>
-          </Card>
-        </Section>
+      <ListGroup title="Meldingen en weergave">
+        <PushToggle enabled={profile.notifications_enabled} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
+        <ThemeToggle />
+        <HapticsToggle />
+      </ListGroup>
 
-        <Section title="Over">
-          <Card padding="none" className="divide-y">
-            <Row href="/instellingen/over" icon={<Info size={20} strokeWidth={1.75} />} label={`Over ${APP_NAME}`} hint={`Versie ${pkg.version}`} />
-            <Row href="/privacy" icon={<ShieldCheck size={20} strokeWidth={1.75} />} label="Privacy en copyright" />
-            <Row href={`mailto:${SUPPORT_EMAIL}`} external icon={<IconMail size={20} />} label="Service en contact" hint={SUPPORT_EMAIL} />
-          </Card>
-        </Section>
+      <ListGroup title="Gegevens">
+        <AnchorRow
+          href="/api/export"
+          download
+          icon={Download}
+          iconClass="bg-cat-blauw-soft text-cat-blauw"
+          label="Download je gegevens"
+          hint="Alles als CSV-bestand"
+        />
+        <ListRow
+          href="/privacy"
+          icon={ShieldCheck}
+          iconClass="bg-cat-groen-soft text-cat-groen"
+          label="Privacy"
+          className={ROW_FOCUS}
+        />
+      </ListGroup>
 
+      <ListGroup title="Over">
+        <ListRow
+          href="/instellingen/over"
+          icon={Info}
+          iconClass="bg-cat-grijs-soft text-cat-grijs"
+          label={`Over ${APP_NAME}`}
+          value={`Versie ${VERSION}`}
+          className={ROW_FOCUS}
+        />
+        <AnchorRow
+          href={`mailto:${SUPPORT_EMAIL}`}
+          icon={CircleHelp}
+          iconClass="bg-cat-oranje-soft text-cat-oranje"
+          label="Hulp en contact"
+        />
+      </ListGroup>
+
+      <ListGroup>
         <form action={signOut}>
-          <SubmitButton variant="ghost" fullWidth>
-            <IconLogout size={20} />
+          <button
+            type="submit"
+            className={cn(
+              "flex min-h-[52px] w-full items-center justify-center px-4 text-[16px] text-primary",
+              "transition-colors duration-150 active:bg-surface-muted",
+              ROW_FOCUS,
+            )}
+          >
             Uitloggen
-          </SubmitButton>
+          </button>
         </form>
+      </ListGroup>
 
-        <p className="pb-2 text-center text-xs text-text-muted">
-          {APP_NAME} · versie {pkg.version} · pilot
-        </p>
-      </div>
-    </>
+      <ListGroup>
+        <DeleteAccountRow />
+      </ListGroup>
+    </div>
   );
 }

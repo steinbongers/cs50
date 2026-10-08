@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 import { IconClose } from "./icons";
 
 interface SheetProps {
@@ -10,6 +11,10 @@ interface SheetProps {
   title: string;
   description?: string;
   children: ReactNode;
+  /** Extra klassen op het paneel, bijvoorbeeld een andere maximale hoogte. */
+  className?: string;
+  /** Extra klassen op het scrollende inhoudsvlak onder de titel. */
+  bodyClassName?: string;
 }
 
 const FOCUSABLE =
@@ -21,7 +26,15 @@ const FOCUSABLE =
  * naar de titel; Tab en Shift+Tab blijven binnen het paneel; bij sluiten keert de
  * focus terug naar het element dat de sheet opende.
  */
-export function Sheet({ open, onClose, title, description, children }: SheetProps) {
+export function Sheet({
+  open,
+  onClose,
+  title,
+  description,
+  children,
+  className,
+  bodyClassName,
+}: SheetProps) {
   const reduceMotion = useReducedMotion();
   const titleId = useId();
   const descId = useId();
@@ -69,8 +82,9 @@ export function Sheet({ open, onClose, title, description, children }: SheetProp
     };
   }, [open, onClose]);
 
+  // Reduced motion: geen schuif, alleen een fade van 120 ms.
   const transition = reduceMotion
-    ? { duration: 0 }
+    ? { duration: 0.12 }
     : { type: "spring" as const, stiffness: 420, damping: 38, mass: 0.9 };
 
   return (
@@ -83,7 +97,7 @@ export function Sheet({ open, onClose, title, description, children }: SheetProp
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: reduceMotion ? 0 : 0.18 }}
+            transition={{ duration: reduceMotion ? 0.12 : 0.18 }}
             onClick={onClose}
           />
           <motion.div
@@ -92,7 +106,10 @@ export function Sheet({ open, onClose, title, description, children }: SheetProp
             aria-modal="true"
             aria-labelledby={titleId}
             aria-describedby={description ? descId : undefined}
-            className="relative flex max-h-[88dvh] w-full max-w-md flex-col rounded-t-card-lg bg-surface shadow-float sm:rounded-card-lg"
+            className={cn(
+              "relative flex max-h-[88dvh] w-full max-w-md flex-col rounded-t-card-lg bg-surface shadow-float sm:rounded-card-lg",
+              className,
+            )}
             initial={{ y: reduceMotion ? 0 : "100%", opacity: reduceMotion ? 0 : 1 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: reduceMotion ? 0 : "100%", opacity: reduceMotion ? 0 : 1 }}
@@ -119,7 +136,7 @@ export function Sheet({ open, onClose, title, description, children }: SheetProp
                 <IconClose size={22} />
               </button>
             </div>
-            <div className="safe-bottom overflow-y-auto px-5 pb-5">{children}</div>
+            <div className={cn("safe-bottom overflow-y-auto px-5 pb-5", bodyClassName)}>{children}</div>
           </motion.div>
         </div>
       )}

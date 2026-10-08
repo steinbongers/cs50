@@ -1,22 +1,16 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Direct zichtbaar na een tik in het menu, terwijl de server de pagina maakt.
- * Zonder dit lijkt de app niet te reageren.
+ * Neutraal skelet voor de schermen binnen de app, direct zichtbaar na een tik in het menu.
+ * Swipen heeft een eigen skelet (swipen/loading.tsx).
  */
 export default function Loading() {
   return (
-    <div className="flex flex-col gap-4 px-4 pt-[calc(1.5rem+env(safe-area-inset-top))]" role="status" aria-label="Laden">
-      <Skeleton className="h-7 w-40" />
-      <Skeleton className="h-36 w-full" />
-      <div className="grid grid-cols-3 gap-3">
-        <Skeleton className="h-28" />
-        <Skeleton className="h-28" />
-        <Skeleton className="h-28" />
-        <Skeleton className="h-28" />
-        <Skeleton className="h-28" />
-        <Skeleton className="h-28" />
-      </div>
+    <div className="safe-top flex flex-col gap-6 px-4 pt-4" role="status" aria-label="Laden">
+      <Skeleton className="h-8 w-40 rounded-full" />
+      <Skeleton className="h-40 w-full" />
+      <Skeleton className="h-24 w-full" />
+      <Skeleton className="h-24 w-full" />
     </div>
   );
 }

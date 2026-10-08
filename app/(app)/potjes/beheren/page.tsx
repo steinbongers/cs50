@@ -18,7 +18,7 @@ export default async function PotjesBeherenPage() {
   const all = data ?? [];
   return (
     <>
-      <PageHeader title="Potjes beheren" subtitle="Volgorde van de tegels, gearchiveerde potjes" backHref="/instellingen" />
+      <PageHeader title="Potjes beheren" subtitle="Volgorde en gearchiveerde potjes" backHref="/instellingen" />
       <ManageCategories
         active={all.filter((c) => !c.archived).map((c) => ({ id: c.id, name: c.name, icon: c.icon, color: c.color }))}
         archived={all.filter((c) => c.archived).map((c) => ({ id: c.id, name: c.name, icon: c.icon, color: c.color }))}

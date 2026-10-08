@@ -1,29 +1,34 @@
 import type { Metadata } from "next";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { inviteCodesEnabled } from "@/lib/invites/codes";
 import { RegisterForm } from "./register-form";
 
 export const metadata: Metadata = { title: "Account aanmaken" };
-
-import { inviteCodesEnabled } from "@/lib/invites/codes";
 
 export default async function RegistrerenPage({ searchParams }: PageProps<"/registreren">) {
   const params = await searchParams;
   const prefill = typeof params.code === "string" ? params.code : "";
   const codeError = params.error === "code";
+  const requireInvite = inviteCodesEnabled();
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Account aanmaken</h1>
-        <p className="mt-1 text-text-muted">
-          {inviteCodesEnabled() ? "De pilot is op uitnodiging. Je code staat in het bericht dat je kreeg." : "Binnen een minuut ben je bezig."}
-        </p>
+    <AuthShell>
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="text-[28px] leading-[34px] font-semibold tracking-[-0.02em]">Account aanmaken</h1>
+          <p className="mt-1 text-[15px] text-text-muted">
+            {requireInvite
+              ? "De pilot is op uitnodiging. Je code staat in je uitnodiging."
+              : "Binnen een minuut ben je bezig."}
+          </p>
+        </div>
+        {codeError && (
+          <p className="rounded-control bg-negative-soft px-4 py-3 text-sm text-negative" role="alert">
+            Voor een nieuw account heb je een geldige code nodig. Vul hem hieronder in en probeer het nog een keer.
+          </p>
+        )}
+        <RegisterForm requireInvite={requireInvite} prefillCode={prefill} />
       </div>
-      {codeError && (
-        <p className="rounded-control bg-negative-soft px-4 py-3 text-sm text-negative" role="alert">
-          Er hoort een geldige uitnodigingscode bij een nieuw account. Vul hem hieronder in en probeer het opnieuw.
-        </p>
-      )}
-      <RegisterForm requireInvite={inviteCodesEnabled()} prefillCode={prefill} />
-    </div>
+    </AuthShell>
   );
 }

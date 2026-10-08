@@ -64,7 +64,7 @@ export function InviteCodes({ codes }: { codes: CodeRow[] }) {
                 {expired || used ? (
                   <span className="text-xs text-text-muted">{used ? "op" : "uit"}</span>
                 ) : (
-                  <button type="button" onClick={() => startTransition(async () => { await disableInviteCode(c.code); })} className="text-xs font-medium text-negative">
+                  <button type="button" onClick={() => startTransition(async () => { await disableInviteCode(c.code); })} className="-my-2 inline-flex min-h-11 items-center px-2 text-[13px] font-medium text-negative">
                     Uitschakelen
                   </button>
                 )}

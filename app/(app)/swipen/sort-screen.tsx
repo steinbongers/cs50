@@ -1,19 +1,33 @@
 "use client";
 
+/*
+ * Hoogterekensom voor 390 × 844 (iPhone 14/15, ±687 px tussen safe-area en tabbalk):
+ *   header 48 + 12 + kaart 168 + 12 + actieregel 44 + 12 + tegels (4 × 80 + 3 × 6)
+ *   = 48+12+168+12+44+12+(4×80+3×6) = 634 px.
+ * Blijft 53 px over voor de Ongedaan-maken-pil (40). Compact (≤ 700 px hoog):
+ * kaart 136 en tegels 64 zonder bedrag, ±518 px van 583.
+ */
+
 import { AnimatePresence } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { CategoryEditor } from "@/components/categories/category-editor";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Sheet } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { ACTION_LABEL, UNDO_WINDOW_MS } from "@/config/app";
+import { tap, warning } from "@/lib/haptics";
+import type { QuickSuggestionKey } from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON } from "@/lib/categories/icons";
 import { CATEGORY_COLORS } from "@/lib/categories/palette";
 import { VOORGESCHOTEN_CATEGORY, type CategoryDraft } from "@/lib/categories/types";
 import type { CategoryOption, OpenShare, OpenTransaction } from "@/lib/transactions/queries";
 import { splitEqually } from "@/lib/transactions/split";
+import { cn } from "@/lib/utils";
 import {
   assignCategory,
+  completeCoach,
   completeSession,
   createCategory,
   setCoachStep,
@@ -22,12 +36,12 @@ import {
   undoAssign,
   type SplitInput,
 } from "./actions";
-import { CategoryTiles } from "./category-tiles";
+import { CategoryTiles, tileCount } from "./category-tiles";
 import { COACH_STEPS, CoachTip } from "./coach-tip";
 import { RawSheet } from "./raw-sheet";
 import { SessionSummary, type Decision } from "./session-summary";
 import { SettleSheet } from "./settle-sheet";
-import { EMPTY_SPLIT, SplitPanel, type SplitState } from "./split-panel";
+import { EMPTY_SPLIT, SplitRow, type SplitState } from "./split-panel";
 import { GhostCard, TransactionCard, type ExitKind } from "./transaction-card";
 import { UndoToast } from "./undo-toast";
 
@@ -41,6 +55,14 @@ interface SortScreenProps {
   coachStep: number;
 }
 
+/** Boven dit aantal tegels mag de pagina scrollen; kaart en actieregel blijven dan staan. */
+const STICKY_FROM_TILES = 21;
+/** Hoe lang het afscheid van de coach blijft staan. */
+const COACH_DONE_MS = 2500;
+/** Hoe lang een foutmelding in de pil blijft staan. */
+const ERROR_MS = 5000;
+const METHOD_MISSING = "Kies eerst: via de bank of buiten de bank.";
+
 const VOORGESCHOTEN_OPTION: CategoryOption = {
   id: "voorgeschoten",
   name: VOORGESCHOTEN_CATEGORY.name,
@@ -49,6 +71,8 @@ const VOORGESCHOTEN_OPTION: CategoryOption = {
   isIncome: false,
   systemKey: VOORGESCHOTEN_CATEGORY.systemKey,
   spentThisPeriod: 0,
+  monthlyBudget: null,
+  goalAmount: null,
 };
 
 /**
@@ -82,8 +106,11 @@ export function SortScreen({
   const [settleOpen, setSettleOpen] = useState(false);
   const [rawOpen, setRawOpen] = useState(false);
   const [editorDraft, setEditorDraft] = useState<CategoryDraft | null>(null);
+  const [editorSuggestion, setEditorSuggestion] = useState<QuickSuggestionKey | null>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
   const [coachStep, setCoach] = useState(initialCoachStep);
+  const [coachDone, setCoachDone] = useState(false);
+  const [methodMissing, setMethodMissing] = useState(false);
   const [totalAtStart, setTotalAtStart] = useState(totalOpen);
   const [isPending, startTransition] = useTransition();
 
@@ -120,9 +147,23 @@ export function SortScreen({
     };
   }, [undo]);
 
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), ERROR_MS);
+    return () => clearTimeout(timer);
+  }, [error]);
+
+  useEffect(() => {
+    if (!coachDone) return;
+    const timer = setTimeout(() => setCoachDone(false), COACH_DONE_MS);
+    return () => clearTimeout(timer);
+  }, [coachDone]);
+
   const assignedCount = decisions.length;
   const remaining = Math.max(totalAtStart - assignedCount, queue.length);
   const finished = current === null;
+  // Coachtip bij de eerste drie kaarten, één stap per kaart.
+  const showCoach = !finished && coachStep < COACH_STEPS.length && coachStep <= assignedCount;
 
   // Nieuwe stapel uit de server (na "Volgende stapel" in de samenvatting) overnemen,
   // maar alleen als de ronde af is: tijdens het sorteren blijft de lokale staat leidend.
@@ -175,9 +216,17 @@ export function SortScreen({
       const transaction = current;
       const durationMs = performance.now() - shownAt.current;
       const useSplit = split.enabled && transaction.amount < 0;
+      if (useSplit && split.method === null) {
+        // We kiezen niet voor de gebruiker: eerst via of buiten de bank.
+        warning();
+        setMethodMissing(true);
+        setError(METHOD_MISSING);
+        return;
+      }
+      const method = split.method ?? "bank";
       const ownShare = useSplit ? splitEqually(transaction.amount, split.persons).ownShare : undefined;
       const splitInput: SplitInput | undefined = useSplit
-        ? { persons: split.persons, method: split.method, names: split.method === "bank" ? split.names : undefined }
+        ? { persons: split.persons, method, names: method === "bank" ? split.names : undefined }
         : undefined;
       const decision: Decision = { transaction, category, ownShare };
 
@@ -188,6 +237,7 @@ export function SortScreen({
           : -transaction.amount;
 
       setError(null);
+      setMethodMissing(false);
       setExitKind("assign");
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, decision]);
@@ -201,7 +251,7 @@ export function SortScreen({
       );
 
       startTransition(async () => {
-        const result = await assignCategory(transaction.id, category.id, durationMs, splitInput);
+        const result = await assignCategory(transaction.id, category.id, durationMs, splitInput, { coach: showCoach });
         if (!result.ok) {
           setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
           setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
@@ -216,7 +266,7 @@ export function SortScreen({
         }
       });
     },
-    [current, split, startTransition],
+    [current, split, showCoach, startTransition],
   );
 
   const settle = useCallback(
@@ -237,7 +287,7 @@ export function SortScreen({
       setAnnouncement(`${transaction.counterparty} verwerkt als terugbetaling`);
 
       startTransition(async () => {
-        const result = await settleSharesWithTransaction(transaction.id, shareIds, durationMs);
+        const result = await settleSharesWithTransaction(transaction.id, shareIds, durationMs, { coach: showCoach });
         if (!result.ok) {
           setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
           setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
@@ -252,7 +302,7 @@ export function SortScreen({
         }
       });
     },
-    [current, startTransition],
+    [current, showCoach, startTransition],
   );
 
   const skip = useCallback(() => {
@@ -272,6 +322,7 @@ export function SortScreen({
   const handleUndo = useCallback(() => {
     if (!undo) return;
     const { transaction, category, ownShare } = undo;
+    warning();
     setUndo(null);
     setError(null);
     setExitKind("none");
@@ -307,6 +358,7 @@ export function SortScreen({
   function openEditor() {
     const used = new Set(categories.map((c) => c.color));
     setEditorError(null);
+    setEditorSuggestion(null);
     setEditorDraft({
       name: "",
       icon: DEFAULT_CATEGORY_ICON,
@@ -319,8 +371,12 @@ export function SortScreen({
   function saveEditor() {
     if (!editorDraft) return;
     const draft = editorDraft;
+    const suggestion = editorSuggestion;
     startTransition(async () => {
-      const result = await createCategory({ name: draft.name, icon: draft.icon, color: draft.color, isIncome: draft.isIncome });
+      const result = await createCategory(
+        { name: draft.name, icon: draft.icon, color: draft.color, isIncome: draft.isIncome },
+        suggestion,
+      );
       if (!result.ok) {
         setEditorError(result.error);
         return;
@@ -333,18 +389,30 @@ export function SortScreen({
   function dismissCoach() {
     const next = coachStep + 1;
     setCoach(next);
+    if (next >= COACH_STEPS.length) {
+      setCoachDone(true);
+      startTransition(() => {
+        void completeCoach(next);
+      });
+      return;
+    }
     startTransition(() => {
       void setCoachStep(next);
     });
   }
 
+  function updateNote(transactionId: string, note: string | null) {
+    setQueue((q) => q.map((t) => (t.id === transactionId ? { ...t, note } : t)));
+  }
+
   const undoToast = (
     <UndoToast
       id={undo ? undo.transaction.id : null}
-      counterparty={undo?.transaction.counterparty ?? ""}
-      categoryName={undo?.category.name ?? ""}
-      label={undo?.category.id === VOORGESCHOTEN_OPTION.id ? "verwerkt als terugbetaling" : undefined}
+      text={
+        undo?.category.id === VOORGESCHOTEN_OPTION.id ? "Verwerkt als terugbetaling" : `In ${undo?.category.name ?? ""}`
+      }
       onUndo={handleUndo}
+      error={error}
     />
   );
 
@@ -358,81 +426,127 @@ export function SortScreen({
   }
 
   const isIncoming = current.amount > 0;
-  const showCoach = coachStep < COACH_STEPS.length && coachStep <= assignedCount;
+  const splitActive = !isIncoming && split.enabled;
+  const ownShare = splitActive ? splitEqually(current.amount, split.persons).ownShare : null;
+  const repayment =
+    isIncoming && availableShares.length > 0
+      ? { total: openSharesTotal, count: availableShares.length, onOpen: () => setSettleOpen(true) }
+      : null;
+  const sticky = tileCount(categories, repayment !== null) >= STICKY_FROM_TILES;
+  const isLast = queue.length < 2;
+  const total = assignedCount + remaining;
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="safe-top flex flex-col gap-2 px-4 pt-6">
-        <div className="flex items-baseline justify-between gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{ACTION_LABEL}</h1>
-          <p className="text-sm text-text-muted tabular-nums">Nog {remaining} te gaan</p>
+      <header className="safe-top px-4 pt-2">
+        <div className="flex h-7 items-center justify-between gap-3">
+          <h1 className="text-[17px] font-semibold">{ACTION_LABEL}</h1>
+          <p className="text-[13px] text-text-muted tabular-nums">Nog {remaining}</p>
         </div>
         <ProgressBar
           value={assignedCount}
-          max={assignedCount + remaining}
-          label={`${assignedCount} van ${assignedCount + remaining} gedaan`}
+          max={total}
+          size="sm"
+          className="mt-2 h-1"
+          label={`${assignedCount} van ${total} gedaan`}
         />
       </header>
 
-      <section className="px-4 pt-5" aria-label="Transactie">
-        <div className="relative grid min-h-56">
+      <div className={cn("px-4", sticky && "sticky top-0 z-10 bg-bg pb-1")}>
+        <section className="relative mt-3 grid h-[168px] compact:h-[136px]" aria-label="Kaartje">
           {queue.length > 2 && <GhostCard depth={2} />}
           {queue.length > 1 && <GhostCard depth={1} />}
           <AnimatePresence custom={exitKind} initial={false}>
-            <TransactionCard key={current.id} transaction={current} onOpenDetails={() => setRawOpen(true)} />
+            <TransactionCard
+              key={current.id}
+              transaction={current}
+              ownShare={ownShare}
+              onOpenDetails={() => setRawOpen(true)}
+            />
           </AnimatePresence>
+        </section>
+
+        <div className="relative">
+          {(showCoach || coachDone) && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-full z-20 mb-3">
+              <AnimatePresence>
+                <CoachTip
+                  key={coachDone ? "done" : coachStep}
+                  step={coachDone ? "done" : coachStep}
+                  onDismiss={dismissCoach}
+                />
+              </AnimatePresence>
+            </div>
+          )}
+
+          <div className="mt-3 flex h-11 gap-2">
+            {isIncoming ? (
+              <div className="flex-1" aria-hidden />
+            ) : (
+              <label className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-control bg-surface px-3 text-[15px] font-medium shadow-card">
+                <span className="truncate" aria-hidden>
+                  Ik krijg geld terug
+                </span>
+                <Switch
+                  size="sm"
+                  label="Ik krijg geld terug"
+                  checked={split.enabled}
+                  onCheckedChange={(enabled) => {
+                    setMethodMissing(false);
+                    setSplitFor({ id: current.id, state: { ...split, enabled } });
+                  }}
+                />
+              </label>
+            )}
+            <Button variant="ghost" onClick={skip} disabled={isLast} className="w-24 shrink-0">
+              {isLast ? (
+                "Laatste"
+              ) : (
+                <>
+                  Later
+                  <ArrowRight size={16} aria-hidden />
+                </>
+              )}
+            </Button>
+          </div>
+
+          {!isIncoming && (
+            <SplitRow
+              key={current.id}
+              open={split.enabled}
+              amountAbs={Math.abs(current.amount)}
+              knownNames={knownNames}
+              state={split}
+              methodMissing={methodMissing && split.method === null}
+              onChange={(patch) => {
+                if (patch.method) setMethodMissing(false);
+                setSplitFor({ id: current.id, state: { ...split, ...patch } });
+              }}
+            />
+          )}
         </div>
-      </section>
+      </div>
 
-      <section className="flex flex-1 flex-col gap-3 px-4 pt-4" aria-label="Potje kiezen">
-        {showCoach && <CoachTip step={coachStep} onDismiss={dismissCoach} />}
-
-        {!isIncoming && (
-          <SplitPanel
-            amountAbs={Math.abs(current.amount)}
-            knownNames={knownNames}
-            state={split}
-            onChange={(patch) => setSplitFor({ id: current.id, state: { ...split, ...patch } })}
-          />
-        )}
-
-        <p className="text-sm font-medium text-text-muted">
-          {isIncoming
-            ? "Waar hoort dit inkomende geld?"
-            : split.enabled
-              ? "In welk potje hoort jouw deel?"
-              : "In welk potje hoort dit?"}
-        </p>
-
+      <section className="px-4" aria-labelledby="potje-kiezen">
+        <h2 id="potje-kiezen" className="sr-only">
+          {isIncoming ? "Waar hoort dit geld bij?" : splitActive ? "Welk potje voor jouw deel?" : "Welk potje?"}
+        </h2>
         <CategoryTiles
           categories={categories}
           onPick={pick}
-          onAdd={openEditor}
+          onAdd={() => {
+            tap();
+            openEditor();
+          }}
           pulseId={pulse.id}
           pulseKey={pulse.key}
-          repayment={
-            isIncoming && availableShares.length > 0
-              ? { total: openSharesTotal, count: availableShares.length, onOpen: () => setSettleOpen(true) }
-              : null
-          }
+          repayment={repayment}
         />
-
-        {error && (
-          <p className="rounded-control bg-negative-soft px-4 py-3 text-sm text-negative" role="alert">
-            {error}
-          </p>
-        )}
-
-        <div className="mt-auto pt-4">
-          <Button variant="ghost" fullWidth onClick={skip} disabled={queue.length < 2}>
-            {queue.length < 2 ? "Dit is de laatste" : "Later"}
-          </Button>
-        </div>
       </section>
 
       {undoToast}
 
-      <RawSheet open={rawOpen} onClose={() => setRawOpen(false)} transaction={current} />
+      <RawSheet open={rawOpen} onClose={() => setRawOpen(false)} transaction={current} onNoteSaved={updateNote} />
 
       <SettleSheet
         key={current.id}
@@ -440,6 +554,7 @@ export function SortScreen({
         onClose={() => setSettleOpen(false)}
         shares={availableShares}
         incomingAmount={current.amount}
+        incomingCounterparty={current.counterparty}
         pending={isPending}
         onConfirm={settle}
       />
@@ -453,6 +568,8 @@ export function SortScreen({
             doneLabel="Potje maken"
             pending={isPending}
             error={editorError}
+            isNew
+            onSuggestionUsed={setEditorSuggestion}
           />
         )}
       </Sheet>

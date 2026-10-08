@@ -1,11 +1,12 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { cn } from "@/lib/utils";
+import { SunMoon } from "lucide-react";
+import { Segmented } from "@/components/ui/segmented";
 
 type Theme = "system" | "light" | "dark";
 
-const OPTIONS: Array<{ value: Theme; label: string }> = [
+const OPTIONS: ReadonlyArray<{ value: Theme; label: string }> = [
   { value: "system", label: "Systeem" },
   { value: "light", label: "Licht" },
   { value: "dark", label: "Donker" },
@@ -31,7 +32,7 @@ function subscribe(listener: () => void) {
   };
 }
 
-/** Thema: volgt het systeem, of vast licht/donker. Bewaard op dit apparaat. */
+/** Thema: volgt het systeem, of vast licht of donker. Bewaard op dit apparaat. Rij voor in een ListGroup. */
 export function ThemeToggle() {
   const theme = useSyncExternalStore(subscribe, readTheme, () => "system" as Theme);
 
@@ -51,24 +52,18 @@ export function ThemeToggle() {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <p className="font-medium">Thema</p>
-      <div className="grid grid-cols-3 gap-1 rounded-control bg-surface-muted p-1" role="radiogroup" aria-label="Thema">
-        {OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={theme === option.value}
-            onClick={() => choose(option.value)}
-            className={cn(
-              "min-h-11 rounded-[0.625rem] text-sm font-medium transition-colors duration-150",
-              theme === option.value ? "bg-surface text-text shadow-card" : "text-text-muted hover:text-text",
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
+    <div className="group/row flex w-full items-start gap-3 pl-4">
+      <span
+        aria-hidden
+        className="mt-[11px] flex size-[30px] shrink-0 items-center justify-center rounded-[8px] bg-cat-indigo-soft text-cat-indigo"
+      >
+        <SunMoon size={18} strokeWidth={2} />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-2 border-b border-border pt-3.5 pr-4 pb-3 group-last/row:border-b-0">
+        <span aria-hidden className="text-[16px] text-text">
+          Thema
+        </span>
+        <Segmented options={OPTIONS} value={theme} onChange={choose} ariaLabel="Thema" />
       </div>
     </div>
   );
