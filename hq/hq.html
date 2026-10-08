@@ -298,7 +298,7 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
           </select>
           <button class="btn primair" type="submit" id="bericht-knop">Stuur naar het team</button>
         </div>
-        <span class="voet" id="bericht-status" aria-live="polite">Het team leest dit bij de volgende werkdag, of meteen als je ze oproept.</span>
+        <span class="voet" id="bericht-status" aria-live="polite">Versturen roept het team meteen op, zodat je bericht direct gelezen wordt.</span>
       </form>
       <div class="berichten" id="berichten"></div>
     </section>
@@ -1132,7 +1132,7 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
     if (!tekst){ st.textContent = 'Schrijf eerst een bericht.'; return; }
     if (!db){ st.textContent = 'Het kantoor is offline, het bericht kan nu niet weg.'; return; }
     const knop = $('#bericht-knop'); knop.disabled = true;
-    try { await db.collection('inbox').add({tekst, aan: $('#bericht-aan').value, datum: new Date().toISOString(), verwerkt: false}); $('#bericht').value = ''; st.textContent = 'Bezorgd. Roep het team als het niet kan wachten tot de volgende werkdag.'; }
+    try { await db.collection('inbox').add({tekst, aan: $('#bericht-aan').value, datum: new Date().toISOString(), verwerkt: false}); $('#bericht').value = ''; st.textContent = 'Bezorgd.'; roepTeam('Nieuw bericht van Stein in het kantoor (inbox): verwerk het nu. Tekst: ' + tekst, '#bericht-status'); }
     catch(err){ st.textContent = err.code === 'invalid_argument' ? 'Alleen Stein kan berichten sturen.' : 'Versturen lukte niet. Probeer het zo nog eens.'; }
     finally { knop.disabled = false; }
   });
@@ -1169,15 +1169,15 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
   }
 
   /* ---------- team oproepen ---------- */
-  async function roepTeam(){
-    const knop = $('#roep'), msg = $('#oproep-msg');
+  async function roepTeam(extra, msgSel){
+    const knop = $('#roep'), msg = $(msgSel || '#oproep-msg');
     knop.disabled = true; msg.textContent = 'Team wordt opgeroepen…';
     let vrijgeven = 4000;
     try {
       const mcp = await window.claude.use('mcp');
       if (!mcp){ msg.textContent = 'Oproepen werkt in deze weergave niet. Zeg het tegen Claude in je sessie.'; return; }
       if (!status.trigger_id){ msg.textContent = 'Er is nog geen werkdag-routine gekoppeld. Zeg het tegen Claude in je sessie.'; return; }
-      await mcp.callTool('Claude Code Remote', 'fire_trigger', {trigger_id: status.trigger_id, text: 'Stein roept het team op via het kantoor. Verwerk nieuwe besluiten in het postvak en nieuwe berichten.'});
+      await mcp.callTool('Claude Code Remote', 'fire_trigger', {trigger_id: status.trigger_id, text: extra || 'Stein roept het team op via het kantoor. Verwerk nieuwe besluiten in het postvak en nieuwe berichten.'});
       msg.textContent = 'Opgeroepen. Het team komt eraan; je ziet ze zo bewegen.'; vrijgeven = 60000;
     } catch(e){
       const c = e && e.code;
@@ -1190,7 +1190,7 @@ dialog::backdrop{background:rgb(10 14 12 / .5)}
       else msg.textContent = 'Oproepen lukte niet. Zeg het tegen Claude in je sessie.';
     } finally { setTimeout(() => { knop.disabled = false; }, vrijgeven); }
   }
-  $('#roep').addEventListener('click', roepTeam);
+  $('#roep').addEventListener('click', () => roepTeam());
 
   /* ---------- eerste weergave zonder data ---------- */
   renderTeam(true); renderStatus(); renderVerzoeken(); renderFilters(); renderTaken(); renderLog(); renderDocs(); renderInbox();
