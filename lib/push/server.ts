@@ -22,9 +22,19 @@ function ensureVapid(): boolean {
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   const subject = process.env.VAPID_SUBJECT;
   if (!publicKey || !privateKey || !subject) return false;
-  webpush.setVapidDetails(subject, publicKey, privateKey);
+  try {
+    webpush.setVapidDetails(subject, publicKey, privateKey);
+  } catch {
+    // Ongeldige sleutel of onderwerp: niet crashen, de cron meldt het netjes.
+    return false;
+  }
   configured = true;
   return true;
+}
+
+/** Zijn de VAPID-gegevens aanwezig én geldig? */
+export function isPushUsable(): boolean {
+  return ensureVapid();
 }
 
 /**

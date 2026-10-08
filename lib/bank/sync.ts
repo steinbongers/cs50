@@ -11,6 +11,8 @@ export interface SyncResult {
   accounts: number;
   status: ConnectionStatus;
   error?: string;
+  /** Toestemming verlopen of ingetrokken: geen fout, de gebruiker moet opnieuw koppelen. */
+  expired?: boolean;
 }
 
 const MAX_PAGES_PER_ACCOUNT = 30;
@@ -42,8 +44,9 @@ export async function syncConnection(
   let status: ConnectionStatus = statusFor(connection, now);
 
   if (status === "revoked" || status === "expired") {
-    await supabase.from("bank_connections").update({ status }).eq("id", connection.id);
-    return { inserted: 0, accounts: 0, status, error: "De bankkoppeling is niet meer geldig." };
+    const message = "De bankkoppeling is niet meer geldig.";
+    await supabase.from("bank_connections").update({ status, last_error: message }).eq("id", connection.id);
+    return { inserted: 0, accounts: 0, status, error: message, expired: true };
   }
 
   for (const account of accounts ?? []) {

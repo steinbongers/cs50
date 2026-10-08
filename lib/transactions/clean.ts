@@ -55,7 +55,12 @@ export function cleanCounterparty(raw: string | null | undefined): string {
   let text = (raw ?? "").trim();
   if (!text) return "Onbekende tegenpartij";
 
-  for (const prefix of PROCESSOR_PREFIXES) text = text.replace(prefix, "");
+  // Herhalen tot er niets meer verandert: "CCV*CCV* PAY.NL*" heeft geneste verwerkers.
+  for (let round = 0; round < 5; round++) {
+    const before = text;
+    for (const prefix of PROCESSOR_PREFIXES) text = text.replace(prefix, "").trimStart();
+    if (text === before) break;
+  }
 
   text = text
     // filiaal- of terminalnummers: losse getallen van 3 of meer cijfers
@@ -72,7 +77,9 @@ export function cleanCounterparty(raw: string | null | undefined): string {
     .replace(/\s{2,}/g, " ")
     .trim();
 
-  if (!text) return titleCase((raw ?? "").trim()) || "Onbekende tegenpartij";
+  // Bleef er niets herkenbaars over (alleen nummers en codes), dan geen ruis tonen;
+  // de ruwe banktekst is altijd nog te zien via de kaart.
+  if (!text || !/[A-Za-z]{2,}/.test(text)) return "Onbekende tegenpartij";
 
   // Alleen hoofdletters fatsoeneren als de tekst (bijna) helemaal in kapitalen staat.
   const letters = text.replace(/[^A-Za-z]/g, "");

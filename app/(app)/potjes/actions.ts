@@ -72,7 +72,8 @@ export async function moveTransaction(transactionId: string, categoryId: string)
     .eq("user_id", user.id);
   if (error) return { ok: false, error: GENERIC };
 
-  await logEvent("swipe", { transaction_id: transactionId, category_id: categoryId, duration_ms: 0, moved: true });
+  // Eigen type: verplaatsen is geen swipe en telt niet mee in de swipe- en retentiecijfers.
+  await logEvent("transaction_moved", { transaction_id: transactionId, category_id: categoryId });
   refresh();
   return { ok: true };
 }

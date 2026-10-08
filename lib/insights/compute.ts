@@ -48,14 +48,19 @@ function inRange(date: string, from: string, to: string): boolean {
  * Heeft deze periode uitgaven die meetellen? Een periode met alleen salaris of
  * eigen overboekingen telt niet als "0 uitgegeven" in een gemiddelde.
  */
+/** Telt een periode mee voor gemiddelden? Alleen als er netto echt iets is uitgegeven (niet alleen terugbetalingen). */
 function hasSpending(txs: TxLite[], cats: Map<string, CatLite>, from: string, to: string): boolean {
-  return txs.some((t) => inRange(t.bookingDate, from, to) && spendOf(t, cats) !== 0);
+  return totalSpent(txs, cats, from, to) > 0;
 }
 
+/**
+ * Netto uitgegeven in [from, to). Nooit negatief: krijg je meer terug dan je uitgaf
+ * (bijvoorbeeld alleen refunds in een maand), dan is er niets uitgegeven.
+ */
 export function totalSpent(txs: TxLite[], cats: Map<string, CatLite>, from: string, to: string): number {
   let total = 0;
   for (const tx of txs) if (inRange(tx.bookingDate, from, to)) total += spendOf(tx, cats);
-  return round2(total);
+  return Math.max(0, round2(total));
 }
 
 export function spentPerCategory(

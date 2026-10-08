@@ -2,9 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { CONNECTION_EXPIRY_WARNING_DAYS } from "@/config/app";
 import { daysUntil } from "@/lib/bank/connections";
 import { toISODate } from "@/lib/format";
-import { currentPeriod } from "@/lib/periods";
+import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { expiringMessage, monthReviewMessage, openCardsMessage } from "@/lib/push/copy";
-import { isPushConfigured, sendPushToUser } from "@/lib/push/server";
+import { isPushConfigured, isPushUsable, sendPushToUser } from "@/lib/push/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Geen toegang" }, { status: 401 });
   }
   if (!isPushConfigured()) return NextResponse.json({ skipped: "push niet ingesteld" });
+  if (!isPushUsable()) return NextResponse.json({ error: "Push verkeerd ingesteld: controleer de VAPID-sleutels." }, { status: 500 });
 
   const { hour, dateISO, dayIndex } = amsterdamNow();
   const force = request.nextUrl.searchParams.get("force") === "1";
@@ -51,6 +52,8 @@ export async function GET(request: NextRequest) {
 
   let sent = 0;
   let skipped = 0;
+  /** Wel een melding, maar geen apparaat bereikt (geen of verlopen abonnement). */
+  let undelivered = 0;
 
   for (const profile of profiles ?? []) {
     const lastPushDay = profile.last_push_at ? toISODate(new Date(profile.last_push_at)) : null;
@@ -59,7 +62,7 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    const period = currentPeriod(profile.salary_day);
+    const period = currentPeriod(profile.salary_day, amsterdamToday());
     let message: { title: string; body: string; url: string; tag: string } | null = null;
 
     if (period.startISO === dateISO && profile.month_review_seen_for !== period.startISO) {
@@ -80,6 +83,7 @@ export async function GET(request: NextRequest) {
     }
 
     const delivered = await sendPushToUser(admin, profile.id, message);
+    if (delivered === 0) undelivered++;
     if (delivered > 0) {
       sent++;
       await admin.from("profiles").update({ last_push_at: new Date().toISOString() }).eq("id", profile.id);
@@ -110,5 +114,5 @@ export async function GET(request: NextRequest) {
     if (delivered > 0) expiryNotified++;
   }
 
-  return NextResponse.json({ sent, skipped, expiryNotified });
+  return NextResponse.json({ sent, skipped, undelivered, expiryNotified });
 }

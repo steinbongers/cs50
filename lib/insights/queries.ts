@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toISODate } from "@/lib/format";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import type { Database } from "@/lib/supabase/types";
 import type { CatLite, TxLite } from "./compute";
 
@@ -17,9 +18,11 @@ export async function loadInsightData(supabase: SupabaseClient<Database>, today 
   const cutoff = toISODate(new Date(today.getTime() - HISTORY_DAYS * 864e5));
   const columns = "id, booking_date, amount, own_share, category_id, created_at, categorized_at, is_internal_transfer";
 
-  const [{ data: recent }, { data: openOld }, { data: categories }] = await Promise.all([
-    supabase.from("transactions").select(columns).gte("booking_date", cutoff),
-    supabase.from("transactions").select(columns).is("category_id", null).lt("booking_date", cutoff),
+  const [recent, openOld, { data: categories }] = await Promise.all([
+    fetchAll((from, to) => supabase.from("transactions").select(columns).gte("booking_date", cutoff).order("id").range(from, to)),
+    fetchAll((from, to) =>
+      supabase.from("transactions").select(columns).is("category_id", null).lt("booking_date", cutoff).order("id").range(from, to),
+    ),
     supabase
       .from("categories")
       .select("id, name, icon, color, is_income, system_key, monthly_budget")
@@ -29,7 +32,7 @@ export async function loadInsightData(supabase: SupabaseClient<Database>, today 
 
   const seen = new Set<string>();
   const txs: TxLite[] = [];
-  for (const row of [...(recent ?? []), ...(openOld ?? [])]) {
+  for (const row of [...recent, ...openOld]) {
     if (seen.has(row.id)) continue;
     seen.add(row.id);
     txs.push({

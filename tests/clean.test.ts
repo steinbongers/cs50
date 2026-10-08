@@ -71,3 +71,8 @@ test("zonder salarisdag is de periode de kalendermaand", () => {
   assert.equal(p.endISO, "2026-11-01");
   assert.equal(p.label, "oktober");
 });
+
+test("geneste verwerkers en tegenpartijen zonder naam", () => {
+  assert.equal(cleanCounterparty("1234567 NLD"), "Onbekende tegenpartij");
+  assert.ok(!/ccv/i.test(cleanCounterparty("CCV*CCV*  PAY.NL*  BAKKERIJ BART")));
+});

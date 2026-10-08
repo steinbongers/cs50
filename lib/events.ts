@@ -7,6 +7,7 @@ import type { Json } from "@/lib/supabase/types";
 export type EventType =
   | "app_open"
   | "swipe"
+  | "transaction_moved"
   | "swipe_session_complete"
   | "undo"
   | "skip"

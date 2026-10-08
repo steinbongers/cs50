@@ -155,3 +155,10 @@ test("jouw maand: alleen salaris in de afgelopen periode is geen maand om te ton
   assert.equal(review.periodsUsed, 1);
   assert.equal(review.average, 100);
 });
+
+test("uitgegeven wordt nooit negatief, ook met alleen terugbetalingen", async () => {
+  const { totalSpent } = await import("../lib/insights/compute");
+  const cats = new Map([["c1", { id: "c1", name: "Overig", icon: "package", color: "grijs", isIncome: false, systemKey: null, monthlyBudget: null }]]);
+  const refund = { id: "t1", bookingDate: "2026-10-02", amount: 40, ownShare: null, categoryId: "c1", createdAt: "2026-10-02T10:00:00Z", categorizedAt: "2026-10-02T11:00:00Z", isInternal: false };
+  assert.equal(totalSpent([refund], cats, "2026-10-01", "2026-11-01"), 0);
+});

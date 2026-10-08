@@ -34,12 +34,14 @@ export async function GET(request: NextRequest) {
   let synced = 0;
   let inserted = 0;
   let failed = 0;
+  let expired = 0;
   for (const connection of connections ?? []) {
     const result = await syncConnection(admin, connection);
-    if (result.error) failed++;
+    if (result.expired) expired++;
+    else if (result.error) failed++;
     else synced++;
     inserted += result.inserted;
   }
 
-  return NextResponse.json({ connections: connections?.length ?? 0, synced, failed, inserted });
+  return NextResponse.json({ connections: connections?.length ?? 0, synced, failed, expired, inserted });
 }

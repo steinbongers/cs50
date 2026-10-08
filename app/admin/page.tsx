@@ -16,6 +16,7 @@ import {
 import { requireUser } from "@/lib/auth";
 import { formatDayShort } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { InviteCodes } from "./invite-codes";
 
 export const metadata: Metadata = { title: "Admin" };
@@ -32,15 +33,26 @@ export default async function AdminPage() {
   const today = new Date();
   const since = new Date(today.getTime() - 120 * 864e5).toISOString();
 
-  const [{ data: events }, { data: profiles }, { data: txs }, { data: connections }, { data: codes }] = await Promise.all([
-    admin.from("events").select("user_id, type, created_at, payload").gte("created_at", since).in("type", ["swipe", "undo", "bank_reconnect"]),
-    admin.from("profiles").select("id, created_at"),
-    admin.from("transactions").select("created_at, categorized_at, is_internal_transfer").gte("created_at", since),
+  // Alles pagineren: Supabase geeft anders stil maar 1000 rijen en de cijfers kloppen niet meer.
+  const [events, profiles, txs, { data: connections }, { data: codes }] = await Promise.all([
+    fetchAll((from, to) =>
+      admin
+        .from("events")
+        .select("user_id, type, created_at, payload")
+        .gte("created_at", since)
+        .in("type", ["swipe", "undo", "bank_reconnect"])
+        .order("id")
+        .range(from, to),
+    ),
+    fetchAll((from, to) => admin.from("profiles").select("id, created_at").order("id").range(from, to)),
+    fetchAll((from, to) =>
+      admin.from("transactions").select("created_at, categorized_at, is_internal_transfer").gte("created_at", since).order("id").range(from, to),
+    ),
     admin.from("bank_connections").select("status, valid_until").eq("provider", "enablebanking"),
     admin.from("invite_codes").select("*").order("created_at", { ascending: false }),
   ]);
 
-  const eventRows: EventLite[] = (events ?? []).map((e) => {
+  const eventRows: EventLite[] = events.map((e) => {
     const payload = (e.payload ?? {}) as { duration_ms?: unknown };
     return {
       userId: e.user_id,
@@ -49,8 +61,8 @@ export default async function AdminPage() {
       durationMs: typeof payload.duration_ms === "number" ? payload.duration_ms : null,
     };
   });
-  const profileRows = (profiles ?? []).map((p) => ({ id: p.id, createdAt: p.created_at }));
-  const txRows = (txs ?? []).map((t) => ({ createdAt: t.created_at, categorizedAt: t.categorized_at, isInternal: t.is_internal_transfer }));
+  const profileRows = profiles.map((p) => ({ id: p.id, createdAt: p.created_at }));
+  const txRows = txs.map((t) => ({ createdAt: t.created_at, categorizedAt: t.categorized_at, isInternal: t.is_internal_transfer }));
 
   const weekly = weeklyActiveUsers(eventRows, today);
   const cohorts = cohortRetention(profileRows, eventRows, today);

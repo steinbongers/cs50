@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/auth";
+import { fetchAll } from "@/lib/supabase/fetch-all";
 import { createClient } from "@/lib/supabase/server";
 
 function csvField(value: unknown): string {
@@ -17,13 +18,17 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
 
   const supabase = await createClient();
-  const [{ data: transactions }, { data: categories }, { data: shares }] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select("booking_date, booking_time, amount, own_share, currency, counterparty, description, raw_counterparty, raw_description, category_id, categorized_at, is_internal_transfer, balance_after")
-      .order("booking_date", { ascending: false }),
+  const [transactions, { data: categories }, shares] = await Promise.all([
+    fetchAll((from, to) =>
+      supabase
+        .from("transactions")
+        .select("booking_date, booking_time, amount, own_share, currency, counterparty, description, raw_counterparty, raw_description, category_id, categorized_at, is_internal_transfer, balance_after")
+        .order("booking_date", { ascending: false })
+        .order("id")
+        .range(from, to),
+    ),
     supabase.from("categories").select("id, name"),
-    supabase.from("transaction_shares").select("transaction_id, person_name, amount, status"),
+    fetchAll((from, to) => supabase.from("transaction_shares").select("transaction_id, person_name, amount, status").order("id").range(from, to)),
   ]);
 
   const nameById = new Map((categories ?? []).map((c) => [c.id, c.name]));
@@ -32,7 +37,7 @@ export async function GET() {
     "potje", "in_potje_gezet_op", "eigen_overboeking", "saldo_erna",
   ];
   const lines = [header.join(";")];
-  for (const t of transactions ?? []) {
+  for (const t of transactions) {
     lines.push(
       [
         t.booking_date,
@@ -54,7 +59,7 @@ export async function GET() {
     );
   }
 
-  if (shares && shares.length > 0) {
+  if (shares.length > 0) {
     lines.push("");
     lines.push(["voorgeschoten_transactie", "persoon", "bedrag", "status"].join(";"));
     for (const s of shares) {
