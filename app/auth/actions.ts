@@ -7,7 +7,9 @@ import { createClient } from "@/lib/supabase/server";
 export type AuthFormState = {
   error?: string;
   success?: "confirm-email" | "magic-link-sent";
+  /** Ingevulde waarden, zodat het formulier na een fout niet leeg is. */
   email?: string;
+  displayName?: string;
 };
 
 const MIN_PASSWORD_LENGTH = 8;
@@ -60,12 +62,12 @@ export async function signInWithPassword(
   const password = readString(formData, "password");
   const next = await safeNextPath(readString(formData, "next"));
 
-  if (!isValidEmail(email)) return { error: "Vul een geldig e-mailadres in." };
-  if (!password) return { error: "Vul je wachtwoord in." };
+  if (!isValidEmail(email)) return { error: "Vul een geldig e-mailadres in.", email };
+  if (!password) return { error: "Vul je wachtwoord in.", email };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: translateAuthError(error.message) };
+  if (error) return { error: translateAuthError(error.message), email };
 
   redirect(next);
 }
@@ -75,9 +77,9 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
   const email = readString(formData, "email");
   const password = readString(formData, "password");
 
-  if (!isValidEmail(email)) return { error: "Vul een geldig e-mailadres in." };
+  if (!isValidEmail(email)) return { error: "Vul een geldig e-mailadres in.", email, displayName };
   if (password.length < MIN_PASSWORD_LENGTH)
-    return { error: `Kies een wachtwoord van minimaal ${MIN_PASSWORD_LENGTH} tekens.` };
+    return { error: `Kies een wachtwoord van minimaal ${MIN_PASSWORD_LENGTH} tekens.`, email, displayName };
 
   const origin = await getOrigin();
   const supabase = await createClient();
@@ -90,11 +92,11 @@ export async function signUp(_prev: AuthFormState, formData: FormData): Promise<
     },
   });
 
-  if (error) return { error: translateAuthError(error.message) };
+  if (error) return { error: translateAuthError(error.message), email, displayName };
 
   // Bestaand account met bevestigingsmail aan: Supabase geeft dan een user zonder identities terug.
   if (data.user && data.user.identities && data.user.identities.length === 0) {
-    return { error: "Er bestaat al een account met dit e-mailadres. Log in." };
+    return { error: "Er bestaat al een account met dit e-mailadres. Log in.", email, displayName };
   }
 
   if (data.session) redirect("/onboarding");
@@ -108,7 +110,7 @@ export async function sendMagicLink(
 ): Promise<AuthFormState> {
   const email = readString(formData, "email");
   const next = await safeNextPath(readString(formData, "next"));
-  if (!isValidEmail(email)) return { error: "Vul een geldig e-mailadres in." };
+  if (!isValidEmail(email)) return { error: "Vul een geldig e-mailadres in.", email };
 
   const origin = await getOrigin();
   const supabase = await createClient();
@@ -120,7 +122,7 @@ export async function sendMagicLink(
     },
   });
 
-  if (error) return { error: translateAuthError(error.message) };
+  if (error) return { error: translateAuthError(error.message), email };
   return { success: "magic-link-sent", email };
 }
 

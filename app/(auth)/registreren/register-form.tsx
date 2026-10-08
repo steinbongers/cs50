@@ -31,7 +31,14 @@ export function RegisterForm() {
   return (
     <form action={action} className="flex flex-col gap-4">
       <Field label="Hoe mogen we je noemen?" htmlFor="display_name" hint="Optioneel">
-        <Input id="display_name" name="display_name" type="text" autoComplete="given-name" maxLength={60} />
+        <Input
+          id="display_name"
+          name="display_name"
+          type="text"
+          autoComplete="given-name"
+          maxLength={60}
+          defaultValue={state.displayName}
+        />
       </Field>
       <Field label="E-mailadres" htmlFor="email">
         <Input
@@ -41,6 +48,7 @@ export function RegisterForm() {
           autoComplete="email"
           inputMode="email"
           required
+          defaultValue={state.email}
           aria-invalid={state.error ? true : undefined}
         />
       </Field>

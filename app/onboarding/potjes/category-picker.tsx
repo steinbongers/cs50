@@ -11,7 +11,7 @@ import { CATEGORY_COLORS, categoryColorClasses, type CategoryColor } from "@/lib
 import { cn } from "@/lib/utils";
 import { saveOnboardingCategories, type CategoryDraft } from "../actions";
 
-type DraftWithKey = CategoryDraft & { key: string };
+type DraftWithKey = CategoryDraft & { key: string; isCustom?: boolean };
 
 export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft[] }) {
   const [drafts, setDrafts] = useState<DraftWithKey[]>(() =>
@@ -41,7 +41,7 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
     const color = CATEGORY_COLORS.find((c) => !usedColors.has(c)) ?? "grijs";
     setDrafts((prev) => [
       ...prev,
-      { key, name: "", emoji: "🏷️", color, isIncome: false, enabled: true },
+      { key, name: "", emoji: "🏷️", color, isIncome: false, enabled: true, isCustom: true },
     ]);
     setEditingKey(key);
   }
@@ -53,7 +53,7 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
 
   function closeEditor() {
     // Een nieuw potje zonder naam heeft geen zin: gooi het weg.
-    if (editing && editing.id === undefined && editing.name.trim() === "") {
+    if (editing && editing.isCustom && editing.name.trim() === "") {
       removeDraft(editing.key);
       return;
     }
@@ -149,14 +149,14 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
       <Sheet
         open={editing !== null}
         onClose={closeEditor}
-        title={editing?.id || (editing && editing.name) ? "Potje bewerken" : "Nieuw potje"}
+        title={editing?.isCustom && editing.name.trim() === "" ? "Nieuw potje" : "Potje bewerken"}
       >
         {editing && (
           <CategoryEditor
             draft={editing}
             onChange={(patch) => update(editing.key, patch)}
             onDone={closeEditor}
-            onRemove={editing.id === undefined ? () => removeDraft(editing.key) : undefined}
+            onRemove={editing.isCustom ? () => removeDraft(editing.key) : undefined}
           />
         )}
       </Sheet>

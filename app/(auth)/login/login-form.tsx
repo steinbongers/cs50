@@ -42,6 +42,7 @@ export function LoginForm({ next }: { next: string }) {
             inputMode="email"
             required
             autoFocus
+            defaultValue={magicState.email ?? pwState.email}
             aria-invalid={magicState.error ? true : undefined}
           />
         </Field>
@@ -70,6 +71,7 @@ export function LoginForm({ next }: { next: string }) {
           autoComplete="email"
           inputMode="email"
           required
+          defaultValue={pwState.email ?? magicState.email}
           aria-invalid={pwState.error ? true : undefined}
         />
       </Field>

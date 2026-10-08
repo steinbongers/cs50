@@ -11,7 +11,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle, backHref, action }: PageHeaderProps) {
   return (
-    <header className="safe-top flex items-start gap-2 px-4 pt-4 pb-2">
+    <header className="safe-top flex items-start gap-2 px-4 pt-6 pb-3">
       {backHref && (
         <Link
           href={backHref}
