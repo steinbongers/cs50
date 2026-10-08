@@ -20,6 +20,8 @@ export type ProfileRow = {
   notifications_enabled: boolean;
   salary_day: number | null;
   coach_step: number;
+  month_review_seen_for: string | null;
+  last_push_at: string | null;
 };
 
 export type CategoryRow = {
@@ -48,7 +50,19 @@ export type BankConnectionRow = {
   last_manual_sync_at: string | null;
   last_synced_at: string | null;
   last_error: string | null;
+  expiry_notified_at: string | null;
   created_at: string;
+};
+
+export type PushSubscriptionRow = {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent: string | null;
+  created_at: string;
+  last_used_at: string | null;
 };
 
 export type AccountRow = {
@@ -139,6 +153,8 @@ export type Database = {
           | "notifications_enabled"
           | "salary_day"
           | "coach_step"
+          | "month_review_seen_for"
+          | "last_push_at"
         >
       >;
       categories: Table<
@@ -169,6 +185,7 @@ export type Database = {
           | "last_manual_sync_at"
           | "last_synced_at"
           | "last_error"
+          | "expiry_notified_at"
           | "created_at"
         >
       >;
@@ -217,6 +234,10 @@ export type Database = {
       >;
       category_rules: Table<CategoryRuleRow, WithOptional<CategoryRuleRow, "id" | "created_at">>;
       events: Table<EventRow, WithOptional<EventRow, "id" | "payload" | "created_at">>;
+      push_subscriptions: Table<
+        PushSubscriptionRow,
+        WithOptional<PushSubscriptionRow, "id" | "user_agent" | "created_at" | "last_used_at">
+      >;
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };

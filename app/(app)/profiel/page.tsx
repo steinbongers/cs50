@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { signOut } from "@/app/auth/actions";
+import { PushToggle } from "@/components/push/push-toggle";
+import { ThemeToggle } from "@/components/push/theme-toggle";
 import { Card } from "@/components/ui/card";
-import { IconLogout } from "@/components/ui/icons";
+import { IconBank, IconChevronRight, IconJar, IconLogout } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/page-header";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { APP_NAME } from "@/config/app";
@@ -30,12 +33,29 @@ export default async function ProfielPage() {
           </div>
         </Card>
 
+        <Card padding="none" className="divide-y">
+          <Link href="/potjes" className="flex min-h-14 items-center gap-3 px-4 hover:bg-surface-muted">
+            <IconJar size={20} className="text-text-muted" />
+            <span className="flex-1 font-medium">Potjes beheren</span>
+            <IconChevronRight size={18} className="text-text-muted" />
+          </Link>
+          <Link href="/bank/koppelen?next=/profiel" className="flex min-h-14 items-center gap-3 px-4 hover:bg-surface-muted">
+            <IconBank size={20} className="text-text-muted" />
+            <span className="flex-1 font-medium">Bankkoppeling</span>
+            <IconChevronRight size={18} className="text-text-muted" />
+          </Link>
+        </Card>
+
+        <Card className="flex flex-col gap-4">
+          <PushToggle enabled={profile.notifications_enabled} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
+          <div className="border-t pt-4">
+            <ThemeToggle />
+          </div>
+        </Card>
+
         <Card className="flex flex-col gap-1">
-          <p className="font-medium">Instellingen</p>
-          <p className="text-sm text-text-muted">
-            Potjes beheren, bankkoppelingen, meldingen, data exporteren en account verwijderen volgen
-            in fase 5.
-          </p>
+          <p className="font-medium">Privacy en data</p>
+          <p className="text-sm text-text-muted">Data exporteren en account verwijderen volgen in fase 5.</p>
         </Card>
 
         <form action={signOut}>

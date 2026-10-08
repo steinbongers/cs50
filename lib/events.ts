@@ -11,6 +11,8 @@ export type EventType =
   | "undo"
   | "skip"
   | "weekly_review_viewed"
+  | "month_review_viewed"
+  | "push_sent"
   | "bank_connected"
   | "bank_reconnect"
   | "csv_import";

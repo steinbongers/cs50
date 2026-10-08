@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { CategoryBadge } from "@/components/categories/category-badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { IconJar } from "@/components/ui/icons";
+import { IconChevronRight, IconJar } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/page-header";
 import { ensureProfile, requireUser } from "@/lib/auth";
 import { VOORGESCHOTEN_CATEGORY } from "@/lib/categories/types";
@@ -31,7 +32,11 @@ export default async function PotjesPage() {
         ) : (
           <Card padding="none" className="divide-y">
             {potjes.map((category) => (
-              <div key={category.id} className="flex min-h-14 items-center gap-3 px-4 py-2.5">
+              <Link
+                key={category.id}
+                href={`/potjes/${category.id}`}
+                className="flex min-h-14 items-center gap-3 px-4 py-2.5 transition-colors duration-150 hover:bg-surface-muted"
+              >
                 <CategoryBadge icon={category.icon} color={category.color} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{category.name}</p>
@@ -40,7 +45,8 @@ export default async function PotjesPage() {
                 <p className="text-sm font-medium tabular-nums text-text-muted">
                   {category.spentThisPeriod === 0 ? "" : formatEuroWhole(category.spentThisPeriod)}
                 </p>
-              </div>
+                <IconChevronRight size={18} className="text-text-muted" />
+              </Link>
             ))}
           </Card>
         )}
