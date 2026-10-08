@@ -1,0 +1,478 @@
+<title>nicetohaveyou welkomstpakket</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,500;9..40,700&display=swap">
+<style>
+:root{
+  /* Layout: studio-hero met het pakket in 3D naast de belofte; daaronder argumenten, inhoud, werkwijze en prijs in één smalle kolom met brede beeldmomenten */
+  --bg:#F2F2EF; --surface:#FFFFFF; --ink:#121316; --muted:#5B5F67; --line:#DCDDD8;
+  --accent:#2B44D6; --accent-soft:#E6E9FB; --steel:#8F969F;
+  --stage-top:#ECECE8; --stage-bottom:#DADAD4;
+  --f-display:"Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --f-body:"Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1013; --surface:#17191D; --ink:#EDEDEA; --muted:#A3A7AE; --line:#2A2D33;
+    --accent:#8E9DFF; --accent-soft:#1E2340; --steel:#9BA2AB;
+    --stage-top:#1B1D21; --stage-bottom:#0F1013;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1013; --surface:#17191D; --ink:#EDEDEA; --muted:#A3A7AE; --line:#2A2D33;
+  --accent:#8E9DFF; --accent-soft:#1E2340; --steel:#9BA2AB;
+  --stage-top:#1B1D21; --stage-bottom:#0F1013;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:20px 72px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.08;letter-spacing:-.01em}
+p{margin:0}
+.merk{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:6px 18px}
+.merk b{font-family:var(--f-display);font-size:1.15rem;letter-spacing:-.01em}
+.merk span{font-family:var(--f-mono);font-size:.72rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:28px;align-items:center}
+@media (max-width:900px){.hero{grid-template-columns:minmax(0,1fr)}}
+.hero-tekst{display:flex;flex-direction:column;gap:18px;min-width:0}
+.hero h1{font-size:clamp(2.2rem,5vw,3.6rem);font-weight:700}
+.hero .sub{font-size:1.15rem;color:var(--muted);max-width:44ch}
+.cta-rij{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pil{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:10px 18px;font-weight:600;border:1px solid var(--ink);background:var(--ink);color:var(--bg);font-size:.95rem}
+.pil.licht{background:transparent;color:var(--ink);border-color:var(--line)}
+.prijsregel{font-family:var(--f-mono);font-size:.85rem;color:var(--muted)}
+
+.stage{position:relative;border-radius:22px;overflow:hidden;aspect-ratio:7/6;background:linear-gradient(180deg,var(--stage-top),var(--stage-bottom));box-shadow:0 0 0 1px var(--line)}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:pan-y;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.stage-knoppen{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:4px;padding:4px;border-radius:999px;background:color-mix(in srgb,var(--surface) 82%,transparent);backdrop-filter:blur(8px);box-shadow:0 2px 10px rgb(0 0 0 / .12);z-index:2}
+.stage-knoppen button{font:inherit;font-size:.86rem;font-weight:600;border:0;border-radius:999px;padding:7px 14px;background:transparent;color:var(--ink);cursor:pointer}
+.stage-knoppen button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.stage-hint{position:absolute;right:14px;top:12px;font-family:var(--f-mono);font-size:.7rem;color:var(--muted);letter-spacing:.04em;z-index:2}
+.stage-noot{position:absolute;left:14px;top:12px;font-family:var(--f-mono);font-size:.7rem;color:var(--muted);letter-spacing:.04em;z-index:2}
+.geen3d{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;color:var(--muted)}
+
+section{padding-block:72px 0}
+.kop2{font-size:clamp(1.6rem,3vw,2.3rem);font-weight:700;max-width:24ch}
+.label{font-family:var(--f-mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:block}
+
+.drie{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:28px}
+@media (max-width:820px){.drie{grid-template-columns:minmax(0,1fr)}}
+.arg{display:flex;flex-direction:column;gap:8px;padding-top:16px;border-top:2px solid var(--ink)}
+.arg h3{font-size:1.2rem}
+.arg p{color:var(--muted)}
+
+.inhoud{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:28px}
+@media (max-width:820px){.inhoud{grid-template-columns:minmax(0,1fr)}}
+.item{background:var(--surface);border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:10px;box-shadow:0 0 0 1px var(--line)}
+.item h3{font-size:1.15rem}
+.item p{color:var(--muted);font-size:.96rem}
+.spec{font-family:var(--f-mono);font-size:.76rem;color:var(--ink);display:flex;flex-direction:column;gap:4px;margin-top:4px;padding-top:10px;border-top:1px dashed var(--line)}
+.spec span::before{content:"— ";color:var(--steel)}
+.extra{margin-top:14px;color:var(--muted);font-size:.96rem;max-width:70ch}
+
+.stappen{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px;margin-top:28px;counter-reset:stap}
+@media (max-width:820px){.stappen{grid-template-columns:minmax(0,1fr)}}
+.stap{display:flex;flex-direction:column;gap:10px}
+.stap .nr{font-family:var(--f-mono);font-size:.8rem;color:var(--accent);font-weight:500}
+.stap p{font-size:1.02rem}
+
+.prijsblok{margin-top:72px;border-radius:22px;background:var(--ink);color:var(--bg);padding:clamp(24px,5vw,48px);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:end}
+@media (max-width:720px){.prijsblok{grid-template-columns:minmax(0,1fr)}}
+.prijsblok h2{font-size:clamp(1.6rem,3.4vw,2.4rem)}
+.prijsblok p{opacity:.78;max-width:52ch;margin-top:10px}
+.bedrag{font-family:var(--f-display);font-weight:700;font-size:clamp(2.6rem,7vw,4.4rem);line-height:1;letter-spacing:-.02em;white-space:nowrap}
+.bedrag small{display:block;font-family:var(--f-mono);font-size:.78rem;font-weight:400;letter-spacing:.04em;opacity:.75;margin-top:8px}
+
+.slot{margin-top:56px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+.slot p{font-size:1.25rem;font-family:var(--f-display);font-weight:600;max-width:36ch}
+.voet{margin-top:48px;font-size:.78rem;color:var(--muted);max-width:90ch}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="merk"><b>nicetohaveyou</b><span>welkomstpakket · impressie</span></div>
+
+  <div class="hero">
+    <div class="hero-tekst">
+      <h1 id="kop">Een bureau dat al weet wie er komt.</h1>
+      <p class="sub" id="subkop">Eén vast welkomstpakket, gegraveerd met de naam van je nieuwe collega en vóór de startdatum bij jullie op kantoor bezorgd.</p>
+      <div class="cta-rij">
+        <span class="pil" id="cta-kort">Plan een gesprek van 20 minuten</span>
+        <span class="prijsregel" id="prijs-kort"></span>
+      </div>
+    </div>
+    <div class="stage" id="stage">
+      <span class="stage-noot" id="stage-noot">Voorbeeld: Zoë van der Meer</span>
+      <span class="stage-hint">Sleep om te draaien</span>
+      <div class="stage-knoppen" role="group" aria-label="Weergave">
+        <button type="button" id="b-doos" aria-pressed="true">In de doos</button>
+        <button type="button" id="b-uit" aria-pressed="false">Uitgepakt</button>
+      </div>
+    </div>
+  </div>
+
+  <section aria-labelledby="h-waarom">
+    <span class="label">Waarom</span>
+    <h2 class="kop2" id="h-waarom">De eerste dag krijg je maar één keer.</h2>
+    <div class="drie" id="argumenten"></div>
+  </section>
+
+  <section aria-labelledby="h-inhoud">
+    <span class="label">Wat erin zit</span>
+    <h2 class="kop2" id="h-inhoud">Drie dingen die elke dag op het bureau staan.</h2>
+    <div class="inhoud">
+      <article class="item">
+        <h3>Drinkfles</h3>
+        <p>Een Stanley IceFlow met klaprietje in het kleine formaat. Houdt de hele werkdag koud.</p>
+        <div class="spec"><span>0,47 liter · zwart</span><span id="spec-fles">naam + jullie logo, gelaserd</span></div>
+      </article>
+      <article class="item">
+        <h3>Notitieboek</h3>
+        <p>Een Leuchtturm1917 in A5, hardcover, met puntjes. Voor het eerste overleg en alles daarna.</p>
+        <div class="spec"><span>A5 · 251 genummerde pagina's</span><span>naam op de kaft, gegraveerd</span></div>
+      </article>
+      <article class="item">
+        <h3>Pen</h3>
+        <p>Een Caran d'Ache 849 van Zwitsers aluminium. Navulbaar en gaat jaren mee.</p>
+        <div class="spec"><span>mat zwart</span><span>naam op de huls, gegraveerd</span></div>
+      </article>
+    </div>
+    <p class="extra" id="extra">Alles ligt in een witte magneetdoos met vloeipapier, dichtgemaakt met jullie logo. Bovenop ligt een kaartje met een welkomstwoord van de eigen manager.</p>
+  </section>
+
+  <section aria-labelledby="h-werk">
+    <span class="label">Zo werkt het</span>
+    <h2 class="kop2" id="h-werk">Jullie geven een naam door. De rest regelen wij.</h2>
+    <div class="stappen" id="stappen"></div>
+  </section>
+
+  <div class="prijsblok">
+    <div>
+      <h2>Eén pakket, één vaste prijs.</h2>
+      <p id="prijs-uitleg">Inclusief gravure van naam en logo, doos, kaartje en levering op kantoor vóór de startdatum.</p>
+    </div>
+    <div class="bedrag" id="bedrag">€ —<small>per nieuwe collega, excl. btw</small></div>
+  </div>
+
+  <div class="slot">
+    <p id="cta-tekst">Plan een gesprek van 20 minuten. We nemen het pakket mee, zodat je het zelf kunt vasthouden.</p>
+    <span class="pil licht">nicetohaveyou</span>
+  </div>
+
+  <p class="voet" id="voet">Impressie: de weergave is een 3D-model, geen foto. De naam Zoë van der Meer en het klantlogo zijn voorbeelden. Stanley, Leuchtturm1917 en Caran d'Ache zijn merken van hun eigenaren; nicetohaveyou is niet aan die merken verbonden.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  /* ---------- inhoud ---------- */
+  const DEMO = {
+    naam: 'Zoë van der Meer', roepnaam: 'Zoë',
+    klant: 'Voorbeeld', klantKleur: '#2B44D6',
+    prijs: null,
+    kaartTekst: 'Fijn dat je er bent. We hebben naar je uitgekeken.',
+    kaartAfzender: 'Sanne, je teamleider'
+  };
+  const ARG = [
+    ['Een welkom dat bij jullie merk past', 'Je nieuwe collega ziet op dag één meteen: hier hebben ze op mij gerekend.'],
+    ['Geregeld zonder gedoe', 'Eén vast pakket, dus geen keuzes en geen inkoop. Jullie geven alleen naam en startdatum door.'],
+    ['Elke dag in gebruik', 'Fles, notitieboek en pen staan op het bureau en gaan mee naar elk overleg. Jullie welkom blijft in beeld.']
+  ];
+  const STAP = [
+    'Je geeft de naam en startdatum van je nieuwe collega door, het liefst twee weken van tevoren.',
+    'Wij graveren fles, notitieboek en pen. Je krijgt eerst een proef van de naam om te controleren.',
+    'Het pakket wordt vóór de startdatum op jullie kantoor bezorgd, klaar voor het bureau van je nieuwe collega.'
+  ];
+  const $ = s => document.querySelector(s);
+  const mk = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+  ARG.forEach(([h, p]) => { const a = mk('div','arg'); a.append(mk('h3', null, h), mk('p', null, p)); $('#argumenten').append(a); });
+  STAP.forEach((p, i) => { const s = mk('div','stap'); s.append(mk('span','nr','0' + (i + 1)), mk('p', null, p)); $('#stappen').append(s); });
+  function vulPrijs(){
+    if (!DEMO.prijs) return;
+    const b = $('#bedrag'); b.firstChild.textContent = '€' + DEMO.prijs + ' ';
+    $('#prijs-kort').textContent = '€' + DEMO.prijs + ' per nieuwe collega, excl. btw';
+  }
+  $('#stage-noot').textContent = 'Voorbeeld: ' + DEMO.naam + ' bij ' + DEMO.klant;
+  vulPrijs();
+
+  /* ---------- 3D ---------- */
+  const stage = $('#stage');
+  const T = window.THREE;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function geen(t){ const d = mk('div','geen3d', t); stage.appendChild(d); }
+  if (!T){ geen('De 3D-weergave kon niet laden.'); return; }
+  let renderer;
+  try { renderer = new T.WebGLRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true}); } catch(e){ geen('Dit apparaat kan de 3D-weergave niet tonen.'); return; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = T.sRGBEncoding;
+  renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
+  renderer.setClearColor(0x000000, 0);
+  stage.insertBefore(renderer.domElement, stage.firstChild);
+  renderer.domElement.setAttribute('aria-label', '3D-weergave van het welkomstpakket');
+
+  const scene = new T.Scene();
+  const linE = c => new T.Color(c).convertSRGBToLinear();
+  const camera = new T.PerspectiveCamera(30, 7/6, 1, 1000);
+
+  /* omgeving voor reflecties */
+  (function(){
+    const env = new T.Scene();
+    const wand = new T.Mesh(new T.BoxGeometry(200, 120, 200), new T.MeshBasicMaterial({color: linE('#2a2a29'), side: T.BackSide}));
+    env.add(wand);
+    const paneel = (w, h, x, y, z, ry, i) => { const m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({color: new T.Color(i, i, i)})); m.position.set(x, y, z); m.rotation.y = ry; m.lookAt(0, 0, 0); env.add(m); };
+    paneel(80, 30, 0, 55, 0, 0, 1.6);
+    paneel(40, 60, -95, 10, 20, 0, 0.9);
+    paneel(40, 60, 95, 20, -30, 0, 0.7);
+    paneel(60, 20, 0, 10, 98, 0, 0.5);
+    const pm = new T.PMREMGenerator(renderer);
+    scene.environment = pm.fromScene(env, 0.04).texture;
+  })();
+
+  const hemi = new T.HemisphereLight(0xffffff, 0xb9b7b0, 0.35); scene.add(hemi);
+  const key = new T.DirectionalLight(0xffffff, 1.9); key.position.set(-30, 70, 40); key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048); Object.assign(key.shadow.camera, {left: -45, right: 45, top: 45, bottom: -45, near: 10, far: 200}); key.shadow.radius = 6; key.shadow.bias = -0.0004;
+  scene.add(key);
+  const rim = new T.DirectionalLight(0xffffff, 0.5); rim.position.set(40, 30, -50); scene.add(rim);
+
+  const vloer = new T.Mesh(new T.PlaneGeometry(400, 400), new T.ShadowMaterial({opacity: 0.18}));
+  vloer.rotation.x = -Math.PI/2; vloer.receiveShadow = true; scene.add(vloer);
+
+  const draai = new T.Group(); scene.add(draai);
+  const lin = c => new T.Color(c).convertSRGBToLinear();
+  const std = (c, r, m, extra) => new T.MeshStandardMaterial(Object.assign({color: lin(c), roughness: r, metalness: m || 0}, extra || {}));
+  const papier = std('#f7f6f2', 0.92, 0);
+  const binnen = std('#f1f0ea', 0.95, 0);
+  const zwartFles = std('#1b1c1f', 0.5, 0.25);
+  const zwartDop = std('#141518', 0.35, 0.1);
+  const zwartBoek = std('#18181a', 0.85, 0);
+  const zwartPen = std('#1c1c1e', 0.55, 0.35);
+  const staal = std('#c9ccd1', 0.28, 1);
+
+  function schaduw(o){ o.traverse(m => { if (m.isMesh){ m.castShadow = true; m.receiveShadow = true; } }); return o; }
+
+  /* tekst op textuur */
+  const FONT_GRAV = '"DM Sans", "Helvetica Neue", Arial, sans-serif';
+  const FONT_KAART = '"Familjen Grotesk", "Helvetica Neue", Arial, sans-serif';
+  function textuur(w, h, teken){
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const ctx = c.getContext('2d'); const tex = new T.CanvasTexture(c); tex.anisotropy = 8; tex.encoding = T.sRGBEncoding;
+    const herteken = () => { ctx.clearRect(0, 0, w, h); teken(ctx, w, h); tex.needsUpdate = true; };
+    herteken(); return {tex, herteken};
+  }
+  const hertekenen = [];
+  function logoTekenen(ctx, x, y, s, kleur, metTekst){
+    ctx.save(); ctx.fillStyle = kleur; ctx.strokeStyle = kleur;
+    ctx.lineWidth = s*0.11; ctx.beginPath(); ctx.arc(x, y, s*0.5, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, s*0.18, 0, Math.PI*2); ctx.fill();
+    if (metTekst){ ctx.font = '700 ' + (s*0.62) + 'px ' + FONT_GRAV; ctx.textBaseline = 'middle'; ctx.fillText(DEMO.klant.toLowerCase(), x + s*0.75, y + s*0.03); }
+    ctx.restore();
+  }
+
+  /* doos */
+  const doos = new T.Group(); draai.add(doos);
+  const B = 31, H = 12, D = 0.5;
+  const plaat = (w, h, d, m, x, y, z) => { const p = new T.Mesh(new T.BoxGeometry(w, h, d), m); p.position.set(x, y, z); doos.add(p); return p; };
+  plaat(B, D, B, papier, 0, D/2, 0);
+  plaat(B, H, D, papier, 0, H/2, -B/2 + D/2); plaat(B, H, D, papier, 0, H/2, B/2 - D/2);
+  plaat(D, H, B, papier, -B/2 + D/2, H/2, 0); plaat(D, H, B, papier, B/2 - D/2, H/2, 0);
+  const deksel = new T.Group(); deksel.position.set(0, H + 0.2, -B/2); doos.add(deksel);
+  const dekselPlaat = new T.Mesh(new T.BoxGeometry(B + 0.6, 0.45, B + 0.6), papier); dekselPlaat.position.set(0, 0, B/2); deksel.add(dekselPlaat);
+  const flap = new T.Mesh(new T.BoxGeometry(B + 0.6, 6, 0.45), papier); flap.position.set(0, -3, B + 0.3); deksel.add(flap);
+  const rug = new T.Mesh(new T.BoxGeometry(B + 0.6, H + 0.2, 0.45), papier); rug.position.set(0, -(H + 0.2)/2, -0.25); deksel.add(rug);
+  schaduw(doos);
+  // vloeipapier als bed en twee flappen over de randen
+  function vloei(w, d, x, z, ry, buig){
+    const g = new T.PlaneGeometry(w, d, 24, 24); const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++){
+      const px = p.getX(i), py = p.getY(i);
+      let y = Math.sin(px*0.9 + py*0.7)*0.12 + Math.sin(px*2.1 - py*1.3)*0.06;
+      if (buig){ const t = Math.max(0, (px + w/2 - (w - buig))/buig); y += t*t*9; }
+      p.setZ(i, y);
+    }
+    g.computeVertexNormals();
+    const m = new T.Mesh(g, std('#fbfbf9', 0.95, 0, {side: T.DoubleSide, transparent: true, opacity: 0.96}));
+    m.rotation.x = -Math.PI/2; m.rotation.z = ry; m.position.set(x, 2.2, z); m.receiveShadow = true; doos.add(m); return m;
+  }
+  vloei(B - 1.4, B - 1.4, 0, 0, 0, 0);
+  vloei(13, B - 2, -B/2 - 0.2, 0, 0, 6);
+  vloei(13, B - 2, B/2 + 0.2, 0, Math.PI, 6);
+  // sluitsticker
+  const sticker = textuur(256, 256, (ctx, w) => { ctx.fillStyle = DEMO.klantKleur; ctx.beginPath(); ctx.arc(w/2, w/2, w/2 - 2, 0, Math.PI*2); ctx.fill(); logoTekenen(ctx, w/2, w/2, w*0.42, '#ffffff', false); });
+  hertekenen.push(sticker.herteken);
+  const stickerM = new T.Mesh(new T.CircleGeometry(2, 40), new T.MeshStandardMaterial({map: sticker.tex, roughness: 0.6, transparent: true}));
+  stickerM.rotation.x = -Math.PI/2; stickerM.position.set(-B/2 - 3.2, 2.6, 8); stickerM.rotation.y = 0; doos.add(stickerM);
+
+  /* fles (Stanley IceFlow Flip Straw 2.0, 0,47 L) */
+  function maakFles(){
+    const g = new T.Group();
+    const R = 4.25;
+    const prof = [[0,0],[R-0.5,0],[R,0.5],[R,15.2],[R-0.15,15.9],[3.75,16.4],[3.75,16.6]].map(([x,y]) => new T.Vector2(x, y));
+    const lijf = new T.Mesh(new T.LatheGeometry(prof, 72), zwartFles); g.add(lijf);
+    const dprof = [[0,16.5],[3.8,16.5],[3.85,18.6],[3.6,19.4],[2.4,19.8],[0,19.85]].map(([x,y]) => new T.Vector2(x, y));
+    const dop = new T.Mesh(new T.LatheGeometry(dprof, 64), zwartDop); g.add(dop);
+    const ring = new T.Mesh(new T.CylinderGeometry(3.87, 3.87, 0.35, 64), staal); ring.position.y = 16.45; g.add(ring);
+    const hendel = new T.Mesh(new T.TorusGeometry(2.4, 0.42, 14, 40, Math.PI), zwartDop); hendel.position.set(0, 19.4, 0); g.add(hendel);
+    const tuit = new T.Mesh(new T.BoxGeometry(1.1, 0.9, 2.6), zwartDop); tuit.position.set(0, 20.1, 1.1); tuit.rotation.x = -0.25; g.add(tuit);
+    // gravure: naam en logo op een dunne cilinderschil
+    const boog = 1.25; // radialen voor de tekst
+    const grav = textuur(1024, 512, (ctx, w, h) => {
+      ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '700 96px ' + FONT_GRAV; ctx.fillText(DEMO.naam, w/2, h*0.36);
+      logoTekenen(ctx, w/2 - 150, h*0.72, 88, '#ffffff', true);
+    });
+    hertekenen.push(grav.herteken);
+    const gravM = new T.MeshStandardMaterial({color: lin('#cfd3d8'), metalness: 1, roughness: 0.32, alphaMap: grav.tex, transparent: true, emissive: 0x6f7680, emissiveMap: grav.tex, emissiveIntensity: 0.12});
+    const schil = new T.Mesh(new T.CylinderGeometry(R + 0.012, R + 0.012, 7.5, 96, 1, true, -boog/2, boog), gravM);
+    schil.position.y = 8.6; g.add(schil);
+    g.userData.grav = gravM;
+    return schaduw(g);
+  }
+  /* notitieboek (Leuchtturm1917 A5, dotted, zwart) */
+  function maakBoek(){
+    const g = new T.Group();
+    const kaft = new T.Mesh(new T.BoxGeometry(14.5, 1.6, 21, 1, 1, 1), zwartBoek); kaft.position.y = 0.8; g.add(kaft);
+    const blad = new T.Mesh(new T.BoxGeometry(14.0, 1.3, 20.5), std('#efece2', 0.95, 0)); blad.position.set(0.2, 0.8, 0); g.add(blad);
+    const elastiek = new T.Mesh(new T.BoxGeometry(0.5, 1.7, 21.1), std('#0c0c0d', 0.6, 0)); elastiek.position.set(5.6, 0.82, 0); g.add(elastiek);
+    const lint = new T.Mesh(new T.BoxGeometry(0.6, 0.05, 3), std('#1d1d22', 0.7, 0)); lint.position.set(-2, 0.4, 11.4); g.add(lint);
+    const grav = textuur(1024, 256, (ctx, w, h) => { ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '700 104px ' + FONT_GRAV; ctx.fillText(DEMO.naam, w/2, h/2); });
+    hertekenen.push(grav.herteken);
+    const gravM = new T.MeshStandardMaterial({color: lin('#a59f93'), roughness: 0.9, alphaMap: grav.tex, transparent: true, emissive: 0x5b564d, emissiveMap: grav.tex, emissiveIntensity: 0.1});
+    const vlak = new T.Mesh(new T.PlaneGeometry(10.5, 2.6), gravM); vlak.rotation.x = -Math.PI/2; vlak.position.set(-0.6, 1.62, 5.6); g.add(vlak);
+    g.userData.grav = gravM;
+    return schaduw(g);
+  }
+  /* pen (Caran d'Ache 849, zeskant, mat zwart) */
+  function maakPen(){
+    const g = new T.Group();
+    const huls = new T.Mesh(new T.CylinderGeometry(0.38, 0.38, 11.2, 6), zwartPen); huls.rotation.z = Math.PI/2; huls.rotation.x = Math.PI/6; g.add(huls);
+    const punt = new T.Mesh(new T.CylinderGeometry(0.33, 0.06, 1.3, 24), staal); punt.rotation.z = -Math.PI/2; punt.position.x = 6.25; g.add(punt);
+    const knop = new T.Mesh(new T.CylinderGeometry(0.3, 0.3, 0.6, 24), staal); knop.rotation.z = Math.PI/2; knop.position.x = -5.85; g.add(knop);
+    const clip = new T.Mesh(new T.BoxGeometry(3.6, 0.12, 0.32), staal); clip.position.set(-3.6, 0.42, 0); g.add(clip);
+    const grav = textuur(1024, 128, (ctx, w, h) => { ctx.fillStyle = '#ffffff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = '500 70px ' + FONT_GRAV; ctx.fillText(DEMO.naam, w/2, h/2); });
+    hertekenen.push(grav.herteken);
+    const gravM = new T.MeshStandardMaterial({color: lin('#dfe2e6'), metalness: 1, roughness: 0.3, alphaMap: grav.tex, transparent: true, emissive: 0x7b828c, emissiveMap: grav.tex, emissiveIntensity: 0.15});
+    const vlak = new T.Mesh(new T.PlaneGeometry(5.2, 0.62), gravM); vlak.rotation.x = -Math.PI/2; vlak.position.set(1.2, 0.33, 0); g.add(vlak);
+    g.userData.grav = gravM;
+    return schaduw(g);
+  }
+  /* kaartje (A6) */
+  function maakKaart(){
+    const g = new T.Group();
+    const kaart = textuur(840, 1184, (ctx, w, h) => {
+      ctx.fillStyle = '#fbfbf8'; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#121316'; ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.font = '700 104px ' + FONT_KAART; ctx.fillText('Welkom,', 70, 300); ctx.fillText(DEMO.roepnaam + '.', 70, 410);
+      ctx.font = '400 40px ' + FONT_KAART; ctx.fillStyle = '#3c3f45';
+      wrap(ctx, DEMO.kaartTekst, 70, 520, w - 140, 54);
+      ctx.fillStyle = '#5b5f67'; ctx.font = '400 34px ' + FONT_KAART; ctx.fillText('— ' + DEMO.kaartAfzender, 70, 760);
+      logoTekenen(ctx, 100, h - 120, 56, DEMO.klantKleur, true);
+    });
+    hertekenen.push(kaart.herteken);
+    const m = new T.Mesh(new T.BoxGeometry(10.5, 0.08, 14.8), [papier, papier, new T.MeshStandardMaterial({map: kaart.tex, roughness: 0.85}), papier, papier, papier]);
+    g.add(m); return schaduw(g);
+  }
+  function wrap(ctx, tekst, x, y, max, lh){
+    const woorden = tekst.split(' '); let regel = '';
+    woorden.forEach(w => { const t = regel ? regel + ' ' + w : w; if (ctx.measureText(t).width > max){ ctx.fillText(regel, x, y); y += lh; regel = w; } else regel = t; });
+    if (regel) ctx.fillText(regel, x, y);
+  }
+
+  const fles = maakFles(), boek = maakBoek(), pen = maakPen(), kaart = maakKaart();
+  [fles, boek, pen, kaart].forEach(o => draai.add(o));
+
+  /* standen: in de doos en uitgepakt */
+  const q = (x, y, z) => new T.Quaternion().setFromEuler(new T.Euler(x, y, z, 'XYZ'));
+  const STAND = {
+    doos: {
+      fles: {p: new T.Vector3(8.8, 2.4 + 4.3, 10.4), q: q(-Math.PI/2, 0, 0)},
+      boek: {p: new T.Vector3(-7.2, 2.4, 1.2), q: q(0, 0, 0)},
+      pen:  {p: new T.Vector3(1.6, 2.8, 1.0), q: q(0, Math.PI/2, 0)},
+      kaart:{p: new T.Vector3(-0.5, 7.6, -11.2), q: q(-1.05, 0.0, 0)}
+    },
+    uit: {
+      fles: {p: new T.Vector3(25, 0, 14), q: q(0, -0.35, 0)},
+      boek: {p: new T.Vector3(-25, 0.0, 15), q: q(0, 0.32, 0)},
+      pen:  {p: new T.Vector3(-4, 0.4, 25), q: q(0, 0.12, 0)},
+      kaart:{p: new T.Vector3(8, 0.05, 27), q: q(0, -0.18, 0)}
+    }
+  };
+  // fles ligt in de doos met de gravure naar boven: draai om de eigen as
+  STAND.doos.fles.q.multiply(q(0, 0, 0));
+  const ITEMS = {fles, boek, pen, kaart};
+  let stand = 'doos', overgang = 1, vanStand = 'doos';
+  function zet(naam, f){
+    const t = f < 0.5 ? 4*f*f*f : 1 - Math.pow(-2*f + 2, 3)/2;
+    Object.keys(ITEMS).forEach((k, i) => {
+      const o = ITEMS[k], a = STAND[vanStand][k], b = STAND[naam][k];
+      const ti = Math.min(1, Math.max(0, (t*1.25 - i*0.08)));
+      o.position.lerpVectors(a.p, b.p, ti); o.position.y += Math.sin(ti*Math.PI) * (naam === vanStand ? 0 : 14);
+      o.quaternion.copy(a.q).slerp(b.q, ti);
+    });
+  }
+  function kies(naam){
+    if (naam === stand) return;
+    vanStand = stand; stand = naam; overgang = reduce ? 1 : 0;
+    $('#b-doos').setAttribute('aria-pressed', String(naam === 'doos'));
+    $('#b-uit').setAttribute('aria-pressed', String(naam === 'uit'));
+    glinster = 0;
+  }
+  $('#b-doos').addEventListener('click', () => kies('doos'));
+  $('#b-uit').addEventListener('click', () => kies('uit'));
+  zet('doos', 1);
+
+  /* camera en interactie */
+  let camUit = 0, hoek = -0.35, doelHoek = -0.35, sleep = null, laatste = 0, dekselOpen = reduce ? 1 : 0, intro = reduce ? 1 : 0, glinster = 0;
+  function pasAan(){
+    const w = stage.clientWidth, h = stage.clientHeight; if (!w || !h) return;
+    renderer.setSize(w, h, false); camera.aspect = w/h; camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(pasAan).observe(stage); pasAan();
+  const cv = renderer.domElement;
+  cv.addEventListener('pointerdown', e => { sleep = {x: e.clientX, h: doelHoek}; laatste = performance.now(); });
+  window.addEventListener('pointermove', e => { if (!sleep) return; doelHoek = sleep.h + (e.clientX - sleep.x)*0.008; laatste = performance.now(); });
+  window.addEventListener('pointerup', () => { sleep = null; });
+
+  let zichtbaar = true;
+  new IntersectionObserver(es => { zichtbaar = es[0].isIntersecting; }).observe(stage);
+  let vorige = performance.now(); const start = vorige;
+  function frame(nu){
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (nu - vorige)/1000); vorige = nu; const t = (nu - start)/1000;
+    if (!zichtbaar || document.hidden) return;
+    if (!reduce){
+      intro = Math.min(1, intro + dt*0.45);
+      if (t > 0.6) dekselOpen = Math.min(1, dekselOpen + dt*0.7);
+      if (overgang < 1){ overgang = Math.min(1, overgang + dt*0.9); zet(stand, overgang); }
+      if (!sleep && nu - laatste > 3500) doelHoek += (Math.sin(t*0.25)*0.35 - 0.35 - doelHoek)*dt*0.4;
+      glinster = Math.min(1, glinster + dt*0.5);
+    } else if (overgang < 1){ overgang = 1; zet(stand, 1); }
+    const ease = 1 - Math.pow(1 - dekselOpen, 3);
+    deksel.rotation.x = -ease*1.95;
+    hoek += (doelHoek - hoek)*Math.min(1, dt*6);
+    draai.rotation.y = hoek;
+    // glinstering over de gravures, als een laser die net klaar is
+    const gl = 0.1 + Math.max(0, Math.sin(glinster*Math.PI))*0.9;
+    [fles, boek, pen].forEach(o => { o.userData.grav.emissiveIntensity = gl*0.6; });
+    const ie = 1 - Math.pow(1 - intro, 3);
+    const u = stand === 'uit' ? overgang : 1 - overgang;
+    camUit += ((stand === 'uit' ? 1 : 0) - camUit)*Math.min(1, dt*2.5);
+    const r = (118 - ie*44) + camUit*30;
+    const hoogte = (96 - ie*10) - camUit*22;
+    camera.position.set(0, hoogte, r);
+    camera.lookAt(0, 3 + camUit*3, 2 + camUit*7);
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(frame);
+  if (document.fonts && document.fonts.load){
+    Promise.all([document.fonts.load('700 96px "DM Sans"'), document.fonts.load('700 96px "Familjen Grotesk"'), document.fonts.load('400 40px "Familjen Grotesk"')]).then(() => hertekenen.forEach(f => f())).catch(() => {});
+  }
+  window.__demo = DEMO; window.__kies = kies; window.__herteken = () => { hertekenen.forEach(f => f()); vulPrijs(); };
+})();
+</script>
