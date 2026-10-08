@@ -14,6 +14,15 @@ De app heeft nog geen naam: zie `config/app.ts` (`APP_NAME`).
 4. Optioneel: `npm run seed` maakt een testgebruiker met 60 neptransacties.
 5. Start: `npm run dev` en open http://localhost:3000
 
+## Bankkoppeling (Enable Banking)
+
+1. Maak in het Enable Banking control panel een applicatie aan en upload je certificaat.
+2. Zet `ENABLE_BANKING_APP_ID` en `ENABLE_BANKING_PRIVATE_KEY` (PEM, newlines als `\n`) in de env.
+3. Registreer de redirect-URL `https://<jouw-domein>/api/bank/callback` bij de applicatie.
+4. Vercel Cron (`vercel.json`) roept `/api/cron/sync` twee keer per dag aan met `Authorization: Bearer $CRON_SECRET`.
+
+Transacties worden server-side opgehaald; IBAN's slaan we alleen gemaskeerd en gehasht op.
+
 ## Controles
 
 - `npm run typecheck` — TypeScript

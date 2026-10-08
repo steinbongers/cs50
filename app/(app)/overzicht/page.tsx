@@ -3,7 +3,10 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { ACTION_LABEL, ACTION_VERB } from "@/config/app";
+import { ConnectionBanner } from "@/components/bank/connection-banner";
+import { RefreshButton } from "@/components/bank/refresh-button";
 import { ensureProfile, requireUser } from "@/lib/auth";
+import { getPrimaryConnection, statusFor } from "@/lib/bank/connections";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Overzicht" };
@@ -14,22 +17,35 @@ function greeting(name: string | null): string {
   return name ? `${dagdeel}, ${name}` : dagdeel;
 }
 
-export default async function OverzichtPage() {
+export default async function OverzichtPage({ searchParams }: PageProps<"/overzicht">) {
   const user = await requireUser();
   const profile = await ensureProfile(user);
   const supabase = await createClient();
+  const params = await searchParams;
 
-  const { count } = await supabase
-    .from("transactions")
-    .select("id", { count: "exact", head: true })
-    .is("category_id", null);
+  const [{ count }, connection] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .is("category_id", null)
+      .eq("is_internal_transfer", false),
+    getPrimaryConnection(supabase, user.id),
+  ]);
 
   const openCount = count ?? 0;
+  const justConnected = params.bank === "gekoppeld";
+  const canRefresh = connection !== null && ["active", "expiring"].includes(statusFor(connection));
 
   return (
     <>
       <PageHeader title={greeting(profile.display_name)} />
       <div className="flex flex-col gap-4 px-4">
+        {justConnected && (
+          <p className="rounded-control bg-positive-soft px-4 py-3 text-sm text-positive" role="status">
+            Bank gekoppeld. Je transacties komen vanaf nu vanzelf binnen.
+          </p>
+        )}
+        <ConnectionBanner connection={connection} />
         <Card padding="lg" className="flex flex-col gap-4">
           {openCount > 0 ? (
             <>
@@ -56,6 +72,7 @@ export default async function OverzichtPage() {
               </ButtonLink>
             </>
           )}
+          {canRefresh && <RefreshButton lastSyncedAt={connection?.last_synced_at ?? null} />}
         </Card>
 
         <Card className="flex flex-col gap-1">

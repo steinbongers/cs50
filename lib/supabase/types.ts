@@ -45,6 +45,9 @@ export type BankConnectionRow = {
   session_id: string | null;
   valid_until: string | null;
   status: ConnectionStatus;
+  last_manual_sync_at: string | null;
+  last_synced_at: string | null;
+  last_error: string | null;
   created_at: string;
 };
 
@@ -58,6 +61,7 @@ export type AccountRow = {
   currency: string;
   last_balance: number | null;
   last_synced_at: string | null;
+  iban_hash: string | null;
   created_at: string;
 };
 
@@ -157,7 +161,15 @@ export type Database = {
         BankConnectionRow,
         WithOptional<
           BankConnectionRow,
-          "id" | "aspsp_name" | "session_id" | "valid_until" | "status" | "created_at"
+          | "id"
+          | "aspsp_name"
+          | "session_id"
+          | "valid_until"
+          | "status"
+          | "last_manual_sync_at"
+          | "last_synced_at"
+          | "last_error"
+          | "created_at"
         >
       >;
       accounts: Table<
@@ -171,6 +183,7 @@ export type Database = {
           | "currency"
           | "last_balance"
           | "last_synced_at"
+          | "iban_hash"
           | "created_at"
         >
       >;
