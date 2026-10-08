@@ -25,8 +25,9 @@ function amsterdamNow(): { hour: number; dateISO: string; dayIndex: number } {
 }
 
 /**
- * Dagelijkse meldingen om 20:00 Nederlandse tijd. De cron draait om 17:00 en
- * 18:00 UTC (zomer- en wintertijd); alleen de run die op 20:00 valt stuurt.
+ * Dagelijkse meldingen om 20:00 Nederlandse tijd. De planning (GitHub Actions,
+ * zie .github/workflows/cron.yml) roept deze route om 18:00 en 19:00 UTC aan,
+ * voor zomer- en wintertijd; alleen de aanroep die op 20:00 valt stuurt.
  * Per gebruiker hoogstens één melding per dag: Jouw maand op de salarisdag,
  * anders het aantal kaartjes dat ligt. Verloopmeldingen apart, eenmalig.
  */

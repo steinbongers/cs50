@@ -1,0 +1,35 @@
+name: Cron
+
+# Vercel Hobby staat maar één cron per dag toe, daarom draait de planning hier.
+# 06:00 en 18:00 UTC: bankkoppelingen verversen. 18:00 en 19:00 UTC: de
+# meldingsroute, die zelf alleen stuurt als het 20:00 is in Amsterdam
+# (zomertijd 18:00 UTC, wintertijd 19:00 UTC). Extra aanroepen zijn onschadelijk:
+# beide routes doen niets dubbel.
+#
+# Nodig in GitHub: Settings → Secrets and variables → Actions:
+#   secret CRON_SECRET  (zelfde waarde als in Vercel)
+#   variable APP_URL    (alleen als de app niet op financeapppilot.vercel.app staat)
+
+on:
+  schedule:
+    - cron: "0 6,18,19 * * *"
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      APP_URL: ${{ vars.APP_URL || 'https://financeapppilot.vercel.app' }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Bankkoppelingen verversen
+        run: |
+          curl --fail --silent --show-error --max-time 120 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/sync"
+      - name: Meldingen (alleen om 20:00 Amsterdam)
+        if: always()
+        run: |
+          curl --fail --silent --show-error --max-time 120 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron/notify"

@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const maxDuration = 60;
 
 /**
- * Vercel Cron (2x per dag): ververst alle actieve bankkoppelingen.
+ * Cron (GitHub Actions, 2x per dag): ververst alle actieve bankkoppelingen.
  * Beveiligd met CRON_SECRET. Antwoord bevat alleen aantallen.
  */
 export async function GET(request: NextRequest) {

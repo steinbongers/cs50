@@ -36,8 +36,12 @@ Zonder `SUPABASE_SECRET_KEY` staat de uitnodigingscode-controle uit, zodat je lo
    - `ENABLE_BANKING_APP_ID`, `ENABLE_BANKING_PRIVATE_KEY`
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (maak ze met `npx web-push generate-vapid-keys`)
 3. Registreer bij Enable Banking de redirect-URL `https://<domein>/api/bank/callback`.
-4. `vercel.json` bevat de crons: `/api/cron/sync` (2x per dag) en `/api/cron/notify` (17:00 en 18:00 UTC,
-   stuurt alleen om 20:00 Nederlandse tijd). Vercel stuurt automatisch `Authorization: Bearer $CRON_SECRET`.
+4. De planning draait in GitHub Actions (`.github/workflows/cron.yml`), omdat Vercel Hobby maar één cron per dag
+   toestaat. Zet in GitHub onder Settings → Secrets and variables → Actions het secret `CRON_SECRET` (zelfde waarde
+   als in Vercel) en, als de app niet op `financeapppilot.vercel.app` staat, de variable `APP_URL`. De workflow roept
+   `/api/cron/sync` (06:00 en 18:00 UTC) en `/api/cron/notify` (18:00 en 19:00 UTC, stuurt alleen om 20:00 Nederlandse
+   tijd) aan met `Authorization: Bearer $CRON_SECRET`. Let op: GitHub zet geplande workflows uit na 60 dagen zonder
+   commits; een commit zet ze weer aan.
 5. Maak na de eerste deploy via `/admin` uitnodigingscodes en deel ze als `/registreren?code=PILOT-XXXX`.
 
 ## Bankkoppeling (Enable Banking)
