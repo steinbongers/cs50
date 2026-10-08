@@ -158,3 +158,14 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
   potjes beheren, bankkoppeling, meldingen en weergave, over de app met versie, privacy en copyright,
   service en contact, uitloggen.
 - Het tabblad Potjes en Profiel vervallen; oude links sturen door.
+
+## Besluiten voor de afwerkronde (8 oktober 2026, avond)
+
+- **Startscherm slim:** liggen er kaartjes, dan opent de app op Swipen; is de stapel leeg, dan op Overzicht.
+- **Tegels compact:** 4 per rij, zodat de kaart en alle potjes zonder scrollen op één scherm passen.
+- **12 standaardpotjes:** Boodschappen, Eten & drinken, Vervoer, Wonen, Abonnementen, Zorg & verzekeringen,
+  Kleding & verzorging, Uitgaan & vrije tijd, Vakantie, Cadeaus & goede doelen, Sparen & beleggen, Inkomen,
+  plus Overig en het vaste Voorgeschoten. Studie, Huisdier en Kinderen als snelle suggesties in de potje-editor.
+- **Reikwijdte:** afwerken én grotere nieuwe functies, zolang ze het principe versterken (zelf indelen,
+  niets automatisch). Doel: mooi, strak, simpel en concurrerend.
+- **Terugbetalingen:** blijven via de tegel Terugbetaling (inkomend geld afboeken tegen openstaande delen).
