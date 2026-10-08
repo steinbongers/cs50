@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useSyncExternalStore, useTransition } from "react";
-import { disableNotifications, removePushSubscription, savePushSubscription } from "@/app/(app)/profiel/actions";
+import { disableNotifications, removePushSubscription, savePushSubscription } from "@/app/(app)/instellingen/actions";
 import { cn } from "@/lib/utils";
 
 type Support = "unknown" | "ok" | "no-sw" | "ios-not-installed" | "denied";

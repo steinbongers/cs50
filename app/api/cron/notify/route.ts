@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     let message: { title: string; body: string; url: string; tag: string } | null = null;
 
     if (period.startISO === dateISO && profile.month_review_seen_for !== period.startISO) {
-      message = { ...monthReviewMessage(), url: "/overzicht", tag: "jouw-maand" };
+      message = { ...monthReviewMessage(), url: "/overzicht?maand=1", tag: "jouw-maand" };
     } else {
       const { count } = await admin
         .from("transactions")

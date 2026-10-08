@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
   // (sessiecookie), dus het klassieke model (dynamisch renderen zodra de
   // sessie gelezen wordt) is eenvoudiger en voorspelbaarder voor deze app.
   reactStrictMode: true,
+  async redirects() {
+    // Oude tabbladen (vóór de indeling Overzicht, Swipen, Instellingen).
+    return [
+      { source: "/profiel", destination: "/instellingen", permanent: false },
+      { source: "/potjes", destination: "/overzicht", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {

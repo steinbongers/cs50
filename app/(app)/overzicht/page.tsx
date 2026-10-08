@@ -2,39 +2,33 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ConnectionBanner } from "@/components/bank/connection-banner";
 import { RefreshButton } from "@/components/bank/refresh-button";
-import { CategoryIcon } from "@/components/categories/category-icon";
+import { CategoryBadge } from "@/components/categories/category-badge";
 import { BalanceButton } from "@/components/overview/balance-button";
-import { MonthReviewCard } from "@/components/overview/month-review-card";
-import { SpendSummary } from "@/components/overview/spend-summary";
+import { MonthDonut } from "@/components/overview/month-donut";
+import { MonthSeen } from "@/components/overview/month-seen";
 import { StreakChip } from "@/components/overview/streak-chip";
-import { TopCategories } from "@/components/overview/top-categories";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ACTION_LABEL, ACTION_VERB } from "@/config/app";
+import { IconChevronLeft, IconChevronRight } from "@/components/ui/icons";
 import { ensureProfile, requireUser } from "@/lib/auth";
 import { getPrimaryConnection, statusFor } from "@/lib/bank/connections";
 import { VOORGESCHOTEN_CATEGORY } from "@/lib/categories/types";
-import { formatEuroWhole } from "@/lib/format";
-import { compareWithAverage, dailyStreak, monthReview, spentPerCategory } from "@/lib/insights/compute";
+import { formatDayShort, formatEuro, formatEuroWhole } from "@/lib/format";
+import { compareWithAverage, dailyStreak, previousPeriods, spentPerCategory } from "@/lib/insights/compute";
 import { loadAccountBalances, loadInsightData } from "@/lib/insights/queries";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import { getOpenShares } from "@/lib/transactions/queries";
+import { cn } from "@/lib/utils";
+import { SharesList } from "../potjes/shares-list";
 
 export const metadata: Metadata = { title: "Overzicht" };
 
-/** Uur van de dag in Amsterdam, onafhankelijk van de servertijdzone. */
-function amsterdamHour(): number {
-  const part = new Intl.DateTimeFormat("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", hour12: false })
-    .formatToParts(new Date())
-    .find((p) => p.type === "hour");
-  return Number(part?.value ?? 0) % 24;
-}
+/** Zoveel maanden terug kun je bladeren (de geladen historie dekt dit). */
+const MAX_BACK = 3;
 
-function greeting(name: string | null): string {
-  const hour = amsterdamHour();
-  const dagdeel = hour < 6 ? "Goedenacht" : hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
-  return name ? `${dagdeel}, ${name}` : dagdeel;
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 export default async function OverzichtPage({ searchParams }: PageProps<"/overzicht">) {
@@ -43,14 +37,13 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const supabase = await createClient();
   const params = await searchParams;
   const today = amsterdamToday();
-  const period = currentPeriod(profile.salary_day, today);
 
-  const [{ count }, connection, insight, accounts, openShares] = await Promise.all([
-    supabase
-      .from("transactions")
-      .select("id", { count: "exact", head: true })
-      .is("category_id", null)
-      .eq("is_internal_transfer", false),
+  const requested = Number(Array.isArray(params.maand) ? params.maand[0] : params.maand);
+  const back = Number.isInteger(requested) ? Math.min(Math.max(requested, 0), MAX_BACK) : 0;
+  const current = currentPeriod(profile.salary_day, today);
+  const period = back === 0 ? current : previousPeriods(profile.salary_day, today, back)[back - 1];
+
+  const [connection, insight, accounts, openShares] = await Promise.all([
     getPrimaryConnection(supabase, user.id),
     loadInsightData(supabase, today),
     loadAccountBalances(supabase),
@@ -58,26 +51,61 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   ]);
 
   const catMap = new Map(insight.cats.map((c) => [c.id, c]));
-  const comparison = compareWithAverage(insight.txs, catMap, profile.salary_day, today);
   const perCategory = spentPerCategory(insight.txs, catMap, period.startISO, period.endISO);
+  const slices = [...perCategory.entries()]
+    .map(([id, amount]) => {
+      const cat = catMap.get(id);
+      return cat ? { id, name: cat.name, icon: cat.icon, color: cat.color, amount } : null;
+    })
+    .filter((s): s is NonNullable<typeof s> => s !== null && s.amount > 0);
+  const total = slices.reduce((a, s) => a + s.amount, 0);
   const streak = dailyStreak(insight.txs, today);
-  const review = profile.month_review_seen_for === period.startISO ? null : monthReview(insight.txs, insight.cats, profile.salary_day, today);
+  const comparison = back === 0 ? compareWithAverage(insight.txs, catMap, profile.salary_day, today) : null;
   const openSharesTotal = openShares.reduce((a, s) => a + s.amount, 0);
-
-  const openCount = count ?? 0;
-  const hasTransactions = openCount > 0 || insight.txs.length > 0;
-  const justConnected = params.bank === "gekoppeld";
   const canRefresh = connection !== null && ["active", "expiring"].includes(statusFor(connection));
+  const justConnected = params.bank === "gekoppeld";
+
+  let compareLine: { text: string; tone: "muted" | "positive" | "accent" } | null = null;
+  if (comparison && comparison.average !== null && total > 0) {
+    const diff = Math.round((comparison.current - comparison.average) * 100) / 100;
+    if (Math.abs(diff) < 1) compareLine = { text: "Precies je gemiddelde tot nu toe", tone: "muted" };
+    else if (diff < 0) compareLine = { text: `${formatEuro(-diff)} minder dan normaal tot nu toe`, tone: "positive" };
+    else compareLine = { text: `${formatEuro(diff)} meer dan normaal tot nu toe`, tone: "accent" };
+  }
+
+  // Lopende maand: "Sinds 25 september". Afgelopen maand: "25 aug – 24 sep".
+  const lastDay = new Date(period.end);
+  lastDay.setDate(lastDay.getDate() - 1);
+  const title = back === 0 ? capitalize(period.label) : `${formatDayShort(period.start)} – ${formatDayShort(lastDay)}`;
+
+  const navClass = "flex size-11 items-center justify-center rounded-full text-text hover:bg-surface-muted";
 
   return (
     <>
-      <header className="safe-top flex items-center justify-between gap-3 px-4 pt-6 pb-3">
-        <h1 className="min-w-0 truncate text-2xl font-semibold tracking-tight">{greeting(profile.display_name)}</h1>
-        <div className="flex shrink-0 items-center gap-2">
-          <StreakChip days={streak.days} todayDone={streak.todayDone} />
-          <BalanceButton accounts={accounts} />
-        </div>
+      {back === 1 && profile.month_review_seen_for !== current.startISO && <MonthSeen periodStartISO={current.startISO} />}
+
+      <header className="safe-top flex items-center gap-1 px-2 pt-6 pb-2">
+        {back < MAX_BACK ? (
+          <Link href={`/overzicht?maand=${back + 1}`} aria-label="Vorige maand" className={navClass}>
+            <IconChevronLeft />
+          </Link>
+        ) : (
+          <span className="size-11" aria-hidden />
+        )}
+        <h1 className="min-w-0 flex-1 truncate text-center text-xl font-semibold tracking-tight">{title}</h1>
+        {back > 0 ? (
+          <Link href={back === 1 ? "/overzicht" : `/overzicht?maand=${back - 1}`} aria-label="Volgende maand" className={navClass}>
+            <IconChevronRight />
+          </Link>
+        ) : (
+          <span className="size-11" aria-hidden />
+        )}
       </header>
+
+      <div className="flex items-center justify-center gap-2 pb-4">
+        <StreakChip days={streak.days} todayDone={streak.todayDone} />
+        <BalanceButton accounts={accounts} />
+      </div>
 
       <div className="flex flex-col gap-4 px-4">
         {justConnected && (
@@ -87,29 +115,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
         )}
         <ConnectionBanner connection={connection} />
 
-        {review && (
-          <MonthReviewCard
-            currentPeriodStart={period.startISO}
-            review={{
-              periodStartISO: review.period.startISO,
-              periodEndISO: review.period.endISO,
-              total: review.total,
-              average: review.average,
-              periodsUsed: review.periodsUsed,
-              categories: review.categories.map((row) => ({
-                id: row.category.id,
-                name: row.category.name,
-                icon: row.category.icon,
-                color: row.category.color,
-                spent: row.spent,
-                average: row.average,
-                budget: row.budget,
-              })),
-            }}
-          />
-        )}
-
-        {connection === null ? (
+        {connection === null && insight.txs.length === 0 ? (
           <Card padding="lg" className="flex flex-col gap-4">
             <div>
               <h2 className="text-lg font-semibold">Koppel je bank</h2>
@@ -119,60 +125,46 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
               Bank koppelen
             </ButtonLink>
           </Card>
+        ) : slices.length === 0 ? (
+          <Card padding="lg" className="text-center">
+            <p className="font-medium">Nog niets in een potje</p>
+            <p className="mt-1 text-sm text-text-muted">
+              {back === 0 ? "Zet je kaartjes in een potje, dan zie je hier waar je geld heen gaat." : "In deze maand is niets in een potje gezet."}
+            </p>
+          </Card>
         ) : (
-          <Card padding="lg" className="flex flex-col gap-4">
-            {openCount > 0 ? (
-              <>
-                <div>
-                  <p className="text-sm text-text-muted">Nog te {ACTION_VERB}</p>
-                  <p className="text-4xl font-semibold tabular-nums tracking-tight">{openCount}</p>
-                  <p className="mt-1 text-sm text-text-muted">
-                    {openCount === 1 ? "transactie zoekt nog een potje" : "transacties zoeken nog een potje"}
-                  </p>
-                </div>
-                <ButtonLink href="/swipen" size="lg" fullWidth>
-                  {ACTION_LABEL}
-                </ButtonLink>
-              </>
-            ) : hasTransactions ? (
-              <>
-                <div>
-                  <p className="text-sm text-text-muted">Nog te {ACTION_VERB}</p>
-                  <p className="text-4xl font-semibold tabular-nums tracking-tight">0</p>
-                  <p className="mt-1 text-sm text-text-muted">Alles zit in een potje. Lekker bezig, kop koffie verdiend.</p>
-                </div>
-                <ButtonLink href="/swipen" variant="secondary" size="lg" fullWidth>
-                  Naar {ACTION_LABEL.toLowerCase()}
-                </ButtonLink>
-              </>
-            ) : (
-              <div>
-                <h2 className="text-lg font-semibold">Nog geen kaartjes</h2>
-                <p className="mt-1 text-sm text-text-muted">
-                  Je bank is gekoppeld. Zodra er transacties binnenkomen, liggen ze hier voor je klaar.
-                </p>
-              </div>
+          <>
+            <MonthDonut slices={slices} total={total} label={period.label} />
+            {compareLine && (
+              <p
+                className={cn(
+                  "-mt-1 text-center text-sm",
+                  compareLine.tone === "positive" ? "text-positive" : compareLine.tone === "accent" ? "text-accent" : "text-text-muted",
+                )}
+              >
+                {compareLine.text}
+              </p>
             )}
-            {canRefresh && <RefreshButton lastSyncedAt={connection.last_synced_at ?? null} />}
+          </>
+        )}
+
+        {openSharesTotal > 0 && back === 0 && (
+          <Card padding="none">
+            <div className="flex items-center gap-3 px-4 py-3">
+              <CategoryBadge icon={VOORGESCHOTEN_CATEGORY.icon} color={VOORGESCHOTEN_CATEGORY.color} size="sm" />
+              <h2 className="flex-1 font-medium">Nog te krijgen</h2>
+              <p className="text-sm font-medium tabular-nums">{formatEuroWhole(openSharesTotal)}</p>
+            </div>
+            <div className="border-t">
+              <SharesList shares={openShares} />
+            </div>
           </Card>
         )}
 
-        {hasTransactions && <SpendSummary comparison={comparison} periodLabel={period.label} />}
-
-        <TopCategories cats={insight.cats} spent={perCategory} />
-
-        {openSharesTotal > 0 && (
-          <Link href="/potjes" className="flex items-center gap-3 rounded-card bg-surface px-4 py-3 shadow-card hover:bg-surface-muted">
-            <span className="flex size-9 items-center justify-center rounded-full bg-cat-geel-soft text-cat-geel" aria-hidden>
-              <CategoryIcon icon={VOORGESCHOTEN_CATEGORY.icon} size={18} />
-            </span>
-            <span className="flex-1 text-sm">
-              <span className="font-medium">Nog {formatEuroWhole(openSharesTotal)} te krijgen</span>
-              <span className="block text-text-muted">
-                {openShares.length === 1 ? "1 deel staat open" : `${openShares.length} delen staan open`} in Voorgeschoten
-              </span>
-            </span>
-          </Link>
+        {canRefresh && back === 0 && (
+          <div className="flex justify-center">
+            <RefreshButton lastSyncedAt={connection.last_synced_at ?? null} />
+          </div>
         )}
       </div>
     </>

@@ -146,3 +146,15 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 - **Pilot: webapp via Safari, "Zet op beginscherm".** Snelste weg voor Stein en de testers; pushmeldingen werken zo ook op iPhone.
 - **Later: App Store.** Stein heeft een Apple Developer-account en wil de app uiteindelijk in de App Store. Plan: een Capacitor-schil om de bestaande webapp (laadt de live versie), met pushmeldingen via Apple's pushdienst in plaats van webpush, eigen appicoon en splash. Bouwen en uploaden naar TestFlight gebeurt op Steins Mac in Xcode.
 - **Volgorde:** eerst de appnaam en bundel-id vastleggen, dan de schil als aparte fase. Vercel moet dan naar Pro (Hobby is niet voor commercieel gebruik).
+
+## Navigatie: drie tabbladen (8 oktober 2026)
+
+- **Overzicht, Swipen, Instellingen.** Stein vond het oude overzicht overdreven en wil eenvoud.
+- **Overzicht** = je maand: een ring met de uitgaven per potje, daaronder dezelfde potjes als lijst
+  (tik voor het potje-detail), één regel tegenover je gemiddelde, en "Nog te krijgen" als er delen openstaan.
+  Met pijltjes blader je tot drie maanden terug; dat vervangt de losse Jouw-maand-kaart
+  (de melding op salarisdag opent de afgelopen maand).
+- **Instellingen** bundelt: je account (naam, salarisdag, data downloaden, account verwijderen),
+  potjes beheren, bankkoppeling, meldingen en weergave, over de app met versie, privacy en copyright,
+  service en contact, uitloggen.
+- Het tabblad Potjes en Profiel vervallen; oude links sturen door.

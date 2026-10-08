@@ -131,7 +131,7 @@ export async function archiveCategory(categoryId: string): Promise<Result> {
     .eq("user_id", user.id)
     .is("system_key", null);
   if (error) return { ok: false, error: GENERIC };
-  redirect("/potjes");
+  redirect("/overzicht");
 }
 
 /** Nieuwe vaste volgorde van de potjes (de tegels op het hoofdscherm volgen deze). */

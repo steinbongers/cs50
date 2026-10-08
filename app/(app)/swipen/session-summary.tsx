@@ -107,9 +107,6 @@ export function SessionSummary({ decisions, skipped, remaining }: SessionSummary
             <ButtonLink href="/overzicht" size="lg" fullWidth>
               Naar het overzicht
             </ButtonLink>
-            <ButtonLink href="/potjes" variant="ghost" size="lg" fullWidth>
-              Potjes bekijken
-            </ButtonLink>
           </>
         )}
       </div>

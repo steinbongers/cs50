@@ -51,7 +51,7 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
 
   return (
     <>
-      <PageHeader title={category.name} backHref="/potjes" />
+      <PageHeader title={category.name} backHref="/overzicht" />
       <PotjeDetail
         category={{
           id: category.id,

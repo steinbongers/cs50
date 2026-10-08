@@ -29,3 +29,6 @@ export const MANUAL_SYNC_COOLDOWN_MS = 15 * 60 * 1000;
 
 /** Aantal dagen vóór het verlopen van een bankkoppeling waarop we waarschuwen. */
 export const CONNECTION_EXPIRY_WARNING_DAYS = 7;
+
+/** Adres voor service en contact (Instellingen, Over de app). Vervang door een vast supportadres vóór de lancering. */
+export const SUPPORT_EMAIL = "steinbongers2018@gmail.com";
