@@ -10,13 +10,12 @@
  */
 
 import { AnimatePresence } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check, Undo2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { CategoryEditor } from "@/components/categories/category-editor";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { Sheet } from "@/components/ui/sheet";
-import { Switch } from "@/components/ui/switch";
 import { ACTION_LABEL, UNDO_WINDOW_MS } from "@/config/app";
 import { success, tap, warning } from "@/lib/haptics";
 import type { QuickSuggestionKey } from "@/lib/categories/defaults";
@@ -54,7 +53,7 @@ import { RawSheet } from "./raw-sheet";
 import { SessionSummary, type Decision } from "./session-summary";
 import { RefundSheet } from "./refund-sheet";
 import { SettleSheet } from "./settle-sheet";
-import { EMPTY_SPLIT, SplitRow, type SplitState } from "./split-panel";
+import { EMPTY_SPLIT, type SplitState } from "./split-panel";
 import { CASH_QUESTION, GhostCard, TransactionCard, type ExitKind } from "./transaction-card";
 import { UndoToast } from "./undo-toast";
 
@@ -831,7 +830,6 @@ export function SortScreen({
   const isIncoming = current.amount > 0;
   // Pinopname: de app herkent hem aan de banktekst en vraagt waar het geld heen ging. Geen delen, geen vaste ontvanger.
   const isCash = isCashWithdrawal(current);
-  const splitActive = !isIncoming && !isCash && split.enabled;
   // Terugbetaling bij open delen (van vroeger verdelen) én bij uitgaven die op geld terug wachten.
   const repayment =
     isIncoming && (availableShares.length > 0 || availableAwaiting.length > 0)
@@ -880,6 +878,40 @@ export function SortScreen({
           </AnimatePresence>
         </section>
 
+        {/* Direct onder de kaart, klein: Ik krijg een deel terug (besluit van Stein, niet meer onderin).
+            De regel is er altijd, ook bij inkomend geld en pinopnames, zodat de tegels nooit verspringen. */}
+        <div className="mt-2 flex h-8 items-center gap-2">
+          {!isIncoming && !isCash ? (
+            <>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={split.enabled}
+                onClick={() => {
+                  tap();
+                  setHint(null);
+                  setSplitFor({ id: current.id, state: { ...split, enabled: !split.enabled } });
+                }}
+                className={cn(
+                  "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                  split.enabled ? "bg-primary text-on-primary" : "bg-surface text-text shadow-card active:bg-surface-muted",
+                )}
+              >
+                {split.enabled ? <Check size={14} strokeWidth={2.5} aria-hidden /> : <Undo2 size={14} aria-hidden />}
+                Ik krijg een deel terug
+              </button>
+              {split.enabled && (
+                <span className="min-w-0 truncate text-[12px] leading-4 text-text-muted">Je houdt bij wat terugkomt</span>
+              )}
+            </>
+          ) : isIncoming ? (
+            <p className="px-1 text-[13px] text-text-muted" aria-hidden>
+              Waar hoort dit geld bij?
+            </p>
+          ) : null}
+        </div>
+
         <div className="relative">
           {(showCoach || coachDone) && (
             <div className="pointer-events-none absolute inset-x-0 bottom-full z-20 mb-3">
@@ -915,23 +947,14 @@ export function SortScreen({
           pulseKey={pulse.key}
           refund={isIncoming ? { onOpen: () => setRefundOpen(true) } : null}
           repayment={repayment}
-          tight={splitActive}
         />
       </section>
 
-      {/* Onderaan het scherm, in de duimzone: Ik krijg een deel terug en Later. De bijhoudregel klapt erboven open.
-          Bij een pinopname staan hier Verdelen en Nog contant (nog niet uitgegeven); een tik op een potje = alles daarin. */}
+      {/* Onderaan het scherm, in de duimzone: Later. Bij een pinopname ook Verdelen en Nog contant
+          (nog niet uitgegeven); een tik op een potje = alles daarin. */}
       <div ref={bottomRowRef} className="mt-auto px-4 pt-3 pb-2 compact:pt-1">
-        {!isIncoming && !isCash && (
-          <SplitRow key={current.id} open={split.enabled} />
-        )}
-        <div className={cn("mt-2 flex h-11 items-center", isCash ? "gap-1.5" : "gap-2")}>
-          {isIncoming ? (
-            // Bij inkomend geld geen schakelaar: de vraag vult de plek (de h2 zegt hetzelfde voor schermlezers).
-            <p className="flex min-w-0 flex-1 items-center px-1 text-[15px] text-text-muted" aria-hidden>
-              Waar hoort dit geld bij?
-            </p>
-          ) : isCash ? (
+        <div className={cn("flex h-11 items-center justify-end", isCash ? "gap-1.5" : "gap-2")}>
+          {isCash ? (
             <>
               <Button
                 variant="secondary"
@@ -955,22 +978,7 @@ export function SortScreen({
                 <span className="truncate">Nog contant</span>
               </Button>
             </>
-          ) : (
-            <label className="flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-control bg-surface px-3 text-[15px] font-medium shadow-card max-[389px]:text-[14px]">
-              <span className="truncate" aria-hidden>
-                Ik krijg een deel terug
-              </span>
-              <Switch
-                size="sm"
-                label="Ik krijg een deel terug"
-                checked={split.enabled}
-                onCheckedChange={(enabled) => {
-                  setHint(null);
-                  setSplitFor({ id: current.id, state: { ...split, enabled } });
-                }}
-              />
-            </label>
-          )}
+          ) : null}
           <Button
             variant="ghost"
             onClick={skip}

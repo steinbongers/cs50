@@ -244,3 +244,6 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
 - **Terugbetaling per uitgave, niet per persoon** (Stein). Bij Terugbetaling tik je de uitgave aan zoals hij heette
   ("Sijf · € 240"). Oude verdelingen met open delen per persoon worden bij het openen van Swipen of Overzicht
   vanzelf omgezet naar bijhouden per uitgave (behalve als er al iets buiten de bank verrekend is).
+- **"Ik krijg een deel terug" is een klein knopje direct onder de kaart** (Stein), niet meer onderin: met veel
+  potjes hoefde je anders te scrollen. Onderin staat alleen nog Later (en bij een pinopname Verdelen en Nog contant).
+  De regel onder de kaart is er altijd, zodat de tegels nooit verspringen.
