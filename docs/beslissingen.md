@@ -212,3 +212,6 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
   Vaste ontvangers; wat al is ingedeeld blijft dan staan. Direct na het instellen zet Ongedaan maken alles terug.
 - **Ook de andere van deze winkel.** Na een gewone keuze biedt de pil onderin "Ook 3 andere" aan als dezelfde
   ontvanger nog op de stapel ligt. De gebruiker tikt zelf; nooit bij een verdeling of terugbetaling.
+- **Inkomend geld toont alleen inkomstenpotjes** (Stein). Plus Terugbetaling (bij open delen) en '+'; een nieuw
+  potje vanaf een inkomend kaartje is meteen een inkomstenpotje. Heeft iemand geen inkomstenpotje, dan staan alle
+  potjes er, zodat het kaartje ergens heen kan.

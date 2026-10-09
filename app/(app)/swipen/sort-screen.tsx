@@ -598,7 +598,7 @@ export function SortScreen({
     });
   }, [undoBulk, startTransition]);
 
-  function openEditor() {
+  function openEditor(isIncome = false) {
     const used = new Set(categories.map((c) => c.color));
     setEditorError(null);
     setEditorSuggestion(null);
@@ -606,7 +606,8 @@ export function SortScreen({
       name: "",
       icon: DEFAULT_CATEGORY_ICON,
       color: CATEGORY_COLORS.find((c) => !used.has(c)) ?? "grijs",
-      isIncome: false,
+      // Een nieuw potje bij inkomend geld is meteen een inkomstenpotje.
+      isIncome,
       enabled: true,
     });
   }
@@ -699,7 +700,11 @@ export function SortScreen({
     isIncoming && availableShares.length > 0
       ? { total: openSharesTotal, count: availableShares.length, onOpen: () => setSettleOpen(true) }
       : null;
-  const sticky = tileCount(categories, repayment !== null) >= STICKY_FROM_TILES;
+  // Inkomend geld: alleen de inkomstenpotjes (besluit van Stein). Zonder inkomstenpotje
+  // toch alles, anders kun je het kaartje nergens kwijt.
+  const incomeCategories = categories.filter((c) => c.isIncome && c.systemKey === null);
+  const tileCategories = isIncoming && incomeCategories.length > 0 ? incomeCategories : categories;
+  const sticky = tileCount(tileCategories, repayment !== null) >= STICKY_FROM_TILES;
   const isLast = queue.length < 2;
   const total = assignedCount + remaining;
 
@@ -760,12 +765,12 @@ export function SortScreen({
                 : "Welk potje?"}
         </h2>
         <CategoryTiles
-          categories={categories}
+          categories={tileCategories}
           onPick={pick}
           onHold={isCash ? undefined : hold}
           onAdd={() => {
             tap();
-            openEditor();
+            openEditor(isIncoming);
           }}
           pulseId={pulse.id}
           pulseKey={pulse.key}
