@@ -12,6 +12,7 @@ import type { EbAspsp } from "@/lib/enablebanking/types";
 import { createClient } from "@/lib/supabase/server";
 import { BankPicker } from "./bank-picker";
 import { ConnectionCard } from "./connection-card";
+import { HowItWorks } from "./how-it-works";
 
 export const metadata: Metadata = { title: "Bank koppelen" };
 
@@ -115,7 +116,11 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
         ) : loadError ? (
           <Card className="text-[13px] leading-[18px] text-negative">{loadError}</Card>
         ) : banks.length > 0 ? (
-          <BankPicker banks={banks.map((b) => ({ name: b.name, logo: b.logo ?? null }))} next={next} reconnect={Boolean(connection)} />
+          <>
+            {/* Eerst rustig uitleggen, dan pas de bank kiezen. */}
+            <HowItWorks />
+            <BankPicker banks={banks.map((b) => ({ name: b.name, logo: b.logo ?? null }))} next={next} reconnect={Boolean(connection)} />
+          </>
         ) : null}
 
         <p className="px-1 text-[13px] leading-[18px] text-text-muted">
