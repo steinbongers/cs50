@@ -6,9 +6,9 @@
 export type SwipeDirection = "left" | "right" | "up" | "down";
 export type ConnectionProvider = "enablebanking" | "csv";
 export type ConnectionStatus = "active" | "expiring" | "expired" | "revoked";
-export type TransactionSource = "bank" | "csv" | "cash";
+export type TransactionSource = "bank" | "csv" | "cash" | "split";
 export type ShareStatus = "open" | "received" | "settled_elsewhere";
-export type CategorySystemKey = "voorgeschoten" | "contant" | "terug";
+export type CategorySystemKey = "voorgeschoten" | "contant" | "terug" | "verdeeld";
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -124,6 +124,8 @@ export type TransactionRow = {
   awaiting_refund: boolean;
   /** Binnengekomen terugbetaling: de uitgave waar hij bij hoort. */
   refund_for_id: string | null;
+  /** Deel van een verdeelde afschrijving (source 'split'): de afschrijving zelf. */
+  split_parent_id: string | null;
   created_at: string;
 };
 
@@ -278,6 +280,7 @@ export type Database = {
           | "cash_withdrawal_id"
           | "awaiting_refund"
           | "refund_for_id"
+          | "split_parent_id"
           | "account_id"
           | "created_at"
         >
