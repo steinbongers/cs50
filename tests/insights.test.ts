@@ -273,3 +273,21 @@ test("dagstreak is vergevingsgezind: één gemiste dag per week breekt de reeks 
   // zonder gemiste dag geen opvang
   assert.equal(dailyStreak([base], today).forgivenRecently, false);
 });
+
+test("geld terug: met potje van dat potje af, zonder potje alleen van het totaal, nooit inkomen", () => {
+  const terug: CatLite = { id: "terug", name: "Geld terug", icon: "receipt", color: "blauw", isIncome: false, systemKey: "terug", monthlyBudget: null, goalAmount: null };
+  const contant: CatLite = { id: "cash", name: "Contant", icon: "wallet", color: "groen", isIncome: false, systemKey: "contant", monthlyBudget: null, goalAmount: null };
+  const map = new Map([...cats, terug, contant].map((c) => [c.id, c]));
+  const txs = [
+    tx({ bookingDate: "2026-10-02", amount: -60, categoryId: "bood" }),
+    tx({ bookingDate: "2026-10-03", amount: -40, categoryId: "uit" }),
+    tx({ bookingDate: "2026-10-04", amount: 15, categoryId: "bood" }), // retour, van Boodschappen af
+    tx({ bookingDate: "2026-10-05", amount: 25, categoryId: "terug" }), // zonder potje
+    tx({ bookingDate: "2026-10-06", amount: -50, categoryId: "cash" }), // pinopname telt niet
+  ];
+  assert.equal(totalSpent(txs, map, "2026-10-01", "2026-11-01"), 60);
+  const per = spentPerCategory(txs, map, "2026-10-01", "2026-11-01");
+  assert.equal(per.get("bood"), 45);
+  assert.equal(per.get("uit"), 40);
+  assert.equal(per.get("terug"), -25);
+});

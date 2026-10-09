@@ -1,9 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { CONTANT_CATEGORY, VOORGESCHOTEN_CATEGORY } from "./types";
+import { CONTANT_CATEGORY, GELD_TERUG_CATEGORY, VOORGESCHOTEN_CATEGORY } from "./types";
 
-type SystemCategory = typeof VOORGESCHOTEN_CATEGORY | typeof CONTANT_CATEGORY;
+type SystemCategory = typeof VOORGESCHOTEN_CATEGORY | typeof CONTANT_CATEGORY | typeof GELD_TERUG_CATEGORY;
 
 /** Zoekt een ingebouwd potje op (en zet het terug als het gearchiveerd was), of maakt het aan. */
 async function ensureSystemCategory(
@@ -61,4 +61,12 @@ export async function ensureVoorgeschotenCategory(
  */
 export async function ensureContantCategory(supabase: SupabaseClient<Database>, userId: string): Promise<string> {
   return ensureSystemCategory(supabase, userId, CONTANT_CATEGORY, 998);
+}
+
+/**
+ * Zorgt dat het ingebouwde potje Geld terug bestaat en geeft het id terug. Terugbetalingen
+ * zonder potje staan hierin: ze verlagen je totaal, maar geen potje. Geen tegel.
+ */
+export async function ensureGeldTerugCategory(supabase: SupabaseClient<Database>, userId: string): Promise<string> {
+  return ensureSystemCategory(supabase, userId, GELD_TERUG_CATEGORY, 997);
 }

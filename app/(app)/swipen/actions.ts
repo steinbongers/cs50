@@ -1,7 +1,7 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
-import { ensureContantCategory, ensureVoorgeschotenCategory } from "@/lib/categories/system";
+import { ensureContantCategory, ensureGeldTerugCategory, ensureVoorgeschotenCategory } from "@/lib/categories/system";
 import {
   MAX_CATEGORIES,
   MAX_CATEGORY_NAME_LENGTH,
@@ -437,6 +437,69 @@ export async function undoAssign(transactionId: string): Promise<ActionResult> {
   if (error || !updated) return { ok: false, error: "Ongedaan maken lukte niet." };
 
   await logEvent("undo", { transaction_id: transactionId });
+  return { ok: true };
+}
+
+/**
+ * Inkomend geld dat je terugkreeg (retour, refund, iemand betaalt iets terug).
+ * Met een uitgavepotje: daar gaat het van af. Zonder potje (null): in Geld terug,
+ * dan gaat het alleen van je totaal af. Inkomen telt het nooit.
+ */
+export async function assignRefund(
+  transactionId: string,
+  categoryId: string | null,
+  durationMs: number,
+  meta?: SwipeMeta,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isUuid(transactionId) || (categoryId !== null && !isUuid(categoryId))) return { ok: false, error: GENERIC_ERROR };
+
+  const supabase = await createClient();
+  const { data: transaction } = await supabase
+    .from("transactions")
+    .select("id, amount")
+    .eq("id", transactionId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!transaction || Number(transaction.amount) <= 0) return { ok: false, error: GENERIC_ERROR };
+
+  let targetId: string;
+  if (categoryId) {
+    const { data: category } = await supabase
+      .from("categories")
+      .select("id, system_key, is_income")
+      .eq("id", categoryId)
+      .eq("user_id", user.id)
+      .eq("archived", false)
+      .maybeSingle();
+    if (!category) return { ok: false, error: "Dit potje bestaat niet (meer)." };
+    if (category.system_key || category.is_income) return { ok: false, error: "Kies een potje voor uitgaven." };
+    targetId = category.id;
+  } else {
+    try {
+      targetId = await ensureGeldTerugCategory(supabase, user.id);
+    } catch {
+      return { ok: false, error: GENERIC_ERROR };
+    }
+  }
+
+  const { data: updated, error } = await supabase
+    .from("transactions")
+    .update({ category_id: targetId, categorized_at: new Date().toISOString(), own_share: null })
+    .eq("id", transactionId)
+    .eq("user_id", user.id)
+    .select("id")
+    .maybeSingle();
+  if (error || !updated) return { ok: false, error: GENERIC_ERROR };
+
+  await logEvent("swipe", {
+    transaction_id: transactionId,
+    category_id: targetId,
+    duration_ms: Math.max(0, Math.round(Number.isFinite(durationMs) ? durationMs : 0)),
+    coach: coachFlag(meta),
+    flow: "refund",
+    with_category: categoryId !== null,
+  });
   return { ok: true };
 }
 

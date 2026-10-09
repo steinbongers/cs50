@@ -25,7 +25,7 @@ import { ACTION_LABEL } from "@/config/app";
 import { ensureProfile, requireUser } from "@/lib/auth";
 import { getPrimaryConnection, statusFor } from "@/lib/bank/connections";
 import { categoryColorClasses } from "@/lib/categories/palette";
-import { formatEuroWhole } from "@/lib/format";
+import { formatEuro, formatEuroWhole } from "@/lib/format";
 import { budgetLabel, budgetStatus } from "@/lib/insights/budget";
 import {
   categoryDeviations,
@@ -100,8 +100,15 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const before = previousPeriods(profile.salary_day, today, back + 1)[back];
   const lastMonthPer = spentPerCategory(insight.txs, catMap, before.startISO, before.endISO);
 
+  // Geld terug zonder potje: gaat van het totaal af, maar van geen potje (spendOf geeft het negatief).
+  let refundsLoose = 0;
+  for (const [id, amount] of perCategory) {
+    if (catMap.get(id)?.systemKey === "terug" && amount < 0) refundsLoose -= amount;
+  }
+  refundsLoose = Math.round(refundsLoose * 100) / 100;
+
   const sortedTotal = slices.reduce((sum, s) => sum + s.amount, 0);
-  const total = Math.round((sortedTotal + unsorted) * 100) / 100;
+  const total = Math.max(0, Math.round((sortedTotal + unsorted - refundsLoose) * 100) / 100);
 
   // Lijst: potjes met uitgaven of met een budget, grootste bedrag eerst. Geen procenten.
   const rows = insight.cats
@@ -263,6 +270,11 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
             ) : (
               <section aria-label="Uitgaven deze maand" className="flex flex-col items-center gap-3">
                 <MonthDonut slices={slices} unsorted={unsorted} total={total} label={monthName} />
+                {refundsLoose > 0 && (
+                  <p className="text-center text-[13px] leading-[18px] text-text-muted">
+                    {formatEuro(refundsLoose)} geld terug zonder potje is er al vanaf
+                  </p>
+                )}
                 {compare?.kind === "chip" && (
                   <div className="flex flex-col items-center gap-1">
                     <p

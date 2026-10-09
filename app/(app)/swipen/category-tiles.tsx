@@ -8,7 +8,7 @@ import { formatEuroWhole } from "@/lib/format";
 import { tap } from "@/lib/haptics";
 import { tileName } from "@/lib/categories/display";
 import { categoryColorClasses } from "@/lib/categories/palette";
-import { VOORGESCHOTEN_CATEGORY } from "@/lib/categories/types";
+import { GELD_TERUG_CATEGORY, VOORGESCHOTEN_CATEGORY } from "@/lib/categories/types";
 import type { CategoryOption } from "@/lib/transactions/queries";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +20,8 @@ interface CategoryTilesProps {
   onAdd: () => void;
   pulseId: string | null;
   pulseKey: number;
+  /** Altijd bij inkomend geld: de tegel 'Geld terug' (retour, refund, iets terugbetaald). */
+  refund?: { onOpen: () => void } | null;
   /** Alleen bij inkomend geld met openstaande delen: de tegel 'Terugbetaling'. */
   repayment?: { total: number; count: number; onOpen: () => void } | null;
   /** De verdeelregel staat open (52 px extra): in de compacte stand dan 4 px lagere tegels. */
@@ -34,9 +36,9 @@ const HOLD_SLOP_PX = 10;
 /** Vanaf dit aantal tegels worden ze iets lager (72 px). */
 const DENSE_FROM = 17;
 
-/** Aantal tegels inclusief Terugbetaling en '+', voor de keuze van de tegelhoogte en sticky kaart. */
-export function tileCount(categories: CategoryOption[], withRepayment: boolean): number {
-  return categories.filter((c) => c.systemKey === null).length + (withRepayment ? 1 : 0) + 1;
+/** Aantal tegels inclusief Geld terug, Terugbetaling en '+', voor de keuze van de tegelhoogte en sticky kaart. */
+export function tileCount(categories: CategoryOption[], withRepayment: boolean, withRefund = false): number {
+  return categories.filter((c) => c.systemKey === null).length + (withRepayment ? 1 : 0) + (withRefund ? 1 : 0) + 1;
 }
 
 function tileClasses(dense: boolean, tight: boolean) {
@@ -79,12 +81,13 @@ export function CategoryTiles({
   onAdd,
   pulseId,
   pulseKey,
+  refund,
   repayment,
   tight = false,
 }: CategoryTilesProps) {
   const reduce = useReducedMotion();
   const visible = categories.filter((c) => c.systemKey === null);
-  const dense = tileCount(categories, Boolean(repayment)) >= DENSE_FROM;
+  const dense = tileCount(categories, Boolean(repayment), Boolean(refund)) >= DENSE_FROM;
   const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const holdStart = useRef<{ x: number; y: number } | null>(null);
   // Na een geslaagde ingedrukte tik volgt nog een click: die slaan we over.
@@ -177,6 +180,34 @@ export function CategoryTiles({
           </motion.li>
         );
       })}
+
+      {refund && (
+        <li>
+          <button
+            type="button"
+            onClick={() => {
+              tap();
+              refund.onOpen();
+            }}
+            aria-label="Geld terug gekregen"
+            className={cn(tileClasses(dense, tight), "bg-surface shadow-card active:bg-surface-muted")}
+          >
+            <span
+              className={cn(
+                "flex size-7 shrink-0 items-center justify-center rounded-full",
+                categoryColorClasses(GELD_TERUG_CATEGORY.color).bg,
+                categoryColorClasses(GELD_TERUG_CATEGORY.color).text,
+              )}
+              aria-hidden
+            >
+              <CategoryIcon icon={GELD_TERUG_CATEGORY.icon} size={16} strokeWidth={1.75} />
+            </span>
+            <span className={nameClasses} aria-hidden>
+              {tileName(GELD_TERUG_CATEGORY.name)}
+            </span>
+          </button>
+        </li>
+      )}
 
       {repayment && (
         <li>

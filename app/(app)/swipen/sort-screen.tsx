@@ -22,7 +22,7 @@ import { success, tap, warning } from "@/lib/haptics";
 import type { QuickSuggestionKey } from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON } from "@/lib/categories/icons";
 import { CATEGORY_COLORS } from "@/lib/categories/palette";
-import { CONTANT_CATEGORY, VOORGESCHOTEN_CATEGORY, type CategoryDraft } from "@/lib/categories/types";
+import { CONTANT_CATEGORY, GELD_TERUG_CATEGORY, VOORGESCHOTEN_CATEGORY, type CategoryDraft } from "@/lib/categories/types";
 import { formatEuro } from "@/lib/format";
 import { isCashWithdrawal } from "@/lib/transactions/cash";
 import type { CategoryOption, OpenShare, OpenTransaction } from "@/lib/transactions/queries";
@@ -33,6 +33,7 @@ import {
   assignAlways,
   assignCategory,
   assignMany,
+  assignRefund,
   completeCoach,
   completeSession,
   createCategory,
@@ -51,6 +52,7 @@ import { CategoryTiles, tileCount } from "./category-tiles";
 import { COACH_STEPS, CoachTip } from "./coach-tip";
 import { RawSheet } from "./raw-sheet";
 import { SessionSummary, type Decision } from "./session-summary";
+import { RefundSheet } from "./refund-sheet";
 import { SettleSheet } from "./settle-sheet";
 import { EMPTY_SPLIT, SplitRow, type SplitState } from "./split-panel";
 import { CASH_QUESTION, GhostCard, TransactionCard, type ExitKind } from "./transaction-card";
@@ -96,6 +98,19 @@ const VOORGESCHOTEN_OPTION: CategoryOption = {
   color: VOORGESCHOTEN_CATEGORY.color,
   isIncome: false,
   systemKey: VOORGESCHOTEN_CATEGORY.systemKey,
+  spentThisPeriod: 0,
+  monthlyBudget: null,
+  goalAmount: null,
+};
+
+/** Geld terug zonder potje: gaat van het totaal af. Het echte id kent alleen de server. */
+const GELD_TERUG_OPTION: CategoryOption = {
+  id: "terug",
+  name: GELD_TERUG_CATEGORY.name,
+  icon: GELD_TERUG_CATEGORY.icon,
+  color: GELD_TERUG_CATEGORY.color,
+  isIncome: false,
+  systemKey: GELD_TERUG_CATEGORY.systemKey,
   spentThisPeriod: 0,
   monthlyBudget: null,
   goalAmount: null,
@@ -161,6 +176,7 @@ export function SortScreen({
   const [splitFor, setSplitFor] = useState<{ id: string | null; state: SplitState }>({ id: null, state: EMPTY_SPLIT });
   const [settledShareIds, setSettledShareIds] = useState<Set<string>>(() => new Set());
   const [settleOpen, setSettleOpen] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
   const [cashOpen, setCashOpen] = useState(false);
   // Per verdeelde pinopname wat er in welk potje kwam, zodat ongedaan maken het lokaal terugzet.
   const [cashSplits, setCashSplits] = useState<Map<string, CashSplitLocal>>(() => new Map());
@@ -343,6 +359,46 @@ export function SortScreen({
     [current, split, showCoach, startTransition],
   );
 
+  // Geld terug gekregen: van een uitgavepotje af, of zonder potje alleen van het totaal.
+  const refund = useCallback(
+    (category: CategoryOption | null) => {
+      if (!current || current.amount <= 0) return;
+      const transaction = current;
+      const durationMs = performance.now() - shownAt.current;
+      const target = category ?? GELD_TERUG_OPTION;
+      const decision: Decision = { transaction, category: target };
+      const delta = category ? spentDelta(transaction, category) : 0;
+
+      setRefundOpen(false);
+      setError(null);
+      setHint(null);
+      setExitKind("assign");
+      setQueue((q) => q.slice(1));
+      setDecisions((d) => [...d, decision]);
+      setUndo(decision);
+      setUndoBulk(null);
+      if (category) {
+        setPulse((p) => ({ id: category.id, key: p.key + 1 }));
+        bumpCategoryTotal(category.id, delta);
+      }
+      setAnnouncement(
+        category ? `${transaction.counterparty}: geld terug, van ${category.name} af` : `${transaction.counterparty}: geld terug`,
+      );
+
+      startTransition(async () => {
+        const result = await assignRefund(transaction.id, category?.id ?? null, durationMs, { coach: showCoach });
+        if (!result.ok) {
+          setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
+          setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
+          setUndo((u) => (u?.transaction.id === transaction.id ? null : u));
+          if (category) bumpCategoryTotal(category.id, -delta);
+          setError(result.error);
+        }
+      });
+    },
+    [current, showCoach, startTransition],
+  );
+
   const settle = useCallback(
     (shareIds: string[]) => {
       if (!current || current.amount <= 0) return;
@@ -486,7 +542,7 @@ export function SortScreen({
       undo &&
       !undoBulk &&
       undo.ownShare === undefined &&
-      undo.category.id !== VOORGESCHOTEN_OPTION.id &&
+      undo.category.systemKey === null &&
       !isCashWithdrawal(undo.transaction)
         ? sameCounterparty(undo.transaction, queue)
         : [],
@@ -665,7 +721,11 @@ export function SortScreen({
           ? "Verwerkt als terugbetaling"
           : undo?.category.id === CONTANT_OPTION.id
             ? (cashSplits.get(undo.transaction.id)?.text ?? "Bewaard als contant")
-            : `In ${undo?.category.name ?? ""}`
+            : undo?.category.id === GELD_TERUG_OPTION.id
+              ? "Geld terug, van je totaal af"
+              : undo && undo.transaction.amount > 0 && !undo.category.isIncome
+                ? `Geld terug, van ${undo.category.name} af`
+                : `In ${undo?.category.name ?? ""}`
       }
       onUndo={handleUndo}
       extra={
@@ -704,7 +764,7 @@ export function SortScreen({
   // toch alles, anders kun je het kaartje nergens kwijt.
   const incomeCategories = categories.filter((c) => c.isIncome && c.systemKey === null);
   const tileCategories = isIncoming && incomeCategories.length > 0 ? incomeCategories : categories;
-  const sticky = tileCount(tileCategories, repayment !== null) >= STICKY_FROM_TILES;
+  const sticky = tileCount(tileCategories, repayment !== null, isIncoming) >= STICKY_FROM_TILES;
   const isLast = queue.length < 2;
   const total = assignedCount + remaining;
 
@@ -774,6 +834,7 @@ export function SortScreen({
           }}
           pulseId={pulse.id}
           pulseKey={pulse.key}
+          refund={isIncoming ? { onOpen: () => setRefundOpen(true) } : null}
           repayment={repayment}
           tight={splitActive}
         />
@@ -879,6 +940,15 @@ export function SortScreen({
           onConfirm={cashSplit}
         />
       )}
+
+      <RefundSheet
+        open={refundOpen}
+        onClose={() => setRefundOpen(false)}
+        amount={current.amount}
+        categories={categories.filter((c) => c.systemKey === null && !c.isIncome)}
+        pending={isPending}
+        onConfirm={refund}
+      />
 
       <SettleSheet
         key={current.id}

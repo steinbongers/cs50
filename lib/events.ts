@@ -19,7 +19,7 @@ export type EventType =
   /**
    * Transactie in een potje gezet.
    * `{ transaction_id, category_id, duration_ms, skipped_before?, split_persons?, split_method?,
-   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' }`
+   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' | 'refund', with_category? }`
    */
   | "swipe"
   /** Transactie verplaatst via de detailpagina. `{ transaction_id, category_id }` */

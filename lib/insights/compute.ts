@@ -29,12 +29,14 @@ export interface CatLite {
 
 /**
  * Wat een transactie bijdraagt aan "uitgegeven": het eigen deel van een uitgave,
- * of een negatieve bijdrage voor een terugbetaling in een uitgavepotje.
- * Inkomen, Voorgeschoten en eigen overboekingen tellen niet.
+ * of een negatieve bijdrage voor een terugbetaling in een uitgavepotje of in Geld terug.
+ * Inkomen, Voorgeschoten, Contant en eigen overboekingen tellen niet.
  */
 export function spendOf(tx: TxLite, cats: Map<string, CatLite>): number {
   if (tx.isInternal) return 0;
   const cat = tx.categoryId ? cats.get(tx.categoryId) : null;
+  // Geld terug zonder potje: gaat van het totaal af, bij geen enkel potje.
+  if (cat?.systemKey === "terug") return -tx.amount;
   if (cat && (cat.isIncome || cat.systemKey)) return 0;
   if (tx.amount < 0) return tx.ownShare ?? -tx.amount;
   // Inkomend geld zonder potje weten we nog niet; met uitgavepotje is het een terugbetaling.

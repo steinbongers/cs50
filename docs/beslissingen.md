@@ -215,3 +215,7 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
 - **Inkomend geld toont alleen inkomstenpotjes** (Stein). Plus Terugbetaling (bij open delen) en '+'; een nieuw
   potje vanaf een inkomend kaartje is meteen een inkomstenpotje. Heeft iemand geen inkomstenpotje, dan staan alle
   potjes er, zodat het kaartje ergens heen kan.
+- **Geld terug** (Stein). Op elk inkomend kaartje staat de tegel "Geld terug". Kies je een uitgavepotje, dan gaat
+  het bedrag daar van af (minder uitgegeven). Kies je "Zonder potje", dan gaat het in het ingebouwde potje Geld
+  terug: het gaat van je totaal af, van geen enkel potje, en telt nooit als inkomen. Overzicht noemt het bedrag
+  onder de ring. Terugbetaling (open delen afstrepen) blijft een eigen tegel.

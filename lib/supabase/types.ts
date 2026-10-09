@@ -8,7 +8,7 @@ export type ConnectionProvider = "enablebanking" | "csv";
 export type ConnectionStatus = "active" | "expiring" | "expired" | "revoked";
 export type TransactionSource = "bank" | "csv" | "cash";
 export type ShareStatus = "open" | "received" | "settled_elsewhere";
-export type CategorySystemKey = "voorgeschoten" | "contant";
+export type CategorySystemKey = "voorgeschoten" | "contant" | "terug";
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
