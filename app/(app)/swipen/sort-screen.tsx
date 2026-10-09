@@ -2,7 +2,7 @@
 
 /*
  * Hoogterekensom voor 390 × 844 (iPhone 14/15, ±687 px tussen safe-area en tabbalk):
- *   header 52 + 12 + kaart 168 + 12 + actieregel 44 + 12 + tegels (4 × 80 + 3 × 6)
+ *   header 52 + 12 + kaart 168 + 12 + tegels (4 × 80 + 3 × 6) + 12 + actieregel onderaan 44 + 8
  *   = 52+12+168+12+44+12+(4×80+3×6) = 638 px.
  * Blijft 49 px over voor de Ongedaan-maken-pil (40). Compact (≤ 700 px hoog):
  * kaart 136 en tegels 64 zonder bedrag, ±518 px van 583. Met de verdeelregel open (+52)
@@ -491,64 +491,6 @@ export function SortScreen({
               </AnimatePresence>
             </div>
           )}
-
-          <div className="mt-3 flex h-11 gap-2">
-            {isIncoming ? (
-              // Geen schakelaar bij inkomend geld: de vraag zelf vult de plek (de h2 hieronder zegt hetzelfde voor schermlezers).
-              <p className="flex min-w-0 flex-1 items-center px-1 text-[15px] text-text-muted" aria-hidden>
-                Waar hoort dit geld bij?
-              </p>
-            ) : (
-              <label className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-control bg-surface px-3 text-[15px] font-medium shadow-card">
-                <span className="truncate" aria-hidden>
-                  Ik krijg geld terug
-                </span>
-                <Switch
-                  size="sm"
-                  label="Ik krijg geld terug"
-                  checked={split.enabled}
-                  onCheckedChange={(enabled) => {
-                    setMethodMissing(false);
-                    setHint(null);
-                    setSplitFor({ id: current.id, state: { ...split, enabled } });
-                  }}
-                />
-              </label>
-            )}
-            <Button
-              variant="ghost"
-              onClick={skip}
-              disabled={isLast}
-              aria-describedby={isLast ? "later-laatste" : undefined}
-              className="w-24 shrink-0"
-            >
-              Later
-              <ArrowRight size={16} aria-hidden />
-            </Button>
-            {isLast && (
-              <span id="later-laatste" className="sr-only">
-                Dit is het laatste kaartje
-              </span>
-            )}
-          </div>
-
-          {!isIncoming && (
-            <SplitRow
-              key={current.id}
-              open={split.enabled}
-              amountAbs={Math.abs(current.amount)}
-              knownNames={knownNames}
-              state={split}
-              methodMissing={methodMissing && split.method === null}
-              onChange={(patch) => {
-                if (patch.method) {
-                  setMethodMissing(false);
-                  setHint(null);
-                }
-                setSplitFor({ id: current.id, state: { ...split, ...patch } });
-              }}
-            />
-          )}
         </div>
       </div>
 
@@ -569,6 +511,66 @@ export function SortScreen({
           tight={splitActive}
         />
       </section>
+
+      {/* Onderaan het scherm, in de duimzone: Ik krijg geld terug en Later. Het verdeelpaneel klapt erboven open. */}
+      <div className="mt-auto px-4 pt-3 pb-2 compact:pt-1">
+        {!isIncoming && (
+          <SplitRow
+            key={current.id}
+            open={split.enabled}
+            amountAbs={Math.abs(current.amount)}
+            knownNames={knownNames}
+            state={split}
+            methodMissing={methodMissing && split.method === null}
+            onChange={(patch) => {
+              if (patch.method) {
+                setMethodMissing(false);
+                setHint(null);
+              }
+              setSplitFor({ id: current.id, state: { ...split, ...patch } });
+            }}
+          />
+        )}
+        <div className="mt-2 flex h-11 items-center gap-2">
+          {isIncoming ? (
+            // Bij inkomend geld geen schakelaar: de vraag vult de plek (de h2 zegt hetzelfde voor schermlezers).
+            <p className="flex min-w-0 flex-1 items-center px-1 text-[15px] text-text-muted" aria-hidden>
+              Waar hoort dit geld bij?
+            </p>
+          ) : (
+            <label className="flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-control bg-surface px-3 text-[15px] font-medium shadow-card">
+              <span className="truncate" aria-hidden>
+                Ik krijg geld terug
+              </span>
+              <Switch
+                size="sm"
+                label="Ik krijg geld terug"
+                checked={split.enabled}
+                onCheckedChange={(enabled) => {
+                  setMethodMissing(false);
+                  setHint(null);
+                  setSplitFor({ id: current.id, state: { ...split, enabled } });
+                }}
+              />
+            </label>
+          )}
+          <Button
+            variant="ghost"
+            onClick={skip}
+            disabled={isLast}
+            aria-describedby={isLast ? "later-laatste" : undefined}
+            className="w-24 shrink-0"
+          >
+            Later
+            <ArrowRight size={16} aria-hidden />
+          </Button>
+          {isLast && (
+            <span id="later-laatste" className="sr-only">
+              Dit is het laatste kaartje
+            </span>
+          )}
+        </div>
+      </div>
 
       {undoToast}
 
