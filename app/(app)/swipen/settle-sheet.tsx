@@ -107,7 +107,7 @@ export function SettleSheet({
       <Sheet
         open={open}
         onClose={onClose}
-        title={`Is alles binnen voor ${chosen.categoryName} bij ${chosen.counterparty}?`}
+        title={`Is alles binnen voor ${chosen.counterparty}?`}
         description={refundMathText(chosen.amount, chosen.received, incomingAmount)}
       >
         {estimating ? (
@@ -177,15 +177,15 @@ export function SettleSheet({
                     onClick={() => setExpenseId(expense.id)}
                     className="flex min-h-14 w-full items-center gap-3 rounded-control border bg-surface px-3 py-2 text-left transition-colors duration-150 active:bg-surface-muted"
                   >
+                    {/* De uitgave zoals hij heette ("Sijf"), niet per persoon. */}
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] leading-5 font-medium">
-                        {expense.categoryName} bij {expense.counterparty}
-                      </span>
+                      <span className="block truncate text-[15px] leading-5 font-medium">{expense.counterparty}</span>
                       <span className="block truncate text-[13px] leading-[18px] text-text-muted tabular-nums">
                         {expense.bookingDate && `${formatDay(expense.bookingDate)} · `}
-                        {refundProgressText(expense.received, expense.amount)}
+                        {expense.categoryName} · {refundProgressText(expense.received, expense.amount)}
                       </span>
                     </span>
+                    <span className="shrink-0 text-[15px] font-semibold tabular-nums">{formatEuro(expense.amount)}</span>
                   </button>
                 </li>
               ))}

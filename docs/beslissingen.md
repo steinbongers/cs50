@@ -241,3 +241,6 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
 - **Groepen** verdwijnen uit Instellingen (ze waren alleen voor verdelen). De pagina `/instellingen/groepen` blijft
   bestaan maar is niet meer gelinkt.
 - Verplaats je een wachtende uitgave naar een ander potje, dan gaan de gekoppelde terugbetalingen mee.
+- **Terugbetaling per uitgave, niet per persoon** (Stein). Bij Terugbetaling tik je de uitgave aan zoals hij heette
+  ("Sijf · € 240"). Oude verdelingen met open delen per persoon worden bij het openen van Swipen of Overzicht
+  vanzelf omgezet naar bijhouden per uitgave (behalve als er al iets buiten de bank verrekend is).

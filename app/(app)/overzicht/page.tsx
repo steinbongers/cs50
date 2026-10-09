@@ -43,6 +43,7 @@ import { recurringMonthlyTotal } from "@/lib/insights/recurring";
 import { weekReview } from "@/lib/insights/week";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
+import { convertOpenSharesToTracking } from "@/lib/transactions/convert-shares";
 import { countOpenTransactions, getAwaitingRefunds, getOpenShares } from "@/lib/transactions/queries";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,8 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const period = isCurrent ? current : previousPeriods(profile.salary_day, today, back)[back - 1];
   const justConnected = params.bank === "gekoppeld";
 
+  // Oude verdelingen per persoon eerst omzetten naar bijhouden per uitgave.
+  await convertOpenSharesToTracking().catch(() => 0);
   const [connection, insight, accounts, openShares, awaitingRefunds, openCount, fixed] = await Promise.all([
     getPrimaryConnection(supabase, user.id),
     loadInsightData(supabase, today),

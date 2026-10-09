@@ -80,13 +80,12 @@ export function AwaitingList({ expenses, onAllClosed }: AwaitingListProps) {
           return (
             <li key={expense.id} className="flex flex-col gap-1 px-5 py-2.5">
               <div className="flex items-baseline gap-2">
-                <span className="min-w-0 flex-1 truncate text-[15px] font-medium">
-                  {expense.categoryName} bij {expense.counterparty}
-                </span>
+                <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{expense.counterparty}</span>
+                <span className="shrink-0 text-[15px] font-semibold tabular-nums">{formatEuro(expense.amount)}</span>
               </div>
               <p className="text-[13px] leading-[18px] text-text-muted tabular-nums">
                 {expense.bookingDate && `${formatDayShort(expense.bookingDate)} · `}
-                {refundProgressText(expense.received, expense.amount)}
+                {expense.categoryName} · {refundProgressText(expense.received, expense.amount)}
               </p>
               {asking && confirming.estimating ? (
                 <div className="pt-1">

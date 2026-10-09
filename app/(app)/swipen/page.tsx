@@ -11,6 +11,7 @@ import { dailyStreak } from "@/lib/insights/compute";
 import { loadInsightData } from "@/lib/insights/queries";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
+import { convertOpenSharesToTracking } from "@/lib/transactions/convert-shares";
 import {
   countOpenTransactions,
   getActiveCategories,
@@ -27,6 +28,8 @@ export default async function SwipenPage() {
   const profile = await ensureProfile(user);
   const period = currentPeriod(profile.salary_day, amsterdamToday());
 
+  // Oude verdelingen per persoon eerst omzetten naar bijhouden per uitgave.
+  await convertOpenSharesToTracking().catch(() => 0);
   const [categories, transactions, totalOpen, openShares, awaitingRefunds] = await Promise.all([
     getActiveCategories(period),
     getOpenTransactions(),
