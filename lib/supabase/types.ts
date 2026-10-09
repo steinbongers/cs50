@@ -6,9 +6,9 @@
 export type SwipeDirection = "left" | "right" | "up" | "down";
 export type ConnectionProvider = "enablebanking" | "csv";
 export type ConnectionStatus = "active" | "expiring" | "expired" | "revoked";
-export type TransactionSource = "bank" | "csv";
+export type TransactionSource = "bank" | "csv" | "cash";
 export type ShareStatus = "open" | "received" | "settled_elsewhere";
-export type CategorySystemKey = "voorgeschoten";
+export type CategorySystemKey = "voorgeschoten" | "contant";
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -23,6 +23,10 @@ export type ProfileRow = {
   month_review_seen_for: string | null;
   last_push_at: string | null;
   invite_code: string | null;
+  /** Maandafsluiting: het potje om deze maand op te letten. */
+  focus_category_id: string | null;
+  /** Voor welke periode (eerste dag) de focus geldt. */
+  focus_period_start: string | null;
 };
 
 export type InviteCodeRow = {
@@ -94,7 +98,8 @@ export type AccountRow = {
 export type TransactionRow = {
   id: string;
   user_id: string;
-  account_id: string;
+  /** Null bij een contante uitgave (source 'cash'). */
+  account_id: string | null;
   external_id: string | null;
   dedupe_hash: string;
   booking_date: string;
@@ -113,6 +118,23 @@ export type TransactionRow = {
   own_share: number | null;
   is_internal_transfer: boolean;
   note: string | null;
+  /** Contante uitgave: de pinopname waar het geld vandaan kwam. */
+  cash_withdrawal_id: string | null;
+  created_at: string;
+};
+
+export type ShareGroupRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  /** Namen van de anderen (zonder jezelf), in volgorde. */
+  members: string[];
+  created_at: string;
+};
+
+export type WidgetTokenRow = {
+  user_id: string;
+  token_hash: string;
   created_at: string;
 };
 
@@ -177,6 +199,8 @@ export type Database = {
           | "month_review_seen_for"
           | "last_push_at"
           | "invite_code"
+          | "focus_category_id"
+          | "focus_period_start"
         >
       >;
       categories: Table<
@@ -247,6 +271,8 @@ export type Database = {
           | "own_share"
           | "is_internal_transfer"
           | "note"
+          | "cash_withdrawal_id"
+          | "account_id"
           | "created_at"
         >
       >;
@@ -257,6 +283,8 @@ export type Database = {
           "id" | "person_name" | "status" | "received_transaction_id" | "received_at" | "created_at"
         >
       >;
+      share_groups: Table<ShareGroupRow, WithOptional<ShareGroupRow, "id" | "created_at">>;
+      widget_tokens: Table<WidgetTokenRow, WithOptional<WidgetTokenRow, "created_at">>;
       category_rules: Table<CategoryRuleRow, WithOptional<CategoryRuleRow, "id" | "created_at">>;
       events: Table<EventRow, WithOptional<EventRow, "id" | "payload" | "created_at">>;
       invite_codes: Table<InviteCodeRow, WithOptional<InviteCodeRow, "note" | "max_uses" | "uses" | "created_at" | "expires_at">>;
