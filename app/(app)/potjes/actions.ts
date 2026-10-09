@@ -80,11 +80,21 @@ export async function moveTransaction(transactionId: string, categoryId: string)
   // beslissing, anders valt de dagstreak op de oorspronkelijke dag weg.
   const { data: transaction } = await supabase
     .from("transactions")
-    .select("id, categorized_at")
+    .select("id, categorized_at, category_id")
     .eq("id", transactionId)
     .eq("user_id", user.id)
     .maybeSingle();
   if (!transaction) return { ok: false, error: GENERIC };
+  // Uit Voorgeschoten of Contant verplaatsen zou bedragen dubbel laten tellen.
+  if (transaction.category_id) {
+    const { data: from } = await supabase
+      .from("categories")
+      .select("system_key")
+      .eq("id", transaction.category_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (from?.system_key) return { ok: false, error: "Dit kaartje kun je niet verplaatsen." };
+  }
 
   const { error } = await supabase
     .from("transactions")
@@ -215,7 +225,8 @@ export async function createPotje(
     .from("categories")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
-    .eq("archived", false);
+    .eq("archived", false)
+    .is("system_key", null);
   if ((count ?? 0) >= MAX_CATEGORIES) return { ok: false, error: `Je hebt al ${MAX_CATEGORIES} potjes.` };
 
   const { data: last } = await supabase

@@ -3,7 +3,7 @@ import { CONNECTION_EXPIRY_WARNING_DAYS } from "@/config/app";
 import { daysUntil } from "@/lib/bank/connections";
 import { toISODate } from "@/lib/format";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
-import { expiringMessage, monthReviewMessage, openCardsMessage } from "@/lib/push/copy";
+import { expiringMessage, monthReviewMessage, openCardsMessage, weekMessage } from "@/lib/push/copy";
 import { isPushConfigured, isPushUsable, sendPushToUser } from "@/lib/push/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -29,7 +29,8 @@ function amsterdamNow(): { hour: number; dateISO: string; dayIndex: number } {
  * zie .github/workflows/cron.yml) roept deze route om 18:00 en 19:00 UTC aan,
  * voor zomer- en wintertijd; alleen de aanroep die op 20:00 (of bij vertraging 21:00) valt stuurt.
  * Per gebruiker hoogstens één melding per dag: Jouw maand op de salarisdag,
- * anders het aantal kaartjes dat ligt. Verloopmeldingen apart, eenmalig.
+ * anders het aantal kaartjes dat ligt. Op zondag met een lege stapel de weekterugblik
+ * (als er die week iets in een potje ging). Verloopmeldingen apart, eenmalig.
  */
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -40,6 +41,10 @@ export async function GET(request: NextRequest) {
   if (!isPushUsable()) return NextResponse.json({ error: "Push verkeerd ingesteld: controleer de VAPID-sleutels." }, { status: 500 });
 
   const { hour, dateISO, dayIndex } = amsterdamNow();
+  const [year, month, day] = dateISO.split("-").map(Number);
+  const isSunday = new Date(Date.UTC(year, month - 1, day)).getUTCDay() === 0;
+  // Maandag van deze week: de terugblik gaat over maandag tot en met vandaag.
+  const weekStartISO = new Date(Date.UTC(year, month - 1, day - 6)).toISOString().slice(0, 10);
   const force = request.nextUrl.searchParams.get("force") === "1";
   // 20:00 is het doel; 21:00 vangt een vertraagde cron-run op. Dubbel sturen kan niet door last_push_at.
   if (hour !== 20 && hour !== 21 && !force) return NextResponse.json({ skipped: `het is ${hour}:00 in Amsterdam` });
@@ -74,7 +79,20 @@ export async function GET(request: NextRequest) {
         .eq("user_id", profile.id)
         .is("category_id", null)
         .eq("is_internal_transfer", false);
-      if ((count ?? 0) > 0) message = { ...openCardsMessage(count ?? 0, dayIndex), url: "/swipen?ref=push&tag=kaartjes", tag: "kaartjes" };
+      if ((count ?? 0) > 0) {
+        message = { ...openCardsMessage(count ?? 0, dayIndex), url: "/swipen?ref=push&tag=kaartjes", tag: "kaartjes" };
+      } else if (isSunday) {
+        const { count: weekCount } = await admin
+          .from("transactions")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", profile.id)
+          .lt("amount", 0)
+          .eq("is_internal_transfer", false)
+          .not("category_id", "is", null)
+          .gte("booking_date", weekStartISO)
+          .lte("booking_date", dateISO);
+        if ((weekCount ?? 0) > 0) message = { ...weekMessage(dayIndex), url: "/overzicht?ref=push&tag=week", tag: "week" };
+      }
     }
 
     if (!message) {

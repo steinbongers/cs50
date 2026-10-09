@@ -45,7 +45,12 @@ function SheetBody({ transaction, categories }: { transaction: SearchResult; cat
           amount: transaction.amount,
           ownShare: transaction.ownShare,
           counterparty: transaction.rawCounterparty ?? transaction.counterparty,
-          description: transaction.rawDescription ?? transaction.description,
+          // Contant heeft geen banktekst: alleen de korte notitie van het verdelen, als die er is.
+          description: transaction.isCash
+            ? transaction.description
+              ? `Contant betaald: ${transaction.description}`
+              : "Contant betaald"
+            : (transaction.rawDescription ?? transaction.description),
         }}
       >
         <div>

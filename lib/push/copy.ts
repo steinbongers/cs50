@@ -41,6 +41,19 @@ export function monthReviewMessage(): PushCopy {
   return { title: "Jouw maand staat klaar", body: "Een nieuwe maand begint. Zin om even terug te kijken?" };
 }
 
+/**
+ * Weekterugblik op zondag, alleen als de stapel leeg is. Zonder bedragen of potjesnamen:
+ * de cijfers staan op het overzicht.
+ */
+export function weekMessage(dayIndex: number): PushCopy {
+  const list: PushCopy[] = [
+    { title: "Je week in potjes", body: "Alles zit in een potje. Kijk even welke potjes deze week het grootst waren." },
+    { title: "Even terugkijken op je week?", body: "Je stapel is leeg. Op je overzicht staat je week klaar." },
+    { title: "Je weekterugblik staat klaar", body: "Drie potjes en het verschil met vorige week. Kort lijstje." },
+  ];
+  return list[Math.abs(Math.trunc(dayIndex)) % list.length];
+}
+
 /** Bankkoppeling verloopt binnenkort (days > 0) of is verlopen (days <= 0). */
 export function expiringMessage(days: number): PushCopy {
   if (days <= 0) {

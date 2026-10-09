@@ -22,7 +22,9 @@ import { success, tap, warning } from "@/lib/haptics";
 import type { QuickSuggestionKey } from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON } from "@/lib/categories/icons";
 import { CATEGORY_COLORS } from "@/lib/categories/palette";
-import { VOORGESCHOTEN_CATEGORY, type CategoryDraft } from "@/lib/categories/types";
+import { CONTANT_CATEGORY, VOORGESCHOTEN_CATEGORY, type CategoryDraft } from "@/lib/categories/types";
+import { formatEuro } from "@/lib/format";
+import { isCashWithdrawal } from "@/lib/transactions/cash";
 import type { CategoryOption, OpenShare, OpenTransaction } from "@/lib/transactions/queries";
 import { sameCounterparty } from "@/lib/transactions/same-counterparty";
 import { splitEqually } from "@/lib/transactions/split";
@@ -38,17 +40,20 @@ import {
   settleSharesWithTransaction,
   removeRule,
   skipTransaction,
+  splitCash,
   undoAssign,
   undoMany,
+  type CashSpendInput,
   type SplitInput,
 } from "./actions";
+import { CashSplitSheet } from "./cash-split-sheet";
 import { CategoryTiles, tileCount } from "./category-tiles";
 import { COACH_STEPS, CoachTip } from "./coach-tip";
 import { RawSheet } from "./raw-sheet";
 import { SessionSummary, type Decision } from "./session-summary";
 import { SettleSheet } from "./settle-sheet";
 import { EMPTY_SPLIT, SplitRow, type SplitState } from "./split-panel";
-import { GhostCard, TransactionCard, type ExitKind } from "./transaction-card";
+import { CASH_QUESTION, GhostCard, TransactionCard, type ExitKind } from "./transaction-card";
 import { UndoToast } from "./undo-toast";
 
 interface SortScreenProps {
@@ -96,6 +101,32 @@ const VOORGESCHOTEN_OPTION: CategoryOption = {
   goalAmount: null,
 };
 
+const CONTANT_OPTION: CategoryOption = {
+  id: "contant",
+  name: CONTANT_CATEGORY.name,
+  icon: CONTANT_CATEGORY.icon,
+  color: CONTANT_CATEGORY.color,
+  isIncome: false,
+  systemKey: CONTANT_CATEGORY.systemKey,
+  spentThisPeriod: 0,
+  monthlyBudget: null,
+  goalAmount: null,
+};
+
+/** Een verdeelde (of bewaarde) pinopname: wat er per potje bijkwam, voor ongedaan maken. */
+interface CashSplitLocal {
+  parts: { category: CategoryOption; amount: number }[];
+  text: string;
+}
+
+/** Tekst in de pil na het verdelen van een pinopname. */
+function cashUndoText(parts: CashSplitLocal["parts"], amountAbs: number): string {
+  if (parts.length === 0) return "Bewaard als contant";
+  const rest = Math.round((amountAbs - parts.reduce((sum, p) => sum + p.amount, 0)) * 100) / 100;
+  const where = parts.length === 1 ? `In ${parts[0].category.name}` : `In ${parts.length} potjes`;
+  return rest > 0 ? `${where}, ${formatEuro(rest)} contant over` : where;
+}
+
 /**
  * Het hart van de app. Eén kaart bovenin, alle potjes als tegels eronder.
  * De gebruiker beslist zelf, de app vult niets in en markeert niets vooraf. Alleen een vaste
@@ -130,6 +161,9 @@ export function SortScreen({
   const [splitFor, setSplitFor] = useState<{ id: string | null; state: SplitState }>({ id: null, state: EMPTY_SPLIT });
   const [settledShareIds, setSettledShareIds] = useState<Set<string>>(() => new Set());
   const [settleOpen, setSettleOpen] = useState(false);
+  const [cashOpen, setCashOpen] = useState(false);
+  // Per verdeelde pinopname wat er in welk potje kwam, zodat ongedaan maken het lokaal terugzet.
+  const [cashSplits, setCashSplits] = useState<Map<string, CashSplitLocal>>(() => new Map());
   const [rawOpen, setRawOpen] = useState(false);
   const [editorDraft, setEditorDraft] = useState<CategoryDraft | null>(null);
   const [editorSuggestion, setEditorSuggestion] = useState<QuickSuggestionKey | null>(null);
@@ -346,6 +380,51 @@ export function SortScreen({
     [current, showCoach, startTransition],
   );
 
+  // Pinopname verdeeld over potjes, of helemaal bewaard als contant (geen uitgaven).
+  const cashSplit = useCallback(
+    (spends: CashSpendInput[], note: string | null) => {
+      if (!current || !isCashWithdrawal(current)) return;
+      const transaction = current;
+      const durationMs = performance.now() - shownAt.current;
+      const parts = spends.flatMap((s) => {
+        const category = categories.find((c) => c.id === s.categoryId);
+        return category ? [{ category, amount: s.amount }] : [];
+      });
+      const local: CashSplitLocal = { parts, text: cashUndoText(parts, Math.abs(transaction.amount)) };
+      const decision: Decision = { transaction, category: CONTANT_OPTION, ownShare: 0 };
+
+      setCashOpen(false);
+      setError(null);
+      setHint(null);
+      setExitKind("assign");
+      setQueue((q) => q.slice(1));
+      setDecisions((d) => [...d, decision]);
+      setUndo(decision);
+      setUndoBulk(null);
+      setCashSplits((prev) => new Map(prev).set(transaction.id, local));
+      if (parts.length === 1) setPulse((p) => ({ id: parts[0].category.id, key: p.key + 1 }));
+      parts.forEach((p) => bumpCategoryTotal(p.category.id, p.amount));
+      setAnnouncement(local.text);
+
+      startTransition(async () => {
+        const result = await splitCash(transaction.id, spends, note, durationMs, { coach: showCoach });
+        if (!result.ok) {
+          setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
+          setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
+          setUndo((u) => (u?.transaction.id === transaction.id ? null : u));
+          setCashSplits((prev) => {
+            const next = new Map(prev);
+            next.delete(transaction.id);
+            return next;
+          });
+          parts.forEach((p) => bumpCategoryTotal(p.category.id, -p.amount));
+          setError(result.error);
+        }
+      });
+    },
+    [current, categories, showCoach, startTransition],
+  );
+
   const skip = useCallback(() => {
     if (!current || queue.length < 2) return;
     const transaction = current;
@@ -371,7 +450,15 @@ export function SortScreen({
     setQueue((q) => [transaction, ...q]);
     setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
     setUndone((u) => u + 1);
-    if (category.id === VOORGESCHOTEN_OPTION.id) {
+    if (category.id === CONTANT_OPTION.id) {
+      // De contante uitgaven uit deze opname gaan weer uit de potjes (de server verwijdert ze).
+      cashSplits.get(transaction.id)?.parts.forEach((p) => bumpCategoryTotal(p.category.id, -p.amount));
+      setCashSplits((prev) => {
+        const next = new Map(prev);
+        next.delete(transaction.id);
+        return next;
+      });
+    } else if (category.id === VOORGESCHOTEN_OPTION.id) {
       // De delen die deze Tikkie afbetaalde komen lokaal weer open te staan.
       const shareIds = settledByTransaction.current.get(transaction.id) ?? [];
       settledByTransaction.current.delete(transaction.id);
@@ -390,13 +477,17 @@ export function SortScreen({
       const result = await undoAssign(transaction.id);
       if (!result.ok) setError(result.error);
     });
-  }, [undo, startTransition]);
+  }, [undo, cashSplits, startTransition]);
 
   // Aanbod na een gewone keuze: dezelfde tegenpartij staat nog vaker op de stapel.
-  // Nooit bij een verdeling of terugbetaling; jij tikt zelf op "Ook de andere".
+  // Nooit bij een verdeling, terugbetaling of pinopname; jij tikt zelf op "Ook de andere".
   const sameOffer = useMemo(
     () =>
-      undo && !undoBulk && undo.ownShare === undefined && undo.category.id !== VOORGESCHOTEN_OPTION.id
+      undo &&
+      !undoBulk &&
+      undo.ownShare === undefined &&
+      undo.category.id !== VOORGESCHOTEN_OPTION.id &&
+      !isCashWithdrawal(undo.transaction)
         ? sameCounterparty(undo.transaction, queue)
         : [],
     [undo, undoBulk, queue],
@@ -434,7 +525,8 @@ export function SortScreen({
   // Potje ingedrukt gehouden: deze ontvanger gaat voortaan altijd hierin (een keuze van de gebruiker zelf).
   const hold = useCallback(
     (category: CategoryOption) => {
-      if (!current) return;
+      // Een geldautomaat wordt nooit een vaste ontvanger (de tegels geven dan ook geen onHold door).
+      if (!current || isCashWithdrawal(current)) return;
       if (split.enabled) {
         warning();
         setHint("Een vaste ontvanger gaat zonder delen. Zet de schakelaar eerst uit.");
@@ -568,7 +660,11 @@ export function SortScreen({
     <UndoToast
       id={undo ? undo.transaction.id : null}
       text={
-        undo?.category.id === VOORGESCHOTEN_OPTION.id ? "Verwerkt als terugbetaling" : `In ${undo?.category.name ?? ""}`
+        undo?.category.id === VOORGESCHOTEN_OPTION.id
+          ? "Verwerkt als terugbetaling"
+          : undo?.category.id === CONTANT_OPTION.id
+            ? (cashSplits.get(undo.transaction.id)?.text ?? "Bewaard als contant")
+            : `In ${undo?.category.name ?? ""}`
       }
       onUndo={handleUndo}
       extra={
@@ -595,7 +691,9 @@ export function SortScreen({
   }
 
   const isIncoming = current.amount > 0;
-  const splitActive = !isIncoming && split.enabled;
+  // Pinopname: de app herkent hem aan de banktekst en vraagt waar het geld heen ging. Geen delen, geen vaste ontvanger.
+  const isCash = isCashWithdrawal(current);
+  const splitActive = !isIncoming && !isCash && split.enabled;
   const ownShare = splitActive ? splitEqually(current.amount, split.persons).ownShare : null;
   const repayment =
     isIncoming && availableShares.length > 0
@@ -630,6 +728,7 @@ export function SortScreen({
               key={current.id}
               transaction={current}
               ownShare={ownShare}
+              cash={isCash}
               onOpenDetails={() => setRawOpen(true)}
             />
           </AnimatePresence>
@@ -652,12 +751,18 @@ export function SortScreen({
 
       <section className="px-4" aria-labelledby="potje-kiezen">
         <h2 id="potje-kiezen" className="sr-only">
-          {isIncoming ? "Waar hoort dit geld bij?" : splitActive ? "Welk potje voor jouw deel?" : "Welk potje?"}
+          {isIncoming
+            ? "Waar hoort dit geld bij?"
+            : isCash
+              ? CASH_QUESTION
+              : splitActive
+                ? "Welk potje voor jouw deel?"
+                : "Welk potje?"}
         </h2>
         <CategoryTiles
           categories={categories}
           onPick={pick}
-          onHold={hold}
+          onHold={isCash ? undefined : hold}
           onAdd={() => {
             tap();
             openEditor();
@@ -669,9 +774,10 @@ export function SortScreen({
         />
       </section>
 
-      {/* Onderaan het scherm, in de duimzone: Ik krijg een deel terug en Later. Het verdeelpaneel klapt erboven open. */}
+      {/* Onderaan het scherm, in de duimzone: Ik krijg een deel terug en Later. Het verdeelpaneel klapt erboven open.
+          Bij een pinopname staan hier Verdelen en Nog contant (nog niet uitgegeven); een tik op een potje = alles daarin. */}
       <div className="mt-auto px-4 pt-3 pb-2 compact:pt-1">
-        {!isIncoming && (
+        {!isIncoming && !isCash && (
           <SplitRow
             key={current.id}
             open={split.enabled}
@@ -688,12 +794,36 @@ export function SortScreen({
             }}
           />
         )}
-        <div className="mt-2 flex h-11 items-center gap-2">
+        <div className={cn("mt-2 flex h-11 items-center", isCash ? "gap-1.5" : "gap-2")}>
           {isIncoming ? (
             // Bij inkomend geld geen schakelaar: de vraag vult de plek (de h2 zegt hetzelfde voor schermlezers).
             <p className="flex min-w-0 flex-1 items-center px-1 text-[15px] text-text-muted" aria-hidden>
               Waar hoort dit geld bij?
             </p>
+          ) : isCash ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  tap();
+                  setCashOpen(true);
+                }}
+                className="shrink-0 px-2.5 max-[389px]:text-[14px]"
+              >
+                Verdelen
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  tap();
+                  cashSplit([], null);
+                }}
+                aria-label="Nog niet uitgegeven, het blijft contant"
+                className="min-w-0 flex-1 px-2.5 max-[389px]:text-[14px]"
+              >
+                <span className="truncate">Nog contant</span>
+              </Button>
+            </>
           ) : (
             <label className="flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-control bg-surface px-3 text-[15px] font-medium shadow-card max-[389px]:text-[14px]">
               <span className="truncate" aria-hidden>
@@ -732,6 +862,18 @@ export function SortScreen({
       {undoToast}
 
       <RawSheet open={rawOpen} onClose={() => setRawOpen(false)} transaction={current} onNoteSaved={updateNote} />
+
+      {isCash && (
+        <CashSplitSheet
+          key={current.id}
+          open={cashOpen}
+          onClose={() => setCashOpen(false)}
+          amountAbs={Math.abs(current.amount)}
+          categories={categories.filter((c) => c.systemKey === null && !c.isIncome)}
+          pending={isPending}
+          onConfirm={cashSplit}
+        />
+      )}
 
       <SettleSheet
         key={current.id}

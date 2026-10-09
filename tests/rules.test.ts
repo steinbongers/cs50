@@ -19,3 +19,10 @@ test("vaste ontvanger: alleen dezelfde ontvanger in dezelfde richting", () => {
   assert.equal(ruleCategory(rules, { counterparty: "Jumbo", amount: 4 }), null);
   assert.equal(ruleCategory(rules, { counterparty: "Lidl", amount: -30 }), null);
 });
+
+test("vaste ontvanger: nooit een geldautomaat", () => {
+  assert.equal(ruleKey("Geldmaat Amsterdam", -50), null);
+  assert.equal(ruleCategory(new Map([["uit:geldmaat amsterdam", "pot-uitgaan"]]), { counterparty: "Geldmaat Amsterdam", amount: -20 }), null);
+  // Geld storten bij de Geldmaat is geen opname; de sleutel blijft dan gewoon.
+  assert.equal(ruleKey("Geldmaat Amsterdam", 50), "in:geldmaat amsterdam");
+});

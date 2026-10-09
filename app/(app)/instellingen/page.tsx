@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { CircleHelp, Download, Info, Landmark, LayoutGrid, Pin, ShieldCheck, Users } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
+import { AppLockToggle } from "@/components/native/app-lock-toggle";
+import { WidgetSetupRow } from "@/components/native/widget-setup-row";
 import { HapticsToggle } from "@/components/push/haptics-toggle";
 import { PushToggle } from "@/components/push/push-toggle";
 import { ThemeToggle } from "@/components/push/theme-toggle";
@@ -82,6 +84,8 @@ export default async function InstellingenPage() {
         <PushToggle enabled={profile.notifications_enabled} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
         <ThemeToggle />
         <HapticsToggle />
+        <AppLockToggle />
+        <WidgetSetupRow />
       </ListGroup>
 
       <ListGroup title="Gegevens">

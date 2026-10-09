@@ -40,6 +40,7 @@ const TAG_LABELS: Record<string, string> = {
   kaartjes: "Kaartjes (20:00)",
   "jouw-maand": "Jouw maand",
   "bank-verloopt": "Bank verloopt",
+  week: "Weekterugblik (zondag)",
 };
 
 /**

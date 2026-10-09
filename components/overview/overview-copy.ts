@@ -77,3 +77,26 @@ export function compareLine(comparison: Comparison | null): CompareLine | null {
 export function openCardsText(count: number): string {
   return count === 1 ? "1 kaartje wacht" : `${count} kaartjes wachten`;
 }
+
+/** "Vrij tot de 25e": de dag van de volgende salarisdag ("YYYY-MM-DD"). */
+export function freeUntilLabel(untilISO: string): string {
+  return `Vrij tot de ${Number(untilISO.slice(8, 10))}e`;
+}
+
+/** "Je betaalt € 47 per maand aan 6 vaste lasten." */
+export function recurringSummary(total: number, count: number): string {
+  return `Je betaalt ${formatEuroWhole(total)} per maand aan ${count} ${count === 1 ? "vaste last" : "vaste lasten"}.`;
+}
+
+/** "Meestal rond de 28e". */
+export function usualDayText(day: number): string {
+  return `Meestal rond de ${day}e`;
+}
+
+/** Neutraal verschil met de week ervoor: geen groen, geen amber, geen oordeel. */
+export function weekDiffText(spent: number, previous: number): string {
+  if (previous <= 0) return "De week ervoor niets";
+  const diff = Math.round(spent - previous);
+  if (diff === 0) return "Net als de week ervoor";
+  return `${formatEuroWhole(Math.abs(diff))} ${diff > 0 ? "meer" : "minder"} dan de week ervoor`;
+}

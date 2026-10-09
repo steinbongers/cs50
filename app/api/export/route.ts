@@ -23,7 +23,7 @@ export async function GET() {
     fetchAll((from, to) =>
       supabase
         .from("transactions")
-        .select("booking_date, booking_time, amount, own_share, currency, counterparty, description, raw_counterparty, raw_description, category_id, categorized_at, is_internal_transfer, balance_after, note")
+        .select("booking_date, booking_time, amount, own_share, currency, counterparty, description, raw_counterparty, raw_description, category_id, categorized_at, is_internal_transfer, balance_after, note, source")
         .order("booking_date", { ascending: false })
         .order("id")
         .range(from, to),
@@ -35,7 +35,7 @@ export async function GET() {
   const nameById = new Map((categories ?? []).map((c) => [c.id, c.name]));
   const header = [
     "datum", "tijd", "bedrag", "jouw_deel", "valuta", "tegenpartij", "omschrijving", "tegenpartij_bank", "omschrijving_bank",
-    "potje", "in_potje_gezet_op", "eigen_overboeking", "saldo_erna", "notitie",
+    "potje", "in_potje_gezet_op", "eigen_overboeking", "saldo_erna", "notitie", "bron",
   ];
   const lines = [header.join(";")];
   for (const t of transactions) {
@@ -55,6 +55,8 @@ export async function GET() {
         t.is_internal_transfer ? "ja" : "nee",
         t.balance_after === null ? "" : String(t.balance_after).replace(".", ","),
         t.note ?? "",
+        // bank, csv of cash (contante uitgave zonder rekening)
+        t.source,
       ]
         .map(csvField)
         .join(";"),

@@ -19,7 +19,7 @@ export type EventType =
   /**
    * Transactie in een potje gezet.
    * `{ transaction_id, category_id, duration_ms, skipped_before?, split_persons?, split_method?,
-   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' }`
+   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' }`
    */
   | "swipe"
   /** Transactie verplaatst via de detailpagina. `{ transaction_id, category_id }` */
@@ -37,6 +37,13 @@ export type EventType =
   | "rule_created"
   /** Vaste ontvanger weggehaald. `{ reverted }` (aantal kaartjes terug op de stapel) */
   | "rule_removed"
+  /**
+   * Pinopname verdeeld of bewaard als contant (op Swipen). `{ spends, kept: 'none' | 'some' | 'all' }`
+   * (aantal potjes en of er iets in je portemonnee blijft; nooit bedragen of de notitie)
+   */
+  | "cash_split"
+  /** Contante uitgave toegevoegd vanaf "Contant over" op Overzicht. `{ category_id, parts }` (aantal opnames) */
+  | "cash_spend_added"
   /** Laatste keuze ongedaan gemaakt. `{ transaction_id }` */
   | "undo"
   /** Kaart op Later gezet. `{ transaction_id, skipped_count }` */
@@ -45,7 +52,7 @@ export type EventType =
   | "month_review_viewed"
   /**
    * Pushmelding verstuurd (server). `{ open_cards_bucket?, tag? }`
-   * `tag` is een vaste waarde: 'kaartjes' | 'jouw-maand' | 'bank-verloopt' (ook in `app_open` en `push_opened`).
+   * `tag` is een vaste waarde: 'kaartjes' | 'jouw-maand' | 'week' | 'bank-verloopt' (ook in `app_open` en `push_opened`).
    */
   | "push_sent"
   /** Bank gekoppeld. `{ connection_id, accounts }` */

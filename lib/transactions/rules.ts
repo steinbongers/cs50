@@ -1,3 +1,4 @@
+import { isCashWithdrawal } from "./cash";
 import { counterpartyKey } from "./same-counterparty";
 
 /**
@@ -6,12 +7,13 @@ import { counterpartyKey } from "./same-counterparty";
  *
  * De sleutel bevat de richting, zodat geld van een ontvanger (bijvoorbeeld een terugbetaling)
  * niet automatisch in het potje van de uitgaven bij diezelfde ontvanger belandt.
+ * Een geldautomaat wordt nooit een vaste ontvanger: waar contant geld heen gaat, verschilt elke keer.
  */
 export const MAX_RULE_KEY_LENGTH = 120;
 
 export function ruleKey(counterparty: string | null, amount: number): string | null {
   const key = counterpartyKey(counterparty ?? "");
-  if (!key || amount === 0) return null;
+  if (!key || amount === 0 || isCashWithdrawal({ counterparty, amount })) return null;
   return `${amount < 0 ? "uit" : "in"}:${key}`.slice(0, MAX_RULE_KEY_LENGTH);
 }
 

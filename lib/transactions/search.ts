@@ -44,6 +44,8 @@ export interface SearchResult {
   rawDescription: string | null;
   note: string | null;
   categoryId: string | null;
+  /** Contante uitgave (geen rekening, geen banktekst). */
+  isCash: boolean;
 }
 
 export interface SearchOptions {
@@ -69,7 +71,7 @@ export async function searchTransactions(
   let query = supabase
     .from("transactions")
     .select(
-      "id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note, category_id",
+      "id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note, category_id, source",
     )
     .eq("is_internal_transfer", false);
 
@@ -101,6 +103,7 @@ export async function searchTransactions(
     rawDescription: t.raw_description,
     note: t.note?.trim() || null,
     categoryId: t.category_id,
+    isCash: t.source === "cash",
   }));
 }
 

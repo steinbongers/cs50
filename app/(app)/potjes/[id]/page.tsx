@@ -6,6 +6,7 @@ import { loadInsightData } from "@/lib/insights/queries";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { createClient } from "@/lib/supabase/server";
+import { CASH_COUNTERPARTY } from "@/lib/transactions/cash";
 import { DetailViewed } from "./detail-viewed";
 import { PotjeDetail, type DetailTransaction } from "./potje-detail";
 
@@ -94,23 +95,28 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
 
   const { data: rows } = await supabase
     .from("transactions")
-    .select("id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note")
+    .select("id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note, source")
     .eq("category_id", category.id)
     .order("booking_date", { ascending: false })
     .limit(60);
 
-  const transactions: DetailTransaction[] = (rows ?? []).map((t) => ({
-    id: t.id,
-    bookingDate: t.booking_date,
-    amount: Number(t.amount),
-    ownShare: t.own_share === null ? null : Number(t.own_share),
-    counterparty: t.counterparty ?? "Onbekende tegenpartij",
-    rawCounterparty: t.raw_counterparty ?? t.counterparty ?? "Onbekende tegenpartij",
-    rawDescription: t.raw_description ?? t.description,
-    bookingTime: t.booking_time ? t.booking_time.slice(0, 5) : null,
-    note: t.note,
-    inPeriod: t.booking_date >= period.startISO && t.booking_date < period.endISO,
-  }));
+  const transactions: DetailTransaction[] = (rows ?? []).map((t) => {
+    // Contante uitgave: geen bank en geen banktekst, alleen eventueel de korte notitie van het verdelen.
+    const isCash = t.source === "cash";
+    return {
+      id: t.id,
+      bookingDate: t.booking_date,
+      amount: Number(t.amount),
+      ownShare: t.own_share === null ? null : Number(t.own_share),
+      counterparty: t.counterparty ?? (isCash ? CASH_COUNTERPARTY : "Onbekende tegenpartij"),
+      rawCounterparty: isCash ? CASH_COUNTERPARTY : (t.raw_counterparty ?? t.counterparty ?? "Onbekende tegenpartij"),
+      rawDescription: isCash ? (t.description ? `Contant betaald: ${t.description}` : "Contant betaald") : (t.raw_description ?? t.description),
+      bookingTime: t.booking_time ? t.booking_time.slice(0, 5) : null,
+      note: t.note,
+      cashNote: isCash ? t.description : null,
+      inPeriod: t.booking_date >= period.startISO && t.booking_date < period.endISO,
+    };
+  });
 
   const pickable = insight.cats
     .filter((c) => !c.systemKey)

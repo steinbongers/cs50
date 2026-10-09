@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
+import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 
 type Result = { ok: true; settled: number } | { ok: false; error: string };
@@ -19,6 +20,35 @@ export async function markMonthReviewSeen(periodStartISO: string): Promise<void>
   const supabase = await createClient();
   await supabase.from("profiles").update({ month_review_seen_for: periodStartISO }).eq("id", user.id);
   await logEvent("month_review_viewed", { period_start: periodStartISO });
+}
+
+/**
+ * Maandafsluiting: het potje waar je deze periode op let. De periode bepaalt de
+ * server zelf; het potje moet van jou zijn, actief, en geen Inkomen of systeempotje.
+ */
+export async function setMonthFocus(categoryId: string): Promise<{ ok: boolean }> {
+  const user = await requireUser();
+  if (!isUuid(categoryId)) return { ok: false };
+  const supabase = await createClient();
+  const [{ data: category }, { data: profile }] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, is_income, system_key, archived")
+      .eq("id", categoryId)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase.from("profiles").select("salary_day").eq("id", user.id).maybeSingle(),
+  ]);
+  if (!category || category.archived || category.is_income || category.system_key !== null) return { ok: false };
+
+  const period = currentPeriod(profile?.salary_day ?? null, amsterdamToday());
+  const { error } = await supabase
+    .from("profiles")
+    .update({ focus_category_id: category.id, focus_period_start: period.startISO })
+    .eq("id", user.id);
+  if (error) return { ok: false };
+  refresh();
+  return { ok: true };
 }
 
 /** Meting: welke maand iemand op het overzicht bekijkt (0 = deze maand, tot 3 terug). */

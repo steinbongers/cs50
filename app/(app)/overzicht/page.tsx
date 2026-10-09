@@ -1,17 +1,22 @@
-import { Search } from "lucide-react";
+import { Repeat, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ConnectionBanner } from "@/components/bank/connection-banner";
 import { RefreshButton } from "@/components/bank/refresh-button";
+import { CashWalletRow } from "@/components/cash/cash-wallet-row";
 import { CategoryBadge } from "@/components/categories/category-badge";
 import { BalanceButton } from "@/components/overview/balance-button";
+import { FocusCard } from "@/components/overview/focus-card";
+import { FreeToSpendCard } from "@/components/overview/free-to-spend";
+import { MonthClosingSheet } from "@/components/overview/month-closing";
 import { MonthDonut, type DonutSlice } from "@/components/overview/month-donut";
 import { MonthSeen } from "@/components/overview/month-seen";
 import { MonthViewed } from "@/components/overview/month-viewed";
 import { capitalize, compareLine, openCardsText, periodMonthName, periodSubtitle } from "@/components/overview/overview-copy";
+import { PotjeProgress } from "@/components/overview/potje-progress";
 import { StillToReceive } from "@/components/overview/still-to-receive";
 import { StreakChip } from "@/components/overview/streak-chip";
-import { BudgetBar } from "@/components/ui/budget-bar";
+import { WeekReviewCard } from "@/components/overview/week-review-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -31,7 +36,11 @@ import {
   spendOf,
   spentPerCategory,
 } from "@/lib/insights/compute";
+import { loadFreeToSpendDetails } from "@/lib/insights/free-to-spend";
+import { monthClosing } from "@/lib/insights/month-closing";
 import { loadAccountBalances, loadInsightData } from "@/lib/insights/queries";
+import { recurringMonthlyTotal } from "@/lib/insights/recurring";
+import { weekReview } from "@/lib/insights/week";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import { countOpenTransactions, getOpenShares } from "@/lib/transactions/queries";
@@ -59,12 +68,14 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const period = isCurrent ? current : previousPeriods(profile.salary_day, today, back)[back - 1];
   const justConnected = params.bank === "gekoppeld";
 
-  const [connection, insight, accounts, openShares, openCount] = await Promise.all([
+  const [connection, insight, accounts, openShares, openCount, fixed] = await Promise.all([
     getPrimaryConnection(supabase, user.id),
     loadInsightData(supabase, today),
     loadAccountBalances(supabase),
     getOpenShares(),
     countOpenTransactions().catch(() => 0),
+    // Vaste lasten en "Vrij tot je salaris" alleen voor de lopende maand; mislukt het, dan staat er niets.
+    isCurrent ? loadFreeToSpendDetails(supabase, user.id, today).catch(() => null) : null,
   ]);
 
   const catMap = new Map(insight.cats.map((c) => [c.id, c]));
@@ -85,6 +96,10 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
     const cat = catMap.get(id);
     if (cat && amount > 0) slices.push({ id, name: cat.name, color: cat.color, amount });
   }
+  // Per potje de maand vóór de getoonde: het streepje "vorige maand" in de balk.
+  const before = previousPeriods(profile.salary_day, today, back + 1)[back];
+  const lastMonthPer = spentPerCategory(insight.txs, catMap, before.startISO, before.endISO);
+
   const sortedTotal = slices.reduce((sum, s) => sum + s.amount, 0);
   const total = Math.round((sortedTotal + unsorted) * 100) / 100;
 
@@ -105,6 +120,25 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
     isCurrent && comparison ? pickStandout(categoryDeviations(insight.txs, catMap, profile.salary_day, today), comparison.daysElapsed) : null;
   const standoutCat = standout ? catMap.get(standout.categoryId) : undefined;
 
+  // Maandafsluiting: één keer, bij het eerste openen in een nieuwe periode.
+  const reviewSeen = profile.month_review_seen_for === current.startISO;
+  const closing = back <= 1 && !reviewSeen && !noBank ? monthClosing(insight.txs, insight.cats, profile.salary_day, today) : null;
+  const focusChoices = insight.cats
+    .filter((c) => !c.isIncome && !c.systemKey)
+    .map((c) => ({ id: c.id, name: c.name, icon: c.icon, color: c.color }));
+  const focusCat =
+    isCurrent && profile.focus_category_id && profile.focus_period_start === current.startISO
+      ? catMap.get(profile.focus_category_id)
+      : undefined;
+  const focus = focusCat && !focusCat.isIncome && !focusCat.systemKey ? focusCat : undefined;
+
+  const week = isCurrent ? weekReview(insight.txs, catMap, today) : null;
+  const weekItems = (week?.rows ?? []).flatMap((row) => {
+    const cat = catMap.get(row.categoryId);
+    return cat ? [{ id: cat.id, name: cat.name, icon: cat.icon, color: cat.color, spent: row.spent, previous: row.previous }] : [];
+  });
+  const recurringTotal = fixed ? recurringMonthlyTotal(fixed.recurring) : 0;
+
   const canRefresh = connection !== null && ["active", "expiring"].includes(statusFor(connection));
   const monthName = periodMonthName(period);
   const subtitle = periodSubtitle(period, today, isCurrent, Boolean(profile.salary_day));
@@ -113,7 +147,14 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   return (
     <>
       <MonthViewed monthsBack={back} />
-      {back === 1 && profile.month_review_seen_for !== current.startISO && <MonthSeen periodStartISO={current.startISO} />}
+      {(back === 1 || closing) && !reviewSeen && <MonthSeen periodStartISO={current.startISO} />}
+      {closing && (
+        <MonthClosingSheet
+          closing={closing}
+          monthName={periodMonthName(previousPeriods(profile.salary_day, today, 1)[0])}
+          choices={focusChoices}
+        />
+      )}
 
       {/* Kopregel: streak links, saldo rechts. Alleen als er iets te tonen is; zoeken staat bij de maandtitel. */}
       <div className="safe-top">
@@ -206,6 +247,9 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
               </div>
             )}
 
+            {isCurrent && <CashWalletRow />}
+            {isCurrent && fixed?.free && <FreeToSpendCard free={fixed.free} />}
+
             {slices.length === 0 ? (
               <Card padding="lg" className="text-center">
                 <p className="text-[15px] text-text-muted">
@@ -254,6 +298,12 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
               </Link>
             )}
 
+            {focus && (
+              <FocusCard category={focus} amount={Math.max(0, perCategory.get(focus.id) ?? 0)} lastMonth={Math.max(0, lastMonthPer.get(focus.id) ?? 0)} />
+            )}
+
+            {week && weekItems.length > 0 && <WeekReviewCard weekStartISO={week.weekStartISO} weekEndISO={week.weekEndISO} items={weekItems} />}
+
             {rows.length > 0 && (
               <Card padding="none">
                 <ul className="divide-y">
@@ -268,9 +318,14 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
                           <CategoryBadge icon={cat.icon} color={cat.color} size="row" />
                           <span className="min-w-0 flex-1">
                             <span className="block truncate text-[15px] font-medium">{cat.name}</span>
-                            {budget && (
-                              <BudgetBar ratio={budget.ratio} over={budget.state === "over"} colorClass={colors.solid} className="mt-1.5" />
-                            )}
+                            <PotjeProgress
+                              amount={amount}
+                              budget={budget ? cat.monthlyBudget : null}
+                              lastMonth={Math.max(0, lastMonthPer.get(cat.id) ?? 0)}
+                              over={budget?.state === "over"}
+                              colorClass={colors.solid}
+                              className="mt-1.5"
+                            />
                           </span>
                           <span className="shrink-0 text-right">
                             <span className="block text-[15px] font-semibold tabular-nums">{formatEuroWhole(amount)}</span>
@@ -294,6 +349,25 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
             )}
 
             {isCurrent && <StillToReceive shares={openShares} />}
+
+            {isCurrent && fixed && fixed.recurring.length > 0 && (
+              <Link
+                href="/overzicht/vaste-lasten"
+                className="flex min-h-14 items-center gap-3 rounded-card bg-surface px-4 py-2.5 shadow-card transition-colors duration-150 hover:bg-surface-muted"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-muted text-text-muted" aria-hidden>
+                  <Repeat size={18} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-medium">Vaste lasten en abonnementen</span>
+                  <span className="block text-[13px] leading-[18px] text-text-muted tabular-nums">
+                    {formatEuroWhole(recurringTotal)} per maand · {fixed.recurring.length}{" "}
+                    {fixed.recurring.length === 1 ? "vaste last" : "vaste lasten"}
+                  </span>
+                </span>
+                <IconChevronRight size={18} className="shrink-0 text-text-muted" />
+              </Link>
+            )}
 
             <Link
               href="/transacties"

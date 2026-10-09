@@ -34,6 +34,8 @@ export interface DetailTransaction {
   rawDescription: string | null;
   bookingTime: string | null;
   note: string | null;
+  /** Contante uitgave: de korte notitie van het verdelen (staat in de omschrijving), anders null. */
+  cashNote?: string | null;
   inPeriod: boolean;
 }
 
@@ -299,7 +301,9 @@ export function PotjeDetail({
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[15px] leading-5 font-medium">{tx.counterparty}</p>
-                      {tx.note && <p className="truncate text-[13px] leading-[18px] text-text">{tx.note}</p>}
+                      {(tx.note ?? tx.cashNote) && (
+                        <p className="truncate text-[13px] leading-[18px] text-text">{tx.note ?? tx.cashNote}</p>
+                      )}
                       <p className="truncate text-[13px] leading-[18px] text-text-muted">
                         {formatDay(tx.bookingDate)}
                         {tx.ownShare !== null && ` · jouw deel van ${formatEuro(Math.abs(tx.amount))}`}

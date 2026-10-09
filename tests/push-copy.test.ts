@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { openCardsMessage } from "../lib/push/copy";
+import { openCardsMessage, weekMessage } from "../lib/push/copy";
 
 test("kaartjesmelding: kort, zonder uitroeptekens of schuldgevoel, en wisselt per dag", () => {
   const seen = new Set<string>();
@@ -16,4 +16,17 @@ test("kaartjesmelding: kort, zonder uitroeptekens of schuldgevoel, en wisselt pe
   }
   assert.ok(seen.size >= 10);
   assert.match(openCardsMessage(40, 0).body, /morgen/);
+});
+
+test("weekmelding: kort, zonder bedragen, uitroeptekens of schuldgevoel", () => {
+  const seen = new Set<string>();
+  for (let day = 0; day < 6; day++) {
+    const { title, body } = weekMessage(day);
+    seen.add(title);
+    assert.ok(title.length <= 40, `titel te lang: ${title}`);
+    assert.ok(body.length <= 90, `tekst te lang: ${body}`);
+    assert.ok(!/[!€\d]/.test(title + body), `verboden teken: ${title} ${body}`);
+    assert.ok(!/vergeten|kwijt|verloren|streak/i.test(title + body), `schuldgevoel: ${body}`);
+  }
+  assert.ok(seen.size >= 2);
 });

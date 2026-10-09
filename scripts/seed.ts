@@ -2,7 +2,7 @@
  * Seed-script voor lokale ontwikkeling.
  *
  * Maakt (of hergebruikt) een testgebruiker, de startset potjes, één CSV-"koppeling"
- * met rekening en 60 realistische neptransacties. Deterministisch: elke run geeft
+ * met rekening, 60 realistische neptransacties en twee open pinopnames. Deterministisch: elke run geeft
  * dezelfde data. Bestaande data van de testgebruiker wordt eerst verwijderd.
  *
  * Gebruik:  npm run seed            (leest .env.local)
@@ -275,6 +275,10 @@ async function main() {
     seen.add(hash);
     addRow(daysAgo, amount, t.counterparty, t.description, t.categoryKey);
   }
+
+  // Twee pinopnames op de stapel, om "Waar heb je dit contant geld aan uitgegeven?" te testen.
+  addRow(2, -50, "Geldmaat Amsterdam", "Geldopname", null);
+  addRow(6, -20, "Geldmaat Amsterdam", "Geldopname", null);
 
   // Saldo na elke transactie, chronologisch opgebouwd vanaf het huidige saldo.
   const sorted = [...rows].sort((a, b) => (a.booking_date < b.booking_date ? 1 : a.booking_date > b.booking_date ? -1 : 0));

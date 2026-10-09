@@ -16,3 +16,11 @@ export const VOORGESCHOTEN_CATEGORY = {
   icon: "hand-coins",
   color: "geel",
 } as const;
+
+/** Vaste gegevens van het ingebouwde potje Contant: pinopnames die nog in je portemonnee zitten. */
+export const CONTANT_CATEGORY = {
+  systemKey: "contant",
+  name: "Contant",
+  icon: "wallet",
+  color: "groen",
+} as const;
