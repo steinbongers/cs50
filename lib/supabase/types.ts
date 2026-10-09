@@ -120,6 +120,10 @@ export type TransactionRow = {
   note: string | null;
   /** Contante uitgave: de pinopname waar het geld vandaan kwam. */
   cash_withdrawal_id: string | null;
+  /** Uitgave waarvoor nog geld terugkomt (bijhouden zonder vooraf te verdelen). */
+  awaiting_refund: boolean;
+  /** Binnengekomen terugbetaling: de uitgave waar hij bij hoort. */
+  refund_for_id: string | null;
   created_at: string;
 };
 
@@ -272,6 +276,8 @@ export type Database = {
           | "is_internal_transfer"
           | "note"
           | "cash_withdrawal_id"
+          | "awaiting_refund"
+          | "refund_for_id"
           | "account_id"
           | "created_at"
         >
