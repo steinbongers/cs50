@@ -1,4 +1,4 @@
-import { Repeat, Search } from "lucide-react";
+import { ChartColumn, Repeat, Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ConnectionBanner } from "@/components/bank/connection-banner";
@@ -8,6 +8,7 @@ import { CategoryBadge } from "@/components/categories/category-badge";
 import { BalanceButton } from "@/components/overview/balance-button";
 import { FocusCard } from "@/components/overview/focus-card";
 import { FreeToSpendCard } from "@/components/overview/free-to-spend";
+import { IncomeView, type IncomeGroup } from "@/components/overview/income-view";
 import { MonthClosingSheet } from "@/components/overview/month-closing";
 import { MonthDonut, type DonutSlice } from "@/components/overview/month-donut";
 import { MonthSeen } from "@/components/overview/month-seen";
@@ -16,6 +17,7 @@ import { capitalize, compareLine, openCardsText, periodMonthName, periodSubtitle
 import { PotjeProgress } from "@/components/overview/potje-progress";
 import { StillToReceive } from "@/components/overview/still-to-receive";
 import { StreakChip } from "@/components/overview/streak-chip";
+import { ViewSwitch, overviewHref, type OverviewView } from "@/components/overview/view-switch";
 import { WeekReviewCard } from "@/components/overview/week-review-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -27,14 +29,17 @@ import { getPrimaryConnection, statusFor } from "@/lib/bank/connections";
 import { categoryColorClasses } from "@/lib/categories/palette";
 import { formatEuro, formatEuroWhole } from "@/lib/format";
 import { budgetLabel, budgetStatus } from "@/lib/insights/budget";
+import { compareIncome, incomeTransactionsPerCategory, unsortedIncoming } from "@/lib/insights/charts";
 import {
   categoryDeviations,
   compareWithAverage,
   dailyStreak,
+  incomePerCategory,
   pickStandout,
   previousPeriods,
   spendOf,
   spentPerCategory,
+  totalIncome,
 } from "@/lib/insights/compute";
 import { loadFreeToSpendDetails } from "@/lib/insights/free-to-spend";
 import { monthClosing } from "@/lib/insights/month-closing";
@@ -68,12 +73,16 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const current = currentPeriod(profile.salary_day, today);
   const period = isCurrent ? current : previousPeriods(profile.salary_day, today, back)[back - 1];
   const justConnected = params.bank === "gekoppeld";
+  const view: OverviewView = params.weergave === "inkomsten" ? "inkomsten" : "uitgaven";
+  const showIncome = view === "inkomsten";
+  // Inkomsten vergelijken met de drie maanden vóór de getoonde: die moeten dan ook geladen zijn.
+  const incomeSince = showIncome ? previousPeriods(profile.salary_day, today, back + 3).at(-1)?.startISO : undefined;
 
   // Oude verdelingen per persoon eerst omzetten naar bijhouden per uitgave.
   await convertOpenSharesToTracking().catch(() => 0);
   const [connection, insight, accounts, openShares, awaitingRefunds, openCount, fixed] = await Promise.all([
     getPrimaryConnection(supabase, user.id),
-    loadInsightData(supabase, today),
+    loadInsightData(supabase, today, { since: incomeSince }),
     loadAccountBalances(supabase),
     getOpenShares(),
     getAwaitingRefunds().catch(() => []),
@@ -155,6 +164,27 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const subtitle = periodSubtitle(period, today, isCurrent, Boolean(profile.salary_day));
   const showTopRow = streak.days > 0 || accounts.length > 0;
 
+  // Inkomsten-weergave: alleen inkomstenpotjes; Geld terug en Voorgeschoten tellen nooit als inkomen.
+  let income: { total: number; groups: IncomeGroup[]; unsorted: number; comparison: ReturnType<typeof compareIncome> } | null = null;
+  if (showIncome) {
+    const perIncome = incomePerCategory(insight.txs, catMap, period.startISO, period.endISO);
+    const incomeTxs = incomeTransactionsPerCategory(insight.txs, catMap, period.startISO, period.endISO);
+    const groups = insight.cats
+      .filter((c) => c.isIncome && !c.systemKey)
+      .map((cat) => ({ cat, amount: perIncome.get(cat.id) ?? 0, txs: incomeTxs.get(cat.id) ?? [] }))
+      .filter((g) => g.amount !== 0 || g.txs.length > 0)
+      .sort((a, b) => b.amount - a.amount);
+    // De lopende maand vergelijken we na even veel dagen, net als de uitgaven.
+    const daysIn = isCurrent ? Math.round((today.getTime() - period.start.getTime()) / 864e5) + 1 : undefined;
+    const earlier = previousPeriods(profile.salary_day, today, back + 3).slice(back);
+    income = {
+      total: totalIncome(insight.txs, catMap, period.startISO, period.endISO),
+      groups,
+      unsorted: unsortedIncoming(insight.txs, period.startISO, period.endISO),
+      comparison: compareIncome(insight.txs, catMap, period, earlier, daysIn),
+    };
+  }
+
   return (
     <>
       <MonthViewed monthsBack={back} />
@@ -193,7 +223,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
               </Link>
               <nav aria-label="Maand kiezen" className="flex items-center">
                 {back < MAX_BACK ? (
-                  <Link href={`/overzicht?maand=${back + 1}`} aria-label="Vorige maand" className={roundIcon}>
+                  <Link href={overviewHref(back + 1, view)} aria-label="Vorige maand" className={roundIcon}>
                     <IconChevronLeft size={22} />
                   </Link>
                 ) : (
@@ -203,7 +233,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
                 )}
                 {back > 0 ? (
                   <Link
-                    href={back === 1 ? "/overzicht" : `/overzicht?maand=${back - 1}`}
+                    href={overviewHref(back - 1, view)}
                     aria-label="Volgende maand"
                     className={roundIcon}
                   >
@@ -219,6 +249,8 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
           </div>
           {isCurrent && !noBank && openCount === 0 && <p className="mt-2 text-[15px] text-text-muted">Alles zit in een potje.</p>}
         </header>
+
+        {!noBank && <ViewSwitch view={view} back={back} />}
 
         {justConnected && (
           <p className="rounded-card bg-positive-soft px-4 py-3 text-[15px] text-positive" role="status">
@@ -258,132 +290,162 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
               </div>
             )}
 
-            {isCurrent && <CashWalletRow />}
-            {isCurrent && fixed?.free && <FreeToSpendCard free={fixed.free} />}
-
-            {slices.length === 0 ? (
-              <Card padding="lg" className="text-center">
-                <p className="text-[15px] text-text-muted">
-                  {isCurrent
-                    ? openCount > 0
-                      ? "Eerst je kaartjes indelen, dan zie je hier je maand."
-                      : "Deze maand nog niets uitgegeven."
-                    : `In ${monthName} is niets in een potje gezet.`}
-                </p>
-              </Card>
+            {showIncome && income ? (
+              <IncomeView
+                monthName={monthName}
+                isCurrent={isCurrent}
+                total={income.total}
+                spent={total}
+                comparison={income.comparison}
+                groups={income.groups}
+                unsorted={income.unsorted}
+                hasIncomePotje={insight.cats.some((c) => c.isIncome && !c.systemKey)}
+              />
             ) : (
-              <section aria-label="Uitgaven deze maand" className="flex flex-col items-center gap-3">
-                <MonthDonut slices={slices} unsorted={unsorted} total={total} label={monthName} />
-                {refundsLoose > 0 && (
-                  <p className="text-center text-[13px] leading-[18px] text-text-muted">
-                    {formatEuro(refundsLoose)} geld terug zonder potje is er al vanaf
+              <>
+              {isCurrent && <CashWalletRow />}
+              {isCurrent && fixed?.free && <FreeToSpendCard free={fixed.free} />}
+
+              {slices.length === 0 ? (
+                <Card padding="lg" className="text-center">
+                  <p className="text-[15px] text-text-muted">
+                    {isCurrent
+                      ? openCount > 0
+                        ? "Eerst je kaartjes indelen, dan zie je hier je maand."
+                        : "Deze maand nog niets uitgegeven."
+                      : `In ${monthName} is niets in een potje gezet.`}
                   </p>
-                )}
-                {compare?.kind === "chip" && (
-                  <div className="flex flex-col items-center gap-1">
-                    <p
-                      className={cn(
-                        "mx-auto inline-flex min-h-7 items-center rounded-[14px] px-3 py-1 text-center text-[13px] leading-[18px] font-medium",
-                        compare.tone === "positive" && "bg-positive-soft text-positive",
-                        compare.tone === "accent" && "bg-accent-soft text-accent-strong",
-                        compare.tone === "neutral" && "bg-surface-muted text-text",
-                      )}
-                    >
-                      {compare.text}
+                </Card>
+              ) : (
+                <section aria-label="Uitgaven deze maand" className="flex flex-col items-center gap-3">
+                  <MonthDonut slices={slices} unsorted={unsorted} total={total} label={monthName} />
+                  {refundsLoose > 0 && (
+                    <p className="text-center text-[13px] leading-[18px] text-text-muted">
+                      {formatEuro(refundsLoose)} geld terug zonder potje is er al vanaf
                     </p>
-                    {compare.basis && <p className="text-center text-[13px] leading-[18px] text-text-muted">{compare.basis}</p>}
-                  </div>
-                )}
-                {compare?.kind === "note" && <p className="text-center text-[13px] text-text-muted">{compare.text}</p>}
-              </section>
-            )}
+                  )}
+                  {compare?.kind === "chip" && (
+                    <div className="flex flex-col items-center gap-1">
+                      <p
+                        className={cn(
+                          "mx-auto inline-flex min-h-7 items-center rounded-[14px] px-3 py-1 text-center text-[13px] leading-[18px] font-medium",
+                          compare.tone === "positive" && "bg-positive-soft text-positive",
+                          compare.tone === "accent" && "bg-accent-soft text-accent-strong",
+                          compare.tone === "neutral" && "bg-surface-muted text-text",
+                        )}
+                      >
+                        {compare.text}
+                      </p>
+                      {compare.basis && <p className="text-center text-[13px] leading-[18px] text-text-muted">{compare.basis}</p>}
+                    </div>
+                  )}
+                  {compare?.kind === "note" && <p className="text-center text-[13px] text-text-muted">{compare.text}</p>}
+                </section>
+              )}
 
-            {/* Alleen als er al iets is ingedeeld: anders is het verschil loos. */}
-            {standout && standoutCat && slices.length > 0 && (
-              <Link
-                href={`/potjes/${standoutCat.id}`}
-                className="-my-3 flex min-h-11 items-center gap-2 rounded-control px-1 text-[13px] transition-colors duration-150 hover:bg-surface-muted"
-              >
-                <span className="min-w-0 flex-1 truncate">
-                  <span className="font-medium">{standoutCat.name}:</span>{" "}
-                  <span className="text-text-muted">
-                    {formatEuroWhole(Math.abs(standout.diff))} {standout.diff > 0 ? "meer" : "minder"} dan je gemiddelde
+              {/* Alleen als er al iets is ingedeeld: anders is het verschil loos. */}
+              {standout && standoutCat && slices.length > 0 && (
+                <Link
+                  href={`/potjes/${standoutCat.id}`}
+                  className="-my-3 flex min-h-11 items-center gap-2 rounded-control px-1 text-[13px] transition-colors duration-150 hover:bg-surface-muted"
+                >
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className="font-medium">{standoutCat.name}:</span>{" "}
+                    <span className="text-text-muted">
+                      {formatEuroWhole(Math.abs(standout.diff))} {standout.diff > 0 ? "meer" : "minder"} dan je gemiddelde
+                    </span>
                   </span>
-                </span>
-                <IconChevronRight size={16} className="shrink-0 text-text-muted" />
-              </Link>
-            )}
+                  <IconChevronRight size={16} className="shrink-0 text-text-muted" />
+                </Link>
+              )}
 
-            {focus && (
-              <FocusCard category={focus} amount={Math.max(0, perCategory.get(focus.id) ?? 0)} lastMonth={Math.max(0, lastMonthPer.get(focus.id) ?? 0)} />
-            )}
+              {focus && (
+                <FocusCard category={focus} amount={Math.max(0, perCategory.get(focus.id) ?? 0)} lastMonth={Math.max(0, lastMonthPer.get(focus.id) ?? 0)} />
+              )}
 
-            {week && weekItems.length > 0 && <WeekReviewCard weekStartISO={week.weekStartISO} weekEndISO={week.weekEndISO} items={weekItems} />}
+              {week && weekItems.length > 0 && <WeekReviewCard weekStartISO={week.weekStartISO} weekEndISO={week.weekEndISO} items={weekItems} />}
 
-            {rows.length > 0 && (
-              <Card padding="none">
-                <ul className="divide-y">
-                  {rows.map(({ cat, amount, budget }) => {
-                    const colors = categoryColorClasses(cat.color);
-                    return (
-                      <li key={cat.id}>
-                        <Link
-                          href={`/potjes/${cat.id}`}
-                          className="flex min-h-14 items-center gap-3 px-4 py-2.5 transition-colors duration-150 hover:bg-surface-muted"
-                        >
-                          <CategoryBadge icon={cat.icon} color={cat.color} size="row" />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[15px] font-medium">{cat.name}</span>
-                            <PotjeProgress
-                              amount={amount}
-                              budget={budget ? cat.monthlyBudget : null}
-                              lastMonth={Math.max(0, lastMonthPer.get(cat.id) ?? 0)}
-                              over={budget?.state === "over"}
-                              colorClass={colors.solid}
-                              className="mt-1.5"
-                            />
-                          </span>
-                          <span className="shrink-0 text-right">
-                            <span className="block text-[15px] font-semibold tabular-nums">{formatEuroWhole(amount)}</span>
-                            {budget && (
-                              <span
-                                className={cn(
-                                  "block text-[13px] leading-[18px] tabular-nums",
-                                  budget.state === "over" ? "text-accent-strong" : "text-text-muted",
-                                )}
-                              >
-                                {budgetLabel(budget)}
-                              </span>
-                            )}
-                          </span>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Card>
-            )}
+              {rows.length > 0 && (
+                <Card padding="none">
+                  <ul className="divide-y">
+                    {rows.map(({ cat, amount, budget }) => {
+                      const colors = categoryColorClasses(cat.color);
+                      return (
+                        <li key={cat.id}>
+                          <Link
+                            href={`/potjes/${cat.id}`}
+                            className="flex min-h-14 items-center gap-3 px-4 py-2.5 transition-colors duration-150 hover:bg-surface-muted"
+                          >
+                            <CategoryBadge icon={cat.icon} color={cat.color} size="row" />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[15px] font-medium">{cat.name}</span>
+                              <PotjeProgress
+                                amount={amount}
+                                budget={budget ? cat.monthlyBudget : null}
+                                lastMonth={Math.max(0, lastMonthPer.get(cat.id) ?? 0)}
+                                over={budget?.state === "over"}
+                                colorClass={colors.solid}
+                                className="mt-1.5"
+                              />
+                            </span>
+                            <span className="shrink-0 text-right">
+                              <span className="block text-[15px] font-semibold tabular-nums">{formatEuroWhole(amount)}</span>
+                              {budget && (
+                                <span
+                                  className={cn(
+                                    "block text-[13px] leading-[18px] tabular-nums",
+                                    budget.state === "over" ? "text-accent-strong" : "text-text-muted",
+                                  )}
+                                >
+                                  {budgetLabel(budget)}
+                                </span>
+                              )}
+                            </span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </Card>
+              )}
 
-            {isCurrent && <StillToReceive shares={openShares} awaiting={awaitingRefunds} />}
+              {isCurrent && <StillToReceive shares={openShares} awaiting={awaitingRefunds} />}
 
-            {isCurrent && fixed && fixed.recurring.length > 0 && (
-              <Link
-                href="/overzicht/vaste-lasten"
-                className="flex min-h-14 items-center gap-3 rounded-card bg-surface px-4 py-2.5 shadow-card transition-colors duration-150 hover:bg-surface-muted"
-              >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-muted text-text-muted" aria-hidden>
-                  <Repeat size={18} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[15px] font-medium">Vaste lasten en abonnementen</span>
-                  <span className="block text-[13px] leading-[18px] text-text-muted tabular-nums">
-                    {formatEuroWhole(recurringTotal)} per maand · {fixed.recurring.length}{" "}
-                    {fixed.recurring.length === 1 ? "vaste last" : "vaste lasten"}
+              {isCurrent && fixed && fixed.recurring.length > 0 && (
+                <Link
+                  href="/overzicht/vaste-lasten"
+                  className="flex min-h-14 items-center gap-3 rounded-card bg-surface px-4 py-2.5 shadow-card transition-colors duration-150 hover:bg-surface-muted"
+                >
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-muted text-text-muted" aria-hidden>
+                    <Repeat size={18} />
                   </span>
-                </span>
-                <IconChevronRight size={18} className="shrink-0 text-text-muted" />
-              </Link>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-medium">Vaste lasten en abonnementen</span>
+                    <span className="block text-[13px] leading-[18px] text-text-muted tabular-nums">
+                      {formatEuroWhole(recurringTotal)} per maand · {fixed.recurring.length}{" "}
+                      {fixed.recurring.length === 1 ? "vaste last" : "vaste lasten"}
+                    </span>
+                  </span>
+                  <IconChevronRight size={18} className="shrink-0 text-text-muted" />
+                </Link>
+              )}
+
+              </>
             )}
+
+            <Link
+              href="/overzicht/inzicht"
+              className="flex min-h-14 items-center gap-3 rounded-card bg-surface px-4 py-2.5 shadow-card transition-colors duration-150 hover:bg-surface-muted"
+            >
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-surface-muted text-text-muted" aria-hidden>
+                <ChartColumn size={18} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-medium">Meer inzicht</span>
+                <span className="block text-[13px] leading-[18px] text-text-muted">Grafieken over je laatste maanden</span>
+              </span>
+              <IconChevronRight size={18} className="shrink-0 text-text-muted" />
+            </Link>
 
             <Link
               href="/transacties"

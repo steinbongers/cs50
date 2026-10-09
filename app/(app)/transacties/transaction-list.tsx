@@ -5,6 +5,7 @@ import { CategoryBadge } from "@/components/categories/category-badge";
 import { Card } from "@/components/ui/card";
 import { formatLongDay, formatSignedEuro } from "@/lib/format";
 import type { DayGroup, SearchResult } from "@/lib/transactions/search";
+import { splitPartLine, splitSummary } from "@/lib/transactions/split-parts";
 import { cn } from "@/lib/utils";
 import { TransactionSheet } from "./transaction-sheet";
 
@@ -44,7 +45,15 @@ export function TransactionList({ groups, categories }: TransactionListProps) {
                 <ul className="divide-y">
                   {group.rows.map((tx) => {
                     const category = tx.categoryId ? byId.get(tx.categoryId) : undefined;
-                    const link = tx.refundFor ? `Terug voor: ${tx.refundFor}` : tx.awaitingRefund ? "Wacht op geld terug" : null;
+                    const link = tx.refundFor
+                      ? `Terug voor: ${tx.refundFor}`
+                      : tx.splitParent
+                        ? splitPartLine(tx.splitParent.counterparty, tx.splitParent.amount)
+                        : tx.splitParts !== null
+                          ? splitSummary(tx.splitParts)
+                          : tx.awaitingRefund
+                            ? "Wacht op geld terug"
+                            : null;
                     const sub = link ? [link, tx.note ?? tx.description].filter(Boolean).join(" · ") : (tx.note ?? tx.description);
                     const where = category ? category.name : "Nog op de stapel";
                     return (

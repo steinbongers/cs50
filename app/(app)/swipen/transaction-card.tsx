@@ -32,16 +32,27 @@ interface TransactionCardProps {
   ownShare?: number | null;
   /** Pinopname: label "Contant opgenomen" en onderaan de vraag waar het geld heen ging. */
   cash?: boolean;
+  /** Herkende creditcard-afrekening: een hint dat je hem over je potjes kunt verdelen. */
+  creditCard?: boolean;
 }
 
 export const CASH_QUESTION = "Waar heb je dit contant geld aan uitgegeven?";
+/** Onderaan een herkende creditcard-afrekening (in plaats van de omschrijving, die zegt dan weinig). */
+export const CREDIT_CARD_HINT = "Verdeel over je potjes met Verdelen";
 
 /**
  * De kaart bovenin: datum, tegenpartij en bedrag groot, omschrijving (of je
  * notitie) en saldo klein. Tik op de kaart voor de volledige banktekst.
  * Bij een pinopname staat onderaan de vraag in plaats van omschrijving en saldo (het saldo staat in de banktekst).
+ * Bij een herkende creditcard staat onderaan de hint om hem te verdelen (je eigen notitie gaat voor).
  */
-export function TransactionCard({ transaction, onOpenDetails, ownShare = null, cash = false }: TransactionCardProps) {
+export function TransactionCard({
+  transaction,
+  onOpenDetails,
+  ownShare = null,
+  cash = false,
+  creditCard = false,
+}: TransactionCardProps) {
   const reduce = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
   const isPresent = useIsPresent();
@@ -56,7 +67,9 @@ export function TransactionCard({ transaction, onOpenDetails, ownShare = null, c
     ? CASH_QUESTION
     : ownShare !== null
       ? `Jouw deel ${formatEuro(ownShare)}`
-      : (transaction.note ?? transaction.description ?? "");
+      : creditCard
+        ? (transaction.note ?? CREDIT_CARD_HINT)
+        : (transaction.note ?? transaction.description ?? "");
 
   return (
     <motion.article
@@ -66,7 +79,7 @@ export function TransactionCard({ transaction, onOpenDetails, ownShare = null, c
       animate="center"
       exit="exit"
       className="relative flex h-full cursor-pointer [grid-area:1/1] flex-col justify-between overflow-hidden rounded-card-lg bg-surface p-4 text-left shadow-float will-change-transform focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary/60"
-      aria-label={`${cash ? "Contant opgenomen bij " : ""}${transaction.counterparty}, ${formatSignedEuro(transaction.amount)}, ${formatLongDay(transaction.bookingDate)}. Tik voor de banktekst.`}
+      aria-label={`${cash ? "Contant opgenomen bij " : ""}${transaction.counterparty}, ${formatSignedEuro(transaction.amount)}, ${formatLongDay(transaction.bookingDate)}.${creditCard ? " Creditcard, verdeel hem over je potjes." : ""} Tik voor de banktekst.`}
       role="button"
       tabIndex={0}
       onClick={onOpenDetails}
@@ -85,6 +98,10 @@ export function TransactionCard({ transaction, onOpenDetails, ownShare = null, c
         {cash ? (
           <span className="shrink-0 rounded-full bg-primary-soft px-2 py-0.5 text-[11px] leading-[13px] font-medium text-primary">
             Contant opgenomen
+          </span>
+        ) : creditCard ? (
+          <span className="shrink-0 rounded-full bg-primary-soft px-2 py-0.5 text-[11px] leading-[13px] font-medium text-primary">
+            Creditcard
           </span>
         ) : transaction.skippedCount > 0 && (
           <span className="shrink-0 rounded-full bg-surface-muted px-2 py-0.5 text-[11px] leading-[13px] font-medium text-text-muted">
@@ -113,7 +130,7 @@ export function TransactionCard({ transaction, onOpenDetails, ownShare = null, c
           className={cn(
             "line-clamp-1 min-w-0 flex-1 break-words",
             ownShare !== null && "font-medium text-text tabular-nums",
-            cash && "font-medium text-text",
+            (cash || (creditCard && !transaction.note)) && "font-medium text-text",
           )}
         >
           {footer}

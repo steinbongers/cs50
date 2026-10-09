@@ -7,6 +7,7 @@
  * elke query zelf op user_id.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { VERDEELD_CATEGORY } from "@/lib/categories/types";
 import { currentPeriod } from "@/lib/periods";
 import type { Database } from "@/lib/supabase/types";
 import { round2, previousPeriods } from "./compute";
@@ -72,6 +73,8 @@ async function loadRecurringTxs(supabase: SupabaseClient<Database>, userId: stri
       .select("id, booking_date, amount, counterparty, category_id, is_internal_transfer")
       .eq("user_id", userId)
       .lt("amount", 0)
+      // Delen van een verdeelde afschrijving niet: de afschrijving zelf is de betaling die terugkomt.
+      .neq("source", "split")
       .gte("booking_date", fromISO)
       .order("id")
       .range(from, from + PAGE_SIZE - 1);
@@ -100,7 +103,13 @@ export async function loadRecurringCharges(
   const oldest = previousPeriods(salaryDay, today, 3).at(-1) ?? currentPeriod(salaryDay, today);
   const [txs, { data: systemCats }] = await Promise.all([
     loadRecurringTxs(supabase, userId, oldest.startISO),
-    supabase.from("categories").select("id").eq("user_id", userId).not("system_key", "is", null),
+    // Verdeeld blijft meedoen: die afschrijving (vaak de creditcard) is een echte betaling van je rekening.
+    supabase
+      .from("categories")
+      .select("id")
+      .eq("user_id", userId)
+      .not("system_key", "is", null)
+      .neq("system_key", VERDEELD_CATEGORY.systemKey),
   ]);
   return detectRecurring(txs, new Set((systemCats ?? []).map((c) => c.id)), salaryDay, today);
 }

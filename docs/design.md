@@ -139,6 +139,29 @@ Tien zachte kleuren (`--cat-*` en `--cat-*-soft`): blauw, indigo, paars, roze, r
 oranje, geel, groen, mint, grijs. In de database staat alleen de sleutel (`color`),
 de kleur zelf staat in CSS. Zie `lib/categories/palette.ts`.
 
+## Grafieken (Meer inzicht)
+
+Handgetekende SVG, geen grafiekbibliotheek (`components/insights/`). Rekenwerk staat puur in
+`lib/insights/charts.ts`, teksten in `components/insights/insight-copy.ts`.
+
+| Token | Licht | Donker | Waarvoor |
+|-------|-------|--------|----------|
+| `--chart-in` | `#00915a` | `#1fa774` | Reeks Inkomsten |
+| `--chart-out` | `#0075ff` | `#3d8bf0` | Reeks Uitgaven, en elke grafiek met één reeks |
+| `--chart-out-soft` | `#e7f1ff` | `#14294a` | Lichtere stap van dezelfde kleur ("de rest" naast vaste lasten) |
+| `--chart-ref` | `#6b7183` | `#a3a9b7` | Gestippelde lijn van het gemiddelde (bewust grijs) |
+
+- Gevalideerd met de dataviz-validator op `--surface` (wit en `#1a1d24`): lichtheid, chroma, kleurenblind-
+  en normaal-zicht-afstand en contrast slagen voor in/uit in beide modi. Donker heeft eigen stappen
+  (`#3ccf8e`/`#4d9bff` vallen buiten de lichtheidsband), geen omgedraaid licht palet.
+- **Potjeskleuren zijn identiteit, geen grafiekpalet.** Als set halen ze de validator niet (indigo, paars en
+  blauw liggen te dicht bij elkaar; donker is te licht voor de band). Daarom: uitgaven per potje als kleine
+  veelvouden met naam en icoon per rij, nooit een gestapelde balk of lijnen die alleen op kleur te scheiden zijn.
+- Staven ≤ 24 px, bovenkant 4 px rond, voet recht op de basislijn, 2 px tussen staven van een paar. Lijnen 2 px.
+  Rasterlijnen 1 px `--border`, basislijn `--border-strong`, as-tekst `--text-muted` 11 px.
+- Elke grafiek: kop met de conclusie, legenda bij twee of meer reeksen, tikken toont de cijfers (tik nog eens
+  om te sluiten), en "Als tabel" voor dezelfde cijfers zonder grafiek.
+
 ## Open punt
 
 `#0075ff` met witte tekst heeft een contrast van ±4,2:1, net onder WCAG AA (4,5:1) voor

@@ -51,6 +51,13 @@
   --cat-groen: #00703f;   --cat-groen-soft: #e2f6ec;
   --cat-mint: #0d6b66;    --cat-mint-soft: #dff5f3;
   --cat-grijs: #4b5162;   --cat-grijs-soft: #eef0f4;
+
+  /* Grafieken (Meer inzicht): inkomsten en uitgaven als twee reeksen. Gevalideerd op --surface (zie docs/design.md). */
+  --chart-in: #00915a;
+  --chart-out: #0075ff;
+  --chart-out-soft: #e7f1ff;
+  /* Referentielijn (gemiddelde): bewust grijs, gestippeld. */
+  --chart-ref: #6b7183;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -95,6 +102,12 @@
     --cat-groen: #8fe0b7;   --cat-groen-soft: #11311f;
     --cat-mint: #8fded8;    --cat-mint-soft: #0f302e;
     --cat-grijs: #b8bdc9;   --cat-grijs-soft: #262a33;
+
+    /* Eigen donkere stappen: lichtheid binnen de band voor grafieken, niet het lichte palet omgedraaid. */
+    --chart-in: #1fa774;
+    --chart-out: #3d8bf0;
+    --chart-out-soft: #14294a;
+    --chart-ref: #a3a9b7;
   }
 }
 
@@ -139,6 +152,11 @@
   --cat-groen: #8fe0b7;   --cat-groen-soft: #11311f;
   --cat-mint: #8fded8;    --cat-mint-soft: #0f302e;
   --cat-grijs: #b8bdc9;   --cat-grijs-soft: #262a33;
+
+  --chart-in: #1fa774;
+  --chart-out: #3d8bf0;
+  --chart-out-soft: #14294a;
+  --chart-ref: #a3a9b7;
 }
 
 /* Tailwind-thema: alleen onze tokens, geen standaardpalet met losse hexcodes. */
@@ -179,6 +197,11 @@
   --color-cat-groen: var(--cat-groen);     --color-cat-groen-soft: var(--cat-groen-soft);
   --color-cat-mint: var(--cat-mint);       --color-cat-mint-soft: var(--cat-mint-soft);
   --color-cat-grijs: var(--cat-grijs);     --color-cat-grijs-soft: var(--cat-grijs-soft);
+
+  --color-chart-in: var(--chart-in);
+  --color-chart-out: var(--chart-out);
+  --color-chart-out-soft: var(--chart-out-soft);
+  --color-chart-ref: var(--chart-ref);
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 

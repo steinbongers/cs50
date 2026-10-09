@@ -85,7 +85,8 @@ export async function moveTransaction(transactionId: string, categoryId: string)
     .eq("user_id", user.id)
     .maybeSingle();
   if (!transaction) return { ok: false, error: GENERIC };
-  // Uit Voorgeschoten of Contant verplaatsen zou bedragen dubbel laten tellen.
+  // Uit Voorgeschoten, Contant of Verdeeld verplaatsen zou bedragen dubbel laten tellen. Een deel van
+  // een verdeelde afschrijving staat in een gewoon potje en verplaats je wel.
   if (transaction.category_id) {
     const { data: from } = await supabase
       .from("categories")

@@ -10,7 +10,7 @@
  */
 
 import { AnimatePresence } from "framer-motion";
-import { ArrowRight, Check, Undo2 } from "lucide-react";
+import { ArrowRight, Check, Split, Undo2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { CategoryEditor } from "@/components/categories/category-editor";
 import { Button } from "@/components/ui/button";
@@ -21,12 +21,20 @@ import { success, tap, warning } from "@/lib/haptics";
 import type { QuickSuggestionKey } from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON } from "@/lib/categories/icons";
 import { CATEGORY_COLORS } from "@/lib/categories/palette";
-import { CONTANT_CATEGORY, GELD_TERUG_CATEGORY, VOORGESCHOTEN_CATEGORY, type CategoryDraft } from "@/lib/categories/types";
+import {
+  CONTANT_CATEGORY,
+  GELD_TERUG_CATEGORY,
+  VERDEELD_CATEGORY,
+  VOORGESCHOTEN_CATEGORY,
+  type CategoryDraft,
+} from "@/lib/categories/types";
 import { formatEuro } from "@/lib/format";
 import { isCashWithdrawal } from "@/lib/transactions/cash";
+import { isCreditCardSettlement } from "@/lib/transactions/credit-card";
 import type { AwaitingRefund, CategoryOption, OpenShare, OpenTransaction } from "@/lib/transactions/queries";
 import { refundOutcome, refundUndoText } from "@/lib/transactions/refunds";
 import { sameCounterparty } from "@/lib/transactions/same-counterparty";
+import { splitSummary, type SplitPartInput } from "@/lib/transactions/split-parts";
 import { cn } from "@/lib/utils";
 import {
   assignAlways,
@@ -42,11 +50,12 @@ import {
   removeRule,
   skipTransaction,
   splitCash,
+  splitTransaction,
   undoAssign,
   undoMany,
   type CashSpendInput,
 } from "./actions";
-import { CashSplitSheet } from "./cash-split-sheet";
+import { AmountsSheet } from "./amounts-sheet";
 import { CategoryTiles, tileCount } from "./category-tiles";
 import { COACH_STEPS, CoachTip } from "./coach-tip";
 import { RawSheet } from "./raw-sheet";
@@ -126,14 +135,30 @@ const CONTANT_OPTION: CategoryOption = {
   goalAmount: null,
 };
 
-/** Een verdeelde (of bewaarde) pinopname: wat er per potje bijkwam, voor ongedaan maken. */
-interface CashSplitLocal {
+/** Afschrijving verdeeld over potjes. Het echte id kent alleen de server. */
+const VERDEELD_OPTION: CategoryOption = {
+  id: "verdeeld",
+  name: VERDEELD_CATEGORY.name,
+  icon: VERDEELD_CATEGORY.icon,
+  color: VERDEELD_CATEGORY.color,
+  isIncome: false,
+  systemKey: VERDEELD_CATEGORY.systemKey,
+  spentThisPeriod: 0,
+  monthlyBudget: null,
+  goalAmount: null,
+};
+
+/**
+ * Een verdeelde (of bewaarde) pinopname of een verdeelde afschrijving: wat er per potje bijkwam,
+ * voor ongedaan maken.
+ */
+interface PartsLocal {
   parts: { category: CategoryOption; amount: number }[];
   text: string;
 }
 
 /** Tekst in de pil na het verdelen van een pinopname. */
-function cashUndoText(parts: CashSplitLocal["parts"], amountAbs: number): string {
+function cashUndoText(parts: PartsLocal["parts"], amountAbs: number): string {
   if (parts.length === 0) return "Bewaard als contant";
   const rest = Math.round((amountAbs - parts.reduce((sum, p) => sum + p.amount, 0)) * 100) / 100;
   const where = parts.length === 1 ? `In ${parts[0].category.name}` : `In ${parts.length} potjes`;
@@ -179,8 +204,9 @@ export function SortScreen({
   const [settleOpen, setSettleOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
   const [cashOpen, setCashOpen] = useState(false);
-  // Per verdeelde pinopname wat er in welk potje kwam, zodat ongedaan maken het lokaal terugzet.
-  const [cashSplits, setCashSplits] = useState<Map<string, CashSplitLocal>>(() => new Map());
+  const [partsOpen, setPartsOpen] = useState(false);
+  // Per verdeelde pinopname of afschrijving wat er in welk potje kwam, zodat ongedaan maken het lokaal terugzet.
+  const [partSplits, setPartSplits] = useState<Map<string, PartsLocal>>(() => new Map());
   const [rawOpen, setRawOpen] = useState(false);
   const [editorDraft, setEditorDraft] = useState<CategoryDraft | null>(null);
   const [editorSuggestion, setEditorSuggestion] = useState<QuickSuggestionKey | null>(null);
@@ -513,7 +539,7 @@ export function SortScreen({
         const category = categories.find((c) => c.id === s.categoryId);
         return category ? [{ category, amount: s.amount }] : [];
       });
-      const local: CashSplitLocal = { parts, text: cashUndoText(parts, Math.abs(transaction.amount)) };
+      const local: PartsLocal = { parts, text: cashUndoText(parts, Math.abs(transaction.amount)) };
       const decision: Decision = { transaction, category: CONTANT_OPTION, ownShare: 0 };
 
       setCashOpen(false);
@@ -524,7 +550,7 @@ export function SortScreen({
       setDecisions((d) => [...d, decision]);
       setUndo(decision);
       setUndoBulk(null);
-      setCashSplits((prev) => new Map(prev).set(transaction.id, local));
+      setPartSplits((prev) => new Map(prev).set(transaction.id, local));
       if (parts.length === 1) setPulse((p) => ({ id: parts[0].category.id, key: p.key + 1 }));
       parts.forEach((p) => bumpCategoryTotal(p.category.id, p.amount));
       setAnnouncement(local.text);
@@ -535,7 +561,53 @@ export function SortScreen({
           setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
           setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
           setUndo((u) => (u?.transaction.id === transaction.id ? null : u));
-          setCashSplits((prev) => {
+          setPartSplits((prev) => {
+            const next = new Map(prev);
+            next.delete(transaction.id);
+            return next;
+          });
+          parts.forEach((p) => bumpCategoryTotal(p.category.id, -p.amount));
+          setError(result.error);
+        }
+      });
+    },
+    [current, categories, showCoach, startTransition],
+  );
+
+  // Afschrijving (vaak de creditcard) verdeeld over potjes; samen precies het hele bedrag.
+  const splitParts = useCallback(
+    (input: SplitPartInput[]) => {
+      if (!current || isCashWithdrawal(current)) return;
+      const transaction = current;
+      const durationMs = performance.now() - shownAt.current;
+      // Een uitgave telt per deel op in het potje; inkomend geld gaat er per deel van af.
+      const sign = transaction.amount < 0 ? 1 : -1;
+      const parts = input.flatMap((s) => {
+        const category = categories.find((c) => c.id === s.categoryId);
+        return category ? [{ category, amount: sign * s.amount }] : [];
+      });
+      const local: PartsLocal = { parts, text: splitSummary(parts.length) };
+      const decision: Decision = { transaction, category: VERDEELD_OPTION, ownShare: 0 };
+
+      setPartsOpen(false);
+      setError(null);
+      setHint(null);
+      setExitKind("assign");
+      setQueue((q) => q.slice(1));
+      setDecisions((d) => [...d, decision]);
+      setUndo(decision);
+      setUndoBulk(null);
+      setPartSplits((prev) => new Map(prev).set(transaction.id, local));
+      parts.forEach((p) => bumpCategoryTotal(p.category.id, p.amount));
+      setAnnouncement(`${transaction.counterparty}: ${local.text.toLowerCase()}`);
+
+      startTransition(async () => {
+        const result = await splitTransaction(transaction.id, input, durationMs, { coach: showCoach });
+        if (!result.ok) {
+          setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
+          setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
+          setUndo((u) => (u?.transaction.id === transaction.id ? null : u));
+          setPartSplits((prev) => {
             const next = new Map(prev);
             next.delete(transaction.id);
             return next;
@@ -573,10 +645,10 @@ export function SortScreen({
     setQueue((q) => [transaction, ...q]);
     setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
     setUndone((u) => u + 1);
-    if (category.id === CONTANT_OPTION.id) {
-      // De contante uitgaven uit deze opname gaan weer uit de potjes (de server verwijdert ze).
-      cashSplits.get(transaction.id)?.parts.forEach((p) => bumpCategoryTotal(p.category.id, -p.amount));
-      setCashSplits((prev) => {
+    if (category.id === CONTANT_OPTION.id || category.id === VERDEELD_OPTION.id) {
+      // De contante uitgaven of delen gaan weer uit de potjes (de server verwijdert ze).
+      partSplits.get(transaction.id)?.parts.forEach((p) => bumpCategoryTotal(p.category.id, -p.amount));
+      setPartSplits((prev) => {
         const next = new Map(prev);
         next.delete(transaction.id);
         return next;
@@ -605,7 +677,7 @@ export function SortScreen({
       const result = await undoAssign(transaction.id);
       if (!result.ok) setError(result.error);
     });
-  }, [undo, cashSplits, startTransition]);
+  }, [undo, partSplits, startTransition]);
 
   // Aanbod na een gewone keuze: dezelfde tegenpartij staat nog vaker op de stapel.
   // Nooit bij een verdeling, terugbetaling of pinopname; jij tikt zelf op "Ook de andere".
@@ -783,7 +855,8 @@ export function SortScreen({
     if (refund) return refundUndoText(transaction.amount, category.name, refund.complete, refund.estimate);
     if (track) return `In ${category.name}, je houdt bij wat terugkomt`;
     if (category.id === VOORGESCHOTEN_OPTION.id) return "Verwerkt als terugbetaling";
-    if (category.id === CONTANT_OPTION.id) return cashSplits.get(transaction.id)?.text ?? "Bewaard als contant";
+    if (category.id === CONTANT_OPTION.id) return partSplits.get(transaction.id)?.text ?? "Bewaard als contant";
+    if (category.id === VERDEELD_OPTION.id) return partSplits.get(transaction.id)?.text ?? "Verdeeld over je potjes";
     if (category.id === GELD_TERUG_OPTION.id) return "Geld terug, van je totaal af";
     if (transaction.amount > 0 && !category.isIncome) return `Geld terug, van ${category.name} af`;
     return `In ${category.name}`;
@@ -830,6 +903,9 @@ export function SortScreen({
   const isIncoming = current.amount > 0;
   // Pinopname: de app herkent hem aan de banktekst en vraagt waar het geld heen ging. Geen delen, geen vaste ontvanger.
   const isCash = isCashWithdrawal(current);
+  // Verdelen over potjes kan bij elke uitgave; bij een herkende creditcard staat er een hint op de kaart.
+  const canSplit = !isIncoming && !isCash;
+  const isCreditCard = canSplit && isCreditCardSettlement(current);
   // Terugbetaling bij open delen (van vroeger verdelen) én bij uitgaven die op geld terug wachten.
   const repayment =
     isIncoming && (availableShares.length > 0 || availableAwaiting.length > 0)
@@ -873,6 +949,7 @@ export function SortScreen({
               key={current.id}
               transaction={current}
               cash={isCash}
+              creditCard={isCreditCard}
               onOpenDetails={() => setRawOpen(true)}
             />
           </AnimatePresence>
@@ -950,8 +1027,8 @@ export function SortScreen({
         />
       </section>
 
-      {/* Onderaan het scherm, in de duimzone: Later. Bij een pinopname ook Verdelen en Nog contant
-          (nog niet uitgegeven); een tik op een potje = alles daarin. */}
+      {/* Onderaan het scherm, in de duimzone: Later. Bij een uitgave ook Verdelen (over meerdere potjes),
+          bij een pinopname Verdelen en Nog contant (nog niet uitgegeven); een tik op een potje = alles daarin. */}
       <div ref={bottomRowRef} className="mt-auto px-4 pt-3 pb-2 compact:pt-1">
         <div className={cn("flex h-11 items-center justify-end", isCash ? "gap-1.5" : "gap-2")}>
           {isCash ? (
@@ -978,6 +1055,24 @@ export function SortScreen({
                 <span className="truncate">Nog contant</span>
               </Button>
             </>
+          ) : canSplit ? (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (split.enabled) {
+                  warning();
+                  setHint("Verdelen gaat zonder geld terug. Zet de schakelaar eerst uit.");
+                  return;
+                }
+                tap();
+                setPartsOpen(true);
+              }}
+              aria-label="Verdelen over meerdere potjes"
+              className="shrink-0 px-3"
+            >
+              <Split size={16} aria-hidden />
+              Verdelen
+            </Button>
           ) : null}
           <Button
             variant="ghost"
@@ -1002,7 +1097,8 @@ export function SortScreen({
       <RawSheet open={rawOpen} onClose={() => setRawOpen(false)} transaction={current} onNoteSaved={updateNote} />
 
       {isCash && (
-        <CashSplitSheet
+        <AmountsSheet
+          mode="cash"
           key={current.id}
           open={cashOpen}
           onClose={() => setCashOpen(false)}
@@ -1010,6 +1106,20 @@ export function SortScreen({
           categories={categories.filter((c) => c.systemKey === null && !c.isIncome)}
           pending={isPending}
           onConfirm={cashSplit}
+        />
+      )}
+
+      {canSplit && (
+        <AmountsSheet
+          mode="split"
+          key={current.id}
+          open={partsOpen}
+          onClose={() => setPartsOpen(false)}
+          amountAbs={Math.abs(current.amount)}
+          counterparty={current.counterparty}
+          categories={categories.filter((c) => c.systemKey === null && !c.isIncome)}
+          pending={isPending}
+          onConfirm={splitParts}
         />
       )}
 

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { VERDEELD_CATEGORY } from "@/lib/categories/types";
 import type { Database } from "@/lib/supabase/types";
 
 /**
@@ -50,6 +51,10 @@ export interface SearchResult {
   awaitingRefund: boolean;
   /** Terugbetaling: tegenpartij van de uitgave waar hij bij hoort, anders null. */
   refundFor: string | null;
+  /** Deel van een verdeelde afschrijving: die afschrijving (tegenpartij en bedrag), anders null. */
+  splitParent: { counterparty: string; amount: number } | null;
+  /** Verdeelde afschrijving zelf (in Verdeeld): over hoeveel potjes, anders null. */
+  splitParts: number | null;
 }
 
 export interface SearchOptions {
@@ -75,7 +80,7 @@ export async function searchTransactions(
   let query = supabase
     .from("transactions")
     .select(
-      "id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note, category_id, source, awaiting_refund, refund_for_id",
+      "id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note, category_id, source, awaiting_refund, refund_for_id, split_parent_id",
     )
     .eq("is_internal_transfer", false);
 
@@ -95,12 +100,31 @@ export async function searchTransactions(
   // Geen banktekst of zoekterm in de foutmelding: alleen dat het misging.
   if (error) throw new Error("Zoeken lukte niet.");
 
-  // Bij terugbetalingen de uitgave erbij (één extra query, alleen als er zulke regels zijn).
-  const targetIds = [...new Set((data ?? []).flatMap((t) => (t.refund_for_id ? [t.refund_for_id] : [])))];
-  const targets = new Map<string, string>();
+  // Bij terugbetalingen de uitgave erbij, bij delen de afschrijving (één extra query, alleen als er zulke regels zijn).
+  const targetIds = [
+    ...new Set((data ?? []).flatMap((t) => [t.refund_for_id, t.split_parent_id].filter((id): id is string => id !== null))),
+  ];
+  const targets = new Map<string, { counterparty: string; amount: number }>();
   if (targetIds.length > 0) {
-    const { data: rows } = await supabase.from("transactions").select("id, counterparty").in("id", targetIds);
-    for (const row of rows ?? []) targets.set(row.id, row.counterparty?.trim() || "Onbekende tegenpartij");
+    const { data: rows } = await supabase.from("transactions").select("id, counterparty, amount").in("id", targetIds);
+    for (const row of rows ?? []) {
+      targets.set(row.id, { counterparty: row.counterparty?.trim() || "Onbekende tegenpartij", amount: Number(row.amount) });
+    }
+  }
+
+  // Verdeelde afschrijvingen (in het potje Verdeeld): over hoeveel potjes.
+  const partsPerParent = new Map<string, number>();
+  const { data: verdeeld } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("system_key", VERDEELD_CATEGORY.systemKey)
+    .maybeSingle();
+  const parentIds = verdeeld ? (data ?? []).filter((t) => t.category_id === verdeeld.id).map((t) => t.id) : [];
+  if (parentIds.length > 0) {
+    const { data: parts } = await supabase.from("transactions").select("split_parent_id").in("split_parent_id", parentIds);
+    for (const part of parts ?? []) {
+      if (part.split_parent_id) partsPerParent.set(part.split_parent_id, (partsPerParent.get(part.split_parent_id) ?? 0) + 1);
+    }
   }
 
   return (data ?? []).map((t) => ({
@@ -117,7 +141,9 @@ export async function searchTransactions(
     categoryId: t.category_id,
     isCash: t.source === "cash",
     awaitingRefund: t.awaiting_refund,
-    refundFor: t.refund_for_id ? (targets.get(t.refund_for_id) ?? "een uitgave") : null,
+    refundFor: t.refund_for_id ? (targets.get(t.refund_for_id)?.counterparty ?? "een uitgave") : null,
+    splitParent: t.split_parent_id ? (targets.get(t.split_parent_id) ?? null) : null,
+    splitParts: partsPerParent.get(t.id) ?? null,
   }));
 }
 

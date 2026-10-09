@@ -247,3 +247,35 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
 - **"Ik krijg een deel terug" is een klein knopje direct onder de kaart** (Stein), niet meer onderin: met veel
   potjes hoefde je anders te scrollen. Onderin staat alleen nog Later (en bij een pinopname Verdelen en Nog contant).
   De regel onder de kaart is er altijd, zodat de tegels nooit verspringen.
+
+## Verdelen over potjes (9 oktober 2026, vraag van Stein)
+
+- **Eén afschrijving over meerdere potjes** ("Ik krijg een uitgave van mijn creditcard en die moet verdeeld worden").
+  Op elk uitgavekaartje staat onderin **Verdelen** naast Later. Per potje vul je een bedrag in, met per regel een knop
+  **Rest** (vult precies wat er nog over is) en per deel een eigen notitie (mag leeg). "Nog te verdelen" staat altijd in
+  beeld; Opslaan kan pas als dat **precies € 0,00** is en er minstens twee potjes zijn (één potje = gewoon de tegel).
+- De afschrijving gaat in het ingebouwde potje **Verdeeld** (telt niet mee, geen tegel); elk deel is een eigen regel in
+  zijn potje, met dezelfde datum en tegenpartij. In lijsten: "Deel van ICS Creditcard (€ 450,00)" bij een deel en
+  "Verdeeld over 3 potjes" bij de afschrijving. Een deel verplaats je los; de afschrijving zelf niet. Ongedaan maken
+  haalt de delen weg en legt het kaartje terug op de stapel.
+- **Creditcard-hint:** herkent de app een creditcard-afrekening (ICS, International Card Services, American Express,
+  Rabo Card, "creditcard", of Mastercard/Visa met "afrekening" of "incasso"), dan staat er "Creditcard" op de kaart en
+  onderaan "Verdeel over je potjes met Verdelen". Alleen een hint: de app verdeelt nooit zelf.
+- Niet samen met "Ik krijg een deel terug": staat die schakelaar aan, dan vraagt Verdelen hem eerst uit te zetten.
+- Pinopnames houden hun eigen Verdelen (Contant, met "Nog over"); dezelfde sheet, ander gedrag.
+- Bij de vaste lasten telt de afschrijving in Verdeeld mee (het is een echte betaling van je rekening), de delen niet.
+
+## Inkomsten en Meer inzicht (9 oktober 2026, vraag van Stein)
+
+- **Overzicht heeft een schakelaar Uitgaven | Inkomsten** (standaard Uitgaven, die weergave is ongewijzigd). De keuze
+  staat in de URL (`?weergave=inkomsten`), zodat de maandpijltjes haar vasthouden.
+- **Inkomsten = alleen geld in een inkomstenpotje** (`incomeOf`). Geld terug, Voorgeschoten, terugbetalingen in een
+  uitgavepotje, eigen overboekingen en inkomend geld zonder potje tellen nooit mee. Dat laatste staat er als regel
+  ("€ 25 binnengekomen zit nog in geen potje"), met een link naar Swipen.
+- De vergelijking met je gemiddelde is **neutraal grijs**, niet groen of amber: meer of minder inkomen is geen oordeel.
+  De lopende maand vergelijkt na even veel dagen, net als bij de uitgaven.
+- **Meer inzicht** (`/overzicht/inzicht`, rij op Overzicht): inkomsten en uitgaven per maand, uitgaven per potje,
+  deze maand tot nu tegenover je gemiddelde, per weekdag, de vijf grootste uitgaven en vaste lasten tegenover de rest.
+  Elke kaart heeft een kop die de conclusie zegt en een tabelweergave.
+- Bij vaste lasten op Meer inzicht telt een verdeelde afschrijving mee en de delen niet (zie Verdelen hierboven).
+

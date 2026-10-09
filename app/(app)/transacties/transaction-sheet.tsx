@@ -8,6 +8,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { ACTION_LABEL } from "@/config/app";
 import type { SearchResult } from "@/lib/transactions/search";
+import { splitPartLine, splitSummary } from "@/lib/transactions/split-parts";
 import { moveTransaction } from "../potjes/actions";
 import type { ListCategory } from "./transaction-list";
 
@@ -45,12 +46,16 @@ function SheetBody({ transaction, categories }: { transaction: SearchResult; cat
           amount: transaction.amount,
           ownShare: transaction.ownShare,
           counterparty: transaction.rawCounterparty ?? transaction.counterparty,
-          // Contant heeft geen banktekst: alleen de korte notitie van het verdelen, als die er is.
+          // Contant en een deel hebben geen banktekst: alleen de korte notitie van het verdelen, als die er is.
           description: transaction.isCash
             ? transaction.description
               ? `Contant betaald: ${transaction.description}`
               : "Contant betaald"
-            : (transaction.rawDescription ?? transaction.description),
+            : transaction.splitParent
+              ? [splitPartLine(transaction.splitParent.counterparty, transaction.splitParent.amount), transaction.description]
+                  .filter(Boolean)
+                  .join(": ")
+              : (transaction.rawDescription ?? transaction.description),
         }}
       >
         <div>
@@ -71,7 +76,11 @@ function SheetBody({ transaction, categories }: { transaction: SearchResult; cat
           </ButtonLink>
         </section>
       ) : current?.isSystem ? (
-        <p className="text-[15px] text-text-muted">Dit kaartje hoort bij {current.name}. Dat verplaats je hier niet.</p>
+        <p className="text-[15px] text-text-muted">
+          {transaction.splitParts !== null
+            ? `${splitSummary(transaction.splitParts)}. Elk deel verplaats je los.`
+            : `Dit kaartje hoort bij ${current.name}. Dat verplaats je hier niet.`}
+        </p>
       ) : (
         <MoveSection transaction={transaction} categories={categories} />
       )}

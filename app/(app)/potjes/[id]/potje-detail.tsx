@@ -23,11 +23,13 @@ import { GoalSheet } from "./goal-sheet";
 import { TransactionSheet } from "./transaction-sheet";
 
 /**
- * Wat er onder de datum staat: bij een terugbetaling waar hij bij hoort, bij een uitgave of hij
- * nog op geld terug wacht en wat er al terug is, anders (oude verdeling) jouw deel.
+ * Wat er onder de datum staat: bij een terugbetaling waar hij bij hoort, bij een deel van welke
+ * afschrijving, bij een uitgave of hij nog op geld terug wacht en wat er al terug is, anders (oude
+ * verdeling) jouw deel.
  */
 function refundNote(tx: DetailTransaction): string {
   if (tx.refundFor) return ` · Terug voor: ${tx.refundFor}`;
+  if (tx.splitOf) return ` · ${tx.splitOf}`;
   const received = tx.refundReceived ?? 0;
   if (tx.awaitingRefund) {
     return received > 0
@@ -64,8 +66,10 @@ export interface DetailTransaction {
   rawDescription: string | null;
   bookingTime: string | null;
   note: string | null;
-  /** Contante uitgave: de korte notitie van het verdelen (staat in de omschrijving), anders null. */
+  /** Contante uitgave of deel: de korte notitie van het verdelen (staat in de omschrijving), anders null. */
   cashNote?: string | null;
+  /** Deel van een verdeelde afschrijving: "Deel van ICS Creditcard (€ 450,00)", anders null. */
+  splitOf?: string | null;
   /** Uitgave die nog op geld terug wacht. */
   awaitingRefund?: boolean;
   /** Al terug voor deze uitgave via gekoppelde terugbetalingen (positief). */

@@ -1,9 +1,13 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { CONTANT_CATEGORY, GELD_TERUG_CATEGORY, VOORGESCHOTEN_CATEGORY } from "./types";
+import { CONTANT_CATEGORY, GELD_TERUG_CATEGORY, VERDEELD_CATEGORY, VOORGESCHOTEN_CATEGORY } from "./types";
 
-type SystemCategory = typeof VOORGESCHOTEN_CATEGORY | typeof CONTANT_CATEGORY | typeof GELD_TERUG_CATEGORY;
+type SystemCategory =
+  | typeof VOORGESCHOTEN_CATEGORY
+  | typeof CONTANT_CATEGORY
+  | typeof GELD_TERUG_CATEGORY
+  | typeof VERDEELD_CATEGORY;
 
 /** Zoekt een ingebouwd potje op (en zet het terug als het gearchiveerd was), of maakt het aan. */
 async function ensureSystemCategory(
@@ -69,4 +73,12 @@ export async function ensureContantCategory(supabase: SupabaseClient<Database>, 
  */
 export async function ensureGeldTerugCategory(supabase: SupabaseClient<Database>, userId: string): Promise<string> {
   return ensureSystemCategory(supabase, userId, GELD_TERUG_CATEGORY, 997);
+}
+
+/**
+ * Zorgt dat het ingebouwde potje Verdeeld bestaat en geeft het id terug. Afschrijvingen die over
+ * meerdere potjes zijn verdeeld staan hierin; de delen tellen in hun eigen potje. Geen tegel.
+ */
+export async function ensureVerdeeldCategory(supabase: SupabaseClient<Database>, userId: string): Promise<string> {
+  return ensureSystemCategory(supabase, userId, VERDEELD_CATEGORY, 996);
 }

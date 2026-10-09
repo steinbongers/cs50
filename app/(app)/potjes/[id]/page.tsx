@@ -8,6 +8,7 @@ import { fetchAll } from "@/lib/supabase/fetch-all";
 import { createClient } from "@/lib/supabase/server";
 import { CASH_COUNTERPARTY } from "@/lib/transactions/cash";
 import { receivedPerExpense } from "@/lib/transactions/refunds";
+import { splitPartLine } from "@/lib/transactions/split-parts";
 import { DetailViewed } from "./detail-viewed";
 import { PotjeDetail, type DetailTransaction } from "./potje-detail";
 
@@ -97,7 +98,7 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
   const { data: rows } = await supabase
     .from("transactions")
     .select(
-      "id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note, source, awaiting_refund, refund_for_id",
+      "id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note, source, awaiting_refund, refund_for_id, split_parent_id",
     )
     .eq("category_id", category.id)
     .order("booking_date", { ascending: false })
@@ -105,23 +106,33 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
 
   // Geld terug bijhouden: per uitgave wat er al terug is, en bij een terugbetaling waar hij bij hoort.
   const expenseIds = (rows ?? []).filter((t) => Number(t.amount) < 0).map((t) => t.id);
-  const refundForIds = [...new Set((rows ?? []).flatMap((t) => (t.refund_for_id ? [t.refund_for_id] : [])))];
+  // Terugbetalingen en delen wijzen naar een andere regel: die halen we in één keer op.
+  const refundForIds = [
+    ...new Set((rows ?? []).flatMap((t) => [t.refund_for_id, t.split_parent_id].filter((id): id is string => id !== null))),
+  ];
   const [{ data: linkedRefunds }, { data: refundTargets }] = await Promise.all([
     expenseIds.length > 0
       ? supabase.from("transactions").select("refund_for_id, amount").in("refund_for_id", expenseIds)
       : Promise.resolve({ data: [] as { refund_for_id: string | null; amount: number }[] }),
     refundForIds.length > 0
-      ? supabase.from("transactions").select("id, counterparty").in("id", refundForIds)
-      : Promise.resolve({ data: [] as { id: string; counterparty: string | null }[] }),
+      ? supabase.from("transactions").select("id, counterparty, amount").in("id", refundForIds)
+      : Promise.resolve({ data: [] as { id: string; counterparty: string | null; amount: number }[] }),
   ]);
   const receivedFor = receivedPerExpense(
     (linkedRefunds ?? []).map((r) => ({ refundForId: r.refund_for_id, amount: Number(r.amount) })),
   );
   const targetName = new Map((refundTargets ?? []).map((t) => [t.id, t.counterparty?.trim() || "Onbekende tegenpartij"]));
+  const targetAmount = new Map((refundTargets ?? []).map((t) => [t.id, Number(t.amount)]));
 
   const transactions: DetailTransaction[] = (rows ?? []).map((t) => {
     // Contante uitgave: geen bank en geen banktekst, alleen eventueel de korte notitie van het verdelen.
     const isCash = t.source === "cash";
+    // Deel van een verdeelde afschrijving: ook geen eigen banktekst; wel waar het deel van is.
+    const parentName = t.split_parent_id ? targetName.get(t.split_parent_id) : undefined;
+    const splitOf =
+      t.split_parent_id && parentName !== undefined
+        ? splitPartLine(parentName, targetAmount.get(t.split_parent_id) ?? 0)
+        : null;
     return {
       id: t.id,
       bookingDate: t.booking_date,
@@ -129,10 +140,17 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
       ownShare: t.own_share === null ? null : Number(t.own_share),
       counterparty: t.counterparty ?? (isCash ? CASH_COUNTERPARTY : "Onbekende tegenpartij"),
       rawCounterparty: isCash ? CASH_COUNTERPARTY : (t.raw_counterparty ?? t.counterparty ?? "Onbekende tegenpartij"),
-      rawDescription: isCash ? (t.description ? `Contant betaald: ${t.description}` : "Contant betaald") : (t.raw_description ?? t.description),
+      rawDescription: isCash
+        ? t.description
+          ? `Contant betaald: ${t.description}`
+          : "Contant betaald"
+        : splitOf
+          ? [splitOf, t.description].filter(Boolean).join(": ")
+          : (t.raw_description ?? t.description),
       bookingTime: t.booking_time ? t.booking_time.slice(0, 5) : null,
       note: t.note,
-      cashNote: isCash ? t.description : null,
+      cashNote: isCash || t.source === "split" ? t.description : null,
+      splitOf,
       awaitingRefund: t.awaiting_refund,
       refundReceived: receivedFor.get(t.id) ?? 0,
       refundFor: t.refund_for_id ? (targetName.get(t.refund_for_id) ?? "een uitgave") : null,

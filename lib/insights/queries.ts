@@ -13,10 +13,21 @@ export interface InsightData {
   cats: CatLite[];
 }
 
+export interface InsightOptions {
+  /** Laad ook alles vanaf deze datum ("YYYY-MM-DD"), als die verder terug ligt dan de standaardhistorie. */
+  since?: string;
+}
+
 /** Laadt transacties (recente plus alle open) en actieve potjes voor de rekenfuncties. */
-export async function loadInsightData(supabase: SupabaseClient<Database>, today = new Date()): Promise<InsightData> {
-  const cutoff = toISODate(new Date(today.getTime() - HISTORY_DAYS * 864e5));
-  const columns = "id, booking_date, amount, own_share, category_id, created_at, categorized_at, is_internal_transfer";
+export async function loadInsightData(
+  supabase: SupabaseClient<Database>,
+  today = new Date(),
+  options: InsightOptions = {},
+): Promise<InsightData> {
+  const standard = toISODate(new Date(today.getTime() - HISTORY_DAYS * 864e5));
+  const cutoff = options.since && options.since < standard ? options.since : standard;
+  const columns =
+    "id, booking_date, amount, own_share, category_id, created_at, categorized_at, is_internal_transfer, counterparty, split_parent_id";
 
   const [recent, openOld, { data: categories }] = await Promise.all([
     fetchAll((from, to) => supabase.from("transactions").select(columns).gte("booking_date", cutoff).order("id").range(from, to)),
@@ -44,6 +55,8 @@ export async function loadInsightData(supabase: SupabaseClient<Database>, today 
       createdAt: row.created_at,
       categorizedAt: row.categorized_at,
       isInternal: row.is_internal_transfer,
+      counterparty: row.counterparty,
+      isSplitPart: row.split_parent_id !== null,
     });
   }
 

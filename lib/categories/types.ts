@@ -35,3 +35,14 @@ export const CONTANT_CATEGORY = {
   icon: "wallet",
   color: "groen",
 } as const;
+
+/**
+ * Vaste gegevens van het ingebouwde potje Verdeeld: afschrijvingen (vaak de creditcard) die over
+ * meerdere potjes zijn verdeeld. De afschrijving zelf telt niet mee; de delen tellen in hun eigen potje.
+ */
+export const VERDEELD_CATEGORY = {
+  systemKey: "verdeeld",
+  name: "Verdeeld",
+  icon: "credit-card",
+  color: "grijs",
+} as const;

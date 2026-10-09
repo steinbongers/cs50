@@ -14,6 +14,10 @@ export interface TxLite {
   createdAt: string;
   categorizedAt: string | null;
   isInternal: boolean;
+  /** Opgeschoonde tegenpartij; alleen gevuld door de loader (lijsten op Overzicht en Meer inzicht). */
+  counterparty?: string | null;
+  /** Deel van een verdeelde afschrijving (de afschrijving zelf staat in Verdeeld). */
+  isSplitPart?: boolean;
 }
 
 export interface CatLite {
@@ -41,6 +45,43 @@ export function spendOf(tx: TxLite, cats: Map<string, CatLite>): number {
   if (tx.amount < 0) return tx.ownShare ?? -tx.amount;
   // Inkomend geld zonder potje weten we nog niet; met uitgavepotje is het een terugbetaling.
   return cat ? -tx.amount : 0;
+}
+
+/**
+ * Wat een transactie bijdraagt aan "inkomsten": alleen geld in een inkomstenpotje.
+ * Geld terug, Voorgeschoten, terugbetalingen in een uitgavepotje, eigen overboekingen
+ * en inkomend geld zonder potje tellen nooit als inkomen. Een afschrijving in een
+ * inkomstenpotje (een correctie) gaat er weer vanaf.
+ */
+export function incomeOf(tx: TxLite, cats: Map<string, CatLite>): number {
+  if (tx.isInternal || !tx.categoryId) return 0;
+  const cat = cats.get(tx.categoryId);
+  if (!cat || !cat.isIncome || cat.systemKey) return 0;
+  return tx.amount;
+}
+
+/** Inkomsten in [from, to). Nooit negatief. */
+export function totalIncome(txs: TxLite[], cats: Map<string, CatLite>, from: string, to: string): number {
+  let total = 0;
+  for (const tx of txs) if (inRange(tx.bookingDate, from, to)) total += incomeOf(tx, cats);
+  return Math.max(0, round2(total));
+}
+
+/** Inkomsten per inkomstenpotje in [from, to). */
+export function incomePerCategory(
+  txs: TxLite[],
+  cats: Map<string, CatLite>,
+  from: string,
+  to: string,
+): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const tx of txs) {
+    if (!tx.categoryId || !inRange(tx.bookingDate, from, to)) continue;
+    const value = incomeOf(tx, cats);
+    if (value === 0) continue;
+    totals.set(tx.categoryId, round2((totals.get(tx.categoryId) ?? 0) + value));
+  }
+  return totals;
 }
 
 function inRange(date: string, from: string, to: string): boolean {

@@ -19,12 +19,14 @@ export type EventType =
   /**
    * Transactie in een potje gezet.
    * `{ transaction_id, category_id, duration_ms, skipped_before?, split_persons?, split_method?,
-   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' | 'refund' | 'refund_for',
-   *    with_category?, complete?, estimate? }`
+   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' | 'refund' | 'refund_for' | 'split_parts',
+   *    with_category?, complete?, estimate?, parts? }`
    * `split_method`: 'bank' | 'other' (verdeeld) of 'track' (bijhouden: de hele uitgave wacht op geld terug).
    * `flow: 'refund_for'`: inkomend geld gekoppeld aan een uitgave die op geld terug wacht;
    * `complete` zegt of de gebruiker daarmee alles binnen meldde (de rest is van hem); `estimate` of hij
    * daarbij zelf schatte wat hij uitgaf (een deel kwam buiten de bank terug). Nooit het bedrag zelf.
+   * `flow: 'split_parts'`: één afschrijving (vaak de creditcard) verdeeld over potjes; `parts` is het
+   * aantal potjes, `credit_card` of de kaart hem als creditcard herkende. Nooit bedragen of notities.
    */
   | "swipe"
   /** Transactie verplaatst via de detailpagina. `{ transaction_id, category_id }` */
