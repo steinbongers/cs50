@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CircleHelp, Download, Info, Landmark, LayoutGrid, ShieldCheck } from "lucide-react";
+import { CircleHelp, Download, Info, Landmark, LayoutGrid, Pin, ShieldCheck } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
 import { HapticsToggle } from "@/components/push/haptics-toggle";
 import { PushToggle } from "@/components/push/push-toggle";
@@ -51,6 +51,13 @@ export default async function InstellingenPage() {
           icon={LayoutGrid}
           iconClass="bg-primary-soft text-primary"
           label={<RowLabel label="Potjes beheren" hint="Volgorde en gearchiveerde potjes" />}
+          className={ROW_FOCUS}
+        />
+        <ListRow
+          href="/instellingen/vaste-ontvangers"
+          icon={Pin}
+          iconClass="bg-cat-paars-soft text-cat-paars"
+          label={<RowLabel label="Vaste ontvangers" hint="Potje ingedrukt gehouden: gaat er altijd in" />}
           className={ROW_FOCUS}
         />
         <SalaryDayRow salaryDay={profile.salary_day} />

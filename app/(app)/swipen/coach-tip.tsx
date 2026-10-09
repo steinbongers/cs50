@@ -10,7 +10,7 @@ export type CoachArrow = "center" | "left" | "right";
 export const COACH_STEPS: ReadonlyArray<{ title: string; text?: string; arrow: CoachArrow }> = [
   {
     title: "Elk kaartje is één betaling",
-    text: "Tik op het potje waar hij hoort. Jij beslist, wij vullen niets in.",
+    text: "Tik op het potje waar hij hoort. Ingedrukt houden: die ontvanger gaat er voortaan altijd in.",
     arrow: "center",
   },
   {

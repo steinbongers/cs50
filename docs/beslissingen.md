@@ -205,3 +205,10 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
   sneeuwvlokje op Overzicht laat zien dat er een dag is opgevangen. Dagen zonder kaartjes tellen mee. De streak
   beloont sorteren, niet uitgeven. Meldingen wisselen per dag, nooit met schuldgevoel; bij meer dan 15 kaartjes:
   "Doe er een paar, de rest kan morgen ook nog."
+- **Vaste ontvangers** (9 oktober 2026, Stein). Een potje ingedrukt houden (0,55 s) zet dit kaartje erin én legt
+  vast dat deze ontvanger voortaan altijd in dit potje gaat. Open kaartjes van die ontvanger gaan meteen mee,
+  nieuwe kaartjes bij de bank-sync. Dit is de enige automatische indeling, en alleen omdat de gebruiker het zelf
+  vraagt. De richting telt: geld terug van dezelfde winkel gaat niet vanzelf mee. Weghalen kan in Instellingen >
+  Vaste ontvangers; wat al is ingedeeld blijft dan staan. Direct na het instellen zet Ongedaan maken alles terug.
+- **Ook de andere van deze winkel.** Na een gewone keuze biedt de pil onderin "Ook 3 andere" aan als dezelfde
+  ontvanger nog op de stapel ligt. De gebruiker tikt zelf; nooit bij een verdeling of terugbetaling.

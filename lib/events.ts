@@ -19,7 +19,7 @@ export type EventType =
   /**
    * Transactie in een potje gezet.
    * `{ transaction_id, category_id, duration_ms, skipped_before?, split_persons?, split_method?,
-   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' }`
+   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' }`
    */
   | "swipe"
   /** Transactie verplaatst via de detailpagina. `{ transaction_id, category_id }` */
@@ -33,6 +33,10 @@ export type EventType =
   | "bulk_assign"
   /** "Ook de andere" ongedaan gemaakt. `{ count }` */
   | "bulk_undo"
+  /** Vaste ontvanger ingesteld (potje ingedrukt gehouden). `{ category_id, applied, replaced }` */
+  | "rule_created"
+  /** Vaste ontvanger weggehaald. `{ reverted }` (aantal kaartjes terug op de stapel) */
+  | "rule_removed"
   /** Laatste keuze ongedaan gemaakt. `{ transaction_id }` */
   | "undo"
   /** Kaart op Later gezet. `{ transaction_id, skipped_count }` */

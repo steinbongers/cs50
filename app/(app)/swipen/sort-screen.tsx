@@ -18,7 +18,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { Sheet } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { ACTION_LABEL, UNDO_WINDOW_MS } from "@/config/app";
-import { tap, warning } from "@/lib/haptics";
+import { success, tap, warning } from "@/lib/haptics";
 import type { QuickSuggestionKey } from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON } from "@/lib/categories/icons";
 import { CATEGORY_COLORS } from "@/lib/categories/palette";
@@ -28,6 +28,7 @@ import { sameCounterparty } from "@/lib/transactions/same-counterparty";
 import { splitEqually } from "@/lib/transactions/split";
 import { cn } from "@/lib/utils";
 import {
+  assignAlways,
   assignCategory,
   assignMany,
   completeCoach,
@@ -35,6 +36,7 @@ import {
   createCategory,
   setCoachStep,
   settleSharesWithTransaction,
+  removeRule,
   skipTransaction,
   undoAssign,
   undoMany,
@@ -67,6 +69,15 @@ const COACH_DONE_MS = 2500;
 const ERROR_MS = 5000;
 const METHOD_MISSING = "Kies eerst: via de bank of buiten de bank.";
 
+/** Een groep keuzes die in één keer terug kan; bij een vaste ontvanger gaat ook de regel weg. */
+interface UndoGroup {
+  decisions: Decision[];
+  text: string;
+  ruleId?: string;
+  /** Alle kaartjes die de regel indeelde, ook die niet op de lokale stapel lagen. */
+  revertIds?: string[];
+}
+
 /** Hoeveel er bij het potje bijkomt als deze kaart erin gaat (bij een verdeling alleen jouw deel). */
 function spentDelta(transaction: OpenTransaction, category: CategoryOption, ownShare?: number): number {
   if (category.isIncome) return Math.max(transaction.amount, 0);
@@ -87,7 +98,8 @@ const VOORGESCHOTEN_OPTION: CategoryOption = {
 
 /**
  * Het hart van de app. Eén kaart bovenin, alle potjes als tegels eronder.
- * De gebruiker beslist zelf, de app vult niets in en markeert niets vooraf.
+ * De gebruiker beslist zelf, de app vult niets in en markeert niets vooraf. Alleen een vaste
+ * ontvanger (potje ingedrukt gehouden) deelt de app daarna zelf in.
  */
 export function SortScreen({
   categories: initialCategories,
@@ -107,8 +119,8 @@ export function SortScreen({
   const [undone, setUndone] = useState(0);
   const [exitKind, setExitKind] = useState<ExitKind>("assign");
   const [undo, setUndo] = useState<Decision | null>(null);
-  // Na "Ook de andere": de groep die in één keer is ingedeeld (en in één keer terug kan).
-  const [undoBulk, setUndoBulk] = useState<Decision[] | null>(null);
+  // Na "Ook de andere" of een vaste ontvanger: de groep die in één keer is ingedeeld (en in één keer terug kan).
+  const [undoBulk, setUndoBulk] = useState<UndoGroup | null>(null);
   const [pulse, setPulse] = useState<{ id: string | null; key: number }>({ id: null, key: 0 });
   const [error, setError] = useState<string | null>(null);
   // Een ontbrekende keuze is geen fout: die tonen we als rustige hint, niet in rood.
@@ -139,6 +151,11 @@ export function SortScreen({
   const [adoptedBatch, setAdoptedBatch] = useState(transactions);
 
   const current = queue[0] ?? null;
+  // De stapel zoals hij nu is, voor het antwoord van de server na een vaste ontvanger.
+  const queueRef = useRef(queue);
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
   const split = splitFor.id === current?.id ? splitFor.state : EMPTY_SPLIT;
   const availableShares = openShares.filter((s) => !settledShareIds.has(s.id));
   const openSharesTotal = availableShares.reduce((a, s) => a + s.amount, 0);
@@ -388,34 +405,90 @@ export function SortScreen({
   const assignSame = useCallback(() => {
     if (!undo || sameOffer.length === 0) return;
     const { category } = undo;
-    const group: Decision[] = sameOffer.map((transaction) => ({ transaction, category }));
-    const ids = new Set(group.map((d) => d.transaction.id));
+    const decisionsSame: Decision[] = sameOffer.map((transaction) => ({ transaction, category }));
+    const group: UndoGroup = { decisions: decisionsSame, text: `Nog ${decisionsSame.length} in ${category.name}` };
+    const ids = new Set(decisionsSame.map((d) => d.transaction.id));
     tap();
     setError(null);
     setHint(null);
     setExitKind("assign");
     setQueue((q) => q.filter((t) => !ids.has(t.id)));
-    setDecisions((d) => [...d, ...group]);
+    setDecisions((d) => [...d, ...decisionsSame]);
     setUndo(null);
     setUndoBulk(group);
-    group.forEach((d) => bumpCategoryTotal(category.id, spentDelta(d.transaction, category)));
-    setAnnouncement(`Nog ${group.length} van ${undo.transaction.counterparty} in ${category.name}`);
+    decisionsSame.forEach((d) => bumpCategoryTotal(category.id, spentDelta(d.transaction, category)));
+    setAnnouncement(`Nog ${decisionsSame.length} van ${undo.transaction.counterparty} in ${category.name}`);
 
     startTransition(async () => {
       const result = await assignMany([...ids], category.id);
       if (!result.ok) {
-        setQueue((q) => [...group.map((d) => d.transaction), ...q.filter((t) => !ids.has(t.id))]);
+        setQueue((q) => [...decisionsSame.map((d) => d.transaction), ...q.filter((t) => !ids.has(t.id))]);
         setDecisions((d) => d.filter((x) => !ids.has(x.transaction.id)));
         setUndoBulk((u) => (u === group ? null : u));
-        group.forEach((d) => bumpCategoryTotal(category.id, -spentDelta(d.transaction, category)));
+        decisionsSame.forEach((d) => bumpCategoryTotal(category.id, -spentDelta(d.transaction, category)));
         setError(result.error);
       }
     });
   }, [undo, sameOffer, startTransition]);
 
+  // Potje ingedrukt gehouden: deze ontvanger gaat voortaan altijd hierin (een keuze van de gebruiker zelf).
+  const hold = useCallback(
+    (category: CategoryOption) => {
+      if (!current) return;
+      if (split.enabled) {
+        warning();
+        setHint("Een vaste ontvanger gaat zonder delen. Zet de schakelaar eerst uit.");
+        return;
+      }
+      const transaction = current;
+      const durationMs = performance.now() - shownAt.current;
+      success();
+      setError(null);
+      setHint(null);
+      setMethodMissing(false);
+      setExitKind("assign");
+      setQueue((q) => q.slice(1));
+      setDecisions((d) => [...d, { transaction, category }]);
+      setUndo(null);
+      setUndoBulk(null);
+      setPulse((p) => ({ id: category.id, key: p.key + 1 }));
+      bumpCategoryTotal(category.id, spentDelta(transaction, category));
+
+      startTransition(async () => {
+        const result = await assignAlways(transaction.id, category.id, durationMs, { coach: showCoach });
+        if (!result.ok) {
+          setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
+          setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
+          bumpCategoryTotal(category.id, -spentDelta(transaction, category));
+          setError(result.error);
+          return;
+        }
+        const otherIds = new Set(result.ids.filter((id) => id !== transaction.id));
+        // De andere kaartjes van deze ontvanger die nog op de stapel lagen.
+        const others: Decision[] = queueRef.current
+          .filter((t) => otherIds.has(t.id))
+          .map((t) => ({ transaction: t, category }));
+        setQueue((q) => q.filter((t) => !otherIds.has(t.id)));
+        setDecisions((d) => [...d, ...others]);
+        others.forEach((d) => bumpCategoryTotal(category.id, spentDelta(d.transaction, category)));
+        const name = transaction.counterparty;
+        const text = `${name} gaat voortaan in ${category.name}`;
+        setAnnouncement(otherIds.size > 0 ? `${text}. Nog ${otherIds.size} kaartjes meegenomen.` : text);
+        setUndoBulk({
+          decisions: [{ transaction, category }, ...others],
+          text,
+          ruleId: result.ruleId,
+          revertIds: [transaction.id, ...otherIds],
+        });
+      });
+    },
+    [current, split.enabled, showCoach, startTransition],
+  );
+
   const handleUndoBulk = useCallback(() => {
     if (!undoBulk) return;
-    const group = undoBulk;
+    const group = undoBulk.decisions;
+    const { ruleId, revertIds } = undoBulk;
     const ids = new Set(group.map((d) => d.transaction.id));
     const category = group[0].category;
     warning();
@@ -426,9 +499,9 @@ export function SortScreen({
     setDecisions((d) => d.filter((x) => !ids.has(x.transaction.id)));
     setUndone((u) => u + group.length);
     group.forEach((d) => bumpCategoryTotal(category.id, -spentDelta(d.transaction, category)));
-    setAnnouncement(`${group.length} kaartjes terug op de stapel`);
+    setAnnouncement(group.length === 1 ? "Kaartje terug op de stapel" : `${group.length} kaartjes terug op de stapel`);
     startTransition(async () => {
-      const result = await undoMany([...ids]);
+      const result = ruleId ? await removeRule(ruleId, revertIds ?? [...ids]) : await undoMany([...ids]);
       if (!result.ok) setError(result.error);
     });
   }, [undoBulk, startTransition]);
@@ -485,8 +558,8 @@ export function SortScreen({
 
   const undoToast = undoBulk ? (
     <UndoToast
-      id={`bulk-${undoBulk[0].transaction.id}`}
-      text={`Nog ${undoBulk.length} in ${undoBulk[0].category.name}`}
+      id={`bulk-${undoBulk.decisions[0].transaction.id}`}
+      text={undoBulk.text}
       onUndo={handleUndoBulk}
       error={error}
       hint={hint}
@@ -584,6 +657,7 @@ export function SortScreen({
         <CategoryTiles
           categories={categories}
           onPick={pick}
+          onHold={hold}
           onAdd={() => {
             tap();
             openEditor();

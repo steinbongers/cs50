@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EnableBankingError, getAccountBalances, getAccountTransactions } from "@/lib/enablebanking/client";
 import { toISODate } from "@/lib/format";
+import { applyRules } from "@/lib/transactions/apply-rules";
 import type { BankConnectionRow, ConnectionStatus, Database } from "@/lib/supabase/types";
 import { statusFor } from "./connections";
 import { mapTransaction, pickBalance, type TransactionInsert } from "./mapping";
@@ -81,6 +82,12 @@ export async function syncConnection(
           .select("id");
         if (insertError) throw new Error("Transacties konden niet worden opgeslagen.");
         inserted += insertedRows?.length ?? 0;
+        // Vaste ontvangers (door de gebruiker zelf ingesteld) meteen in hun potje.
+        try {
+          await applyRules(supabase, userId, { ids: (insertedRows ?? []).map((r) => r.id) });
+        } catch {
+          // dan blijven ze gewoon als kaartje staan
+        }
       }
 
       let lastBalance = account.last_balance;

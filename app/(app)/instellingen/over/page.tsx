@@ -18,7 +18,7 @@ export default function OverPage() {
       <div className="flex flex-col gap-7 px-4 pb-8">
         <div className="flex flex-col gap-1 px-1">
           <p className="text-[15px] leading-5">{APP_DESCRIPTION}</p>
-          <p className="text-[13px] leading-[18px] text-text-muted">Jij beslist waar elk bedrag hoort. Wij vullen niets in.</p>
+          <p className="text-[13px] leading-[18px] text-text-muted">Jij beslist waar elk bedrag hoort. Alleen wat jij vast zet, gaat vanzelf.</p>
         </div>
 
         <ListGroup>

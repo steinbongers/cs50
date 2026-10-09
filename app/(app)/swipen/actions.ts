@@ -13,6 +13,8 @@ import { isCategoryColor } from "@/lib/categories/palette";
 import type { CategoryDraft } from "@/lib/categories/types";
 import { logEvent } from "@/lib/events";
 import { createClient } from "@/lib/supabase/server";
+import { applyRules } from "@/lib/transactions/apply-rules";
+import { ruleKey } from "@/lib/transactions/rules";
 import { MAX_SAME_COUNTERPARTY } from "@/lib/transactions/same-counterparty";
 import { MAX_SPLIT_PERSONS, MIN_SPLIT_PERSONS, splitEqually } from "@/lib/transactions/split";
 import type { CategoryOption, OpenShare } from "@/lib/transactions/queries";
@@ -273,6 +275,108 @@ export async function undoAssign(transactionId: string): Promise<ActionResult> {
   if (error || !updated) return { ok: false, error: "Ongedaan maken lukte niet." };
 
   await logEvent("undo", { transaction_id: transactionId });
+  return { ok: true };
+}
+
+export type AssignAlwaysResult =
+  | { ok: true; ruleId: string; ids: string[]; replaced: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Potje ingedrukt gehouden: deze ontvanger gaat voortaan altijd in dit potje.
+ * Zet dit kaartje erin, legt de regel vast en deelt de andere open kaartjes van
+ * dezelfde ontvanger (zelfde richting) meteen mee in. Nieuwe kaartjes volgen bij de bank-sync.
+ */
+export async function assignAlways(
+  transactionId: string,
+  categoryId: string,
+  durationMs: number,
+  meta?: SwipeMeta,
+): Promise<AssignAlwaysResult> {
+  const user = await requireUser();
+  if (!isUuid(transactionId) || !isUuid(categoryId)) return { ok: false, error: GENERIC_ERROR };
+
+  const supabase = await createClient();
+  const { data: category } = await supabase
+    .from("categories")
+    .select("id, system_key")
+    .eq("id", categoryId)
+    .eq("user_id", user.id)
+    .eq("archived", false)
+    .maybeSingle();
+  if (!category) return { ok: false, error: "Dit potje bestaat niet (meer)." };
+  if (category.system_key) return { ok: false, error: "Dit potje kun je niet kiezen." };
+
+  const { data: transaction } = await supabase
+    .from("transactions")
+    .select("id, amount, counterparty")
+    .eq("id", transactionId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!transaction) return { ok: false, error: GENERIC_ERROR };
+  const match = ruleKey(transaction.counterparty, Number(transaction.amount));
+  if (!match) return { ok: false, error: "Deze ontvanger kunnen we niet herkennen. Kies het potje gewoon met een tik." };
+
+  const { data: existing } = await supabase
+    .from("category_rules")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("counterparty_match", match)
+    .maybeSingle();
+  const { data: rule, error: ruleError } = await supabase
+    .from("category_rules")
+    .upsert({ user_id: user.id, counterparty_match: match, category_id: categoryId }, { onConflict: "user_id,counterparty_match" })
+    .select("id")
+    .single();
+  if (ruleError || !rule) return { ok: false, error: GENERIC_ERROR };
+
+  const { error } = await supabase
+    .from("transactions")
+    .update({ category_id: categoryId, categorized_at: new Date().toISOString(), own_share: null })
+    .eq("id", transactionId)
+    .eq("user_id", user.id);
+  if (error) {
+    if (!existing) await supabase.from("category_rules").delete().eq("id", rule.id).eq("user_id", user.id);
+    return { ok: false, error: GENERIC_ERROR };
+  }
+  await supabase.from("transaction_shares").delete().eq("transaction_id", transactionId).eq("user_id", user.id);
+
+  let ids: string[] = [];
+  try {
+    ids = await applyRules(supabase, user.id, { onlyMatch: match });
+  } catch {
+    // de regel staat; de rest volgt bij de volgende sync
+  }
+
+  await logEvent("swipe", {
+    transaction_id: transactionId,
+    category_id: categoryId,
+    duration_ms: Math.max(0, Math.round(Number.isFinite(durationMs) ? durationMs : 0)),
+    coach: coachFlag(meta),
+    flow: "rule",
+  });
+  await logEvent("rule_created", { category_id: categoryId, applied: ids.length, replaced: Boolean(existing) });
+  return { ok: true, ruleId: rule.id, ids, replaced: Boolean(existing) };
+}
+
+/**
+ * Vaste ontvanger weer weg. Met `revertIds` gaan die kaartjes terug op de stapel
+ * (ongedaan maken direct na het instellen); zonder blijft alles wat al ingedeeld is staan.
+ */
+export async function removeRule(ruleId: string, revertIds: string[] = []): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isUuid(ruleId) || !Array.isArray(revertIds) || !revertIds.every(isUuid)) return { ok: false, error: GENERIC_ERROR };
+  const supabase = await createClient();
+  const { error } = await supabase.from("category_rules").delete().eq("id", ruleId).eq("user_id", user.id);
+  if (error) return { ok: false, error: "Weghalen lukte niet. Probeer het nog eens." };
+  if (revertIds.length > 0) {
+    await supabase
+      .from("transactions")
+      .update({ category_id: null, categorized_at: null, own_share: null })
+      .in("id", revertIds)
+      .eq("user_id", user.id);
+  }
+  await logEvent("rule_removed", { reverted: revertIds.length });
   return { ok: true };
 }
 

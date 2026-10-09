@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { useRef } from "react";
 import { Plus } from "lucide-react";
 import { CategoryIcon } from "@/components/categories/category-icon";
 import { formatEuroWhole } from "@/lib/format";
@@ -14,6 +15,8 @@ import { cn } from "@/lib/utils";
 interface CategoryTilesProps {
   categories: CategoryOption[];
   onPick: (category: CategoryOption) => void;
+  /** Ingedrukt houden: deze ontvanger gaat voortaan altijd in dit potje. */
+  onHold?: (category: CategoryOption) => void;
   onAdd: () => void;
   pulseId: string | null;
   pulseKey: number;
@@ -22,6 +25,11 @@ interface CategoryTilesProps {
   /** De verdeelregel staat open (52 px extra): in de compacte stand dan 4 px lagere tegels. */
   tight?: boolean;
 }
+
+/** Zo lang ingedrukt houden maakt een vaste ontvanger. */
+export const HOLD_MS = 550;
+/** Wie verder schuift dan dit, scrolt: dan geen vaste ontvanger. */
+const HOLD_SLOP_PX = 10;
 
 /** Vanaf dit aantal tegels worden ze iets lager (72 px). */
 const DENSE_FROM = 17;
@@ -67,6 +75,7 @@ function wholeAmount(value: number): string | null {
 export function CategoryTiles({
   categories,
   onPick,
+  onHold,
   onAdd,
   pulseId,
   pulseKey,
@@ -76,6 +85,23 @@ export function CategoryTiles({
   const reduce = useReducedMotion();
   const visible = categories.filter((c) => c.systemKey === null);
   const dense = tileCount(categories, Boolean(repayment)) >= DENSE_FROM;
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const holdStart = useRef<{ x: number; y: number } | null>(null);
+  // Na een geslaagde ingedrukte tik volgt nog een click: die slaan we over.
+  const held = useRef(false);
+
+  function cancelHold() {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+    holdStart.current = null;
+  }
+
+  function fireHold(category: CategoryOption) {
+    cancelHold();
+    if (held.current || !onHold) return;
+    held.current = true;
+    onHold(category);
+  }
 
   return (
     <ul role="list" className="mt-3 grid grid-cols-4 gap-1.5">
@@ -93,11 +119,38 @@ export function CategoryTiles({
             <button
               type="button"
               onClick={() => {
+                if (held.current) {
+                  held.current = false;
+                  return;
+                }
                 tap();
                 onPick(category);
               }}
+              onPointerDown={(e) => {
+                if (!onHold || e.button !== 0) return;
+                held.current = false;
+                cancelHold();
+                holdStart.current = { x: e.clientX, y: e.clientY };
+                holdTimer.current = setTimeout(() => fireHold(category), HOLD_MS);
+              }}
+              onPointerMove={(e) => {
+                const start = holdStart.current;
+                if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > HOLD_SLOP_PX) cancelHold();
+              }}
+              onPointerUp={cancelHold}
+              onPointerLeave={cancelHold}
+              onPointerCancel={cancelHold}
+              // Lang drukken op een telefoon (en rechtsklikken) opent anders een menu.
+              onContextMenu={(e) => {
+                if (!onHold) return;
+                e.preventDefault();
+                fireHold(category);
+              }}
               aria-label={amount ? `${category.name}, ${amount} deze maand` : category.name}
-              className={cn(tileClasses(dense, tight), "bg-surface shadow-card active:bg-surface-muted")}
+              className={cn(
+                tileClasses(dense, tight),
+                "bg-surface shadow-card [-webkit-touch-callout:none] active:bg-surface-muted",
+              )}
             >
               {pulsing && (
                 <motion.span

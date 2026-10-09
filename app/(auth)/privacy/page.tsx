@@ -46,7 +46,10 @@ export default function PrivacyPage() {
         <h2 className="font-semibold">Wat we nooit doen</h2>
         <ul className="list-disc space-y-1 pl-5 text-text-muted">
           <li>Je gegevens verkopen of delen met adverteerders.</li>
-          <li>Je betalingen automatisch in potjes stoppen of voorspellen wat je gaat doen.</li>
+          <li>
+            Je betalingen op eigen houtje in potjes stoppen of voorspellen wat je gaat doen. Alleen een ontvanger die jij
+            zelf vast zet (potje ingedrukt houden), gaat er voortaan vanzelf in.
+          </li>
           <li>Je gegevens bewaren nadat je je account hebt verwijderd.</li>
         </ul>
       </section>
