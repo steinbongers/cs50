@@ -40,6 +40,13 @@ export function Sheet({
   const descId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
+  // De nieuwste onClose zonder het effect opnieuw te draaien: ouders geven vaak een
+  // inline functie mee, en een herstart zou bij elke letter de focus (en het
+  // toetsenbord op iOS) uit het invoerveld halen.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -49,7 +56,7 @@ export function Sheet({
 
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (e.key !== "Tab" || !panelRef.current) return;
@@ -80,7 +87,7 @@ export function Sheet({
       document.body.style.overflow = prevOverflow;
       opener?.focus({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open]);
 
   // Reduced motion: geen schuif, alleen een fade van 120 ms.
   const transition = reduceMotion
