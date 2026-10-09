@@ -4,9 +4,11 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { IconChevronLeft } from "@/components/ui/icons";
 import { APP_NAME } from "@/config/app";
+import { isAdminUser } from "@/lib/admin/access";
 import { requireUser } from "@/lib/auth";
 import { daysUntil, getPrimaryConnection, statusFor } from "@/lib/bank/connections";
 import { listAspsps } from "@/lib/enablebanking/client";
+import { describeEnableBankingError } from "@/lib/enablebanking/diagnose";
 import { isEnableBankingConfigured } from "@/lib/enablebanking/jwt";
 import type { EbAspsp } from "@/lib/enablebanking/types";
 import { createClient } from "@/lib/supabase/server";
@@ -57,8 +59,12 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
   if (configured && (!connection || status !== "active" || reconnect)) {
     try {
       banks = sortBanks((await listAspsps("NL")).aspsps ?? []);
-    } catch {
+    } catch (error) {
       loadError = "We konden de lijst met banken niet ophalen. Probeer het zo nog eens.";
+      const detail = describeEnableBankingError(error);
+      console.error(`Bankenlijst ophalen mislukt: ${detail}`);
+      // Beheerders zien wat er mis is, zodat de koppeling zonder serverlogs te herstellen is.
+      if (isAdminUser(user)) loadError = `${loadError} Voor beheer: ${detail}`;
     }
   }
 
