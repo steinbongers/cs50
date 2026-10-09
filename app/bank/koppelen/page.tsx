@@ -13,6 +13,7 @@ import { isEnableBankingConfigured } from "@/lib/enablebanking/jwt";
 import type { EbAspsp } from "@/lib/enablebanking/types";
 import { createClient } from "@/lib/supabase/server";
 import { BankPicker } from "./bank-picker";
+import { ImportEarlier } from "./import-earlier";
 import { ConnectionCard } from "./connection-card";
 import { HowItWorks } from "./how-it-works";
 
@@ -110,6 +111,8 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
             next={next}
           />
         )}
+
+        {configured && connection && (status === "active" || status === "expiring") && !reconnect && <ImportEarlier />}
 
         {!configured ? (
           <>

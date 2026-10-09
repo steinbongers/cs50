@@ -13,6 +13,7 @@ import { isEnableBankingConfigured } from "@/lib/enablebanking/jwt";
 import { logEvent } from "@/lib/events";
 import { createClient } from "@/lib/supabase/server";
 import { BANK_AUTH_COOKIE, type BankAuthCookie } from "@/lib/bank/auth-cookie";
+import { DEFAULT_IMPORT_FROM, importFromDate, isImportFrom } from "@/lib/bank/import-from";
 
 /** Ook gebruikt op /bank/koppelen als de koppeling niet aanstaat. */
 const BANK_NOT_CONFIGURED = "Bank koppelen kan nu even niet. We zijn ermee bezig.";
@@ -43,6 +44,7 @@ export async function startBankConnection(
   aspspName: string,
   next: string,
   reconnect = false,
+  importFrom: string = DEFAULT_IMPORT_FROM,
 ): Promise<{ url: string } | { error: string }> {
   await requireUser();
   if (!isEnableBankingConfigured()) {
@@ -75,7 +77,13 @@ export async function startBankConnection(
   }
 
   const cookieStore = await cookies();
-  const payload: BankAuthCookie = { state, aspsp: name, next: safeNext(next), reconnect: isReconnect };
+  const payload: BankAuthCookie = {
+    state,
+    aspsp: name,
+    next: safeNext(next),
+    reconnect: isReconnect,
+    importFrom: isImportFrom(importFrom) ? importFrom : DEFAULT_IMPORT_FROM,
+  };
   cookieStore.set(BANK_AUTH_COOKIE, JSON.stringify(payload), {
     httpOnly: true,
     sameSite: "lax",
@@ -132,6 +140,41 @@ export async function refreshConnection(): Promise<RefreshResult> {
         : "Verversen lukte niet. Probeer het zo nog eens.",
     };
   }
+  return { ok: true, inserted: result.inserted };
+}
+
+/**
+ * Eerdere kaartjes ophalen bij een bestaande koppeling (bijvoorbeeld de afgelopen 90 dagen).
+ * Dubbele kaartjes ontstaan niet: de sync ontdubbelt. Zelfde wachttijd als verversen.
+ */
+export async function importEarlier(choice: string): Promise<RefreshResult> {
+  const user = await requireUser();
+  if (!isImportFrom(choice) || choice === "nu") return { ok: false, error: "Kies vanaf wanneer." };
+  const supabase = await createClient();
+  const connection = await getPrimaryConnection(supabase, user.id);
+  if (!connection) return { ok: false, error: "Je hebt nog geen bank gekoppeld." };
+  const status = statusFor(connection);
+  if (status !== "active" && status !== "expiring") {
+    return { ok: false, error: "Je bank is ontkoppeld. Koppel opnieuw om kaartjes op te halen." };
+  }
+  if (connection.last_manual_sync_at) {
+    const elapsed = Date.now() - new Date(connection.last_manual_sync_at).getTime();
+    if (elapsed < MANUAL_SYNC_COOLDOWN_MS) {
+      const minutes = Math.ceil((MANUAL_SYNC_COOLDOWN_MS - elapsed) / 60000);
+      return { ok: false, error: `Net opgehaald. Over ${minutes} ${minutes === 1 ? "minuut" : "minuten"} kan het weer.`, retryInMinutes: minutes };
+    }
+  }
+  const { data: profile } = await supabase.from("profiles").select("salary_day").eq("id", user.id).maybeSingle();
+  const result = await syncConnection(supabase, connection, {
+    manual: true,
+    dateFrom: importFromDate(choice, profile?.salary_day ?? null),
+  });
+  refresh();
+  if (result.error) {
+    await logEvent("sync_failed", { reason: result.expired ? "verlopen" : "sync" });
+    return { ok: false, error: "Ophalen lukte niet. Probeer het zo nog eens." };
+  }
+  await logEvent("import_earlier", { choice, inserted_bucket: result.inserted === 0 ? "0" : result.inserted <= 50 ? "1-50" : "50+" });
   return { ok: true, inserted: result.inserted };
 }
 

@@ -1,12 +1,12 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { BANK_AUTH_COOKIE, type BankAuthCookie } from "@/lib/bank/auth-cookie";
+import { DEFAULT_IMPORT_FROM, importFromDate, isImportFrom } from "@/lib/bank/import-from";
 import { ensureProfile, getUser } from "@/lib/auth";
 import { hashIban, maskIban } from "@/lib/bank/mapping";
 import { syncConnection } from "@/lib/bank/sync";
 import { authorizeSession } from "@/lib/enablebanking/client";
 import { logEvent } from "@/lib/events";
-import { currentPeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -120,11 +120,11 @@ export async function GET(request: NextRequest) {
     accounts: session.accounts?.length ?? 0,
   });
 
-  // Eerste transacties: vanaf de laatste salarisdag (of begin van de maand).
+  // Eerste transacties: vanaf wat de gebruiker koos (standaard de laatste salarisdag).
   const { data: connection } = await supabase.from("bank_connections").select("*").eq("id", connectionId).single();
   if (connection) {
-    const period = currentPeriod(profile.salary_day);
-    await syncConnection(supabase, connection, { dateFrom: period.startISO });
+    const choice = isImportFrom(pending.importFrom) ? pending.importFrom : DEFAULT_IMPORT_FROM;
+    await syncConnection(supabase, connection, { dateFrom: importFromDate(choice, profile.salary_day) });
   }
 
   const target = new URL(next, origin);

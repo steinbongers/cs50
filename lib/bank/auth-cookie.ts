@@ -6,4 +6,6 @@ export interface BankAuthCookie {
   aspsp: string;
   next: string;
   reconnect: boolean;
+  /** Eerste koppeling: vanaf wanneer kaartjes ophalen (zie lib/bank/import-from.ts). */
+  importFrom?: string;
 }

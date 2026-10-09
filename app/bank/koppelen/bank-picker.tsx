@@ -5,7 +5,9 @@ import { IconChevronRight } from "@/components/ui/icons";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { DEFAULT_IMPORT_FROM, type ImportFrom } from "@/lib/bank/import-from";
 import { startBankConnection } from "../actions";
+import { ImportFromChoice } from "./import-from-choice";
 
 interface BankOption {
   name: string;
@@ -17,6 +19,7 @@ export function BankPicker({ banks, next, reconnect }: { banks: BankOption[]; ne
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [importFrom, setImportFrom] = useState<ImportFrom>(DEFAULT_IMPORT_FROM);
   const [, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -28,7 +31,7 @@ export function BankPicker({ banks, next, reconnect }: { banks: BankOption[]; ne
     setError(null);
     setBusy(name);
     startTransition(async () => {
-      const result = await startBankConnection(name, next, reconnect);
+      const result = await startBankConnection(name, next, reconnect, importFrom);
       if ("error" in result) {
         setError(result.error);
         setBusy(null);
@@ -40,6 +43,12 @@ export function BankPicker({ banks, next, reconnect }: { banks: BankOption[]; ne
 
   return (
     <div className="flex flex-col gap-3">
+      {!reconnect && (
+        <div className="flex flex-col gap-2">
+          <h2 className="px-1 text-[15px] leading-5 font-semibold">Kaartjes ophalen vanaf</h2>
+          <ImportFromChoice value={importFrom} onChange={setImportFrom} />
+        </div>
+      )}
       <Input
         type="search"
         aria-label="Zoek je bank"

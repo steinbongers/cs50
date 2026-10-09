@@ -19,7 +19,11 @@ export type EventType =
   /**
    * Transactie in een potje gezet.
    * `{ transaction_id, category_id, duration_ms, skipped_before?, split_persons?, split_method?,
-   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' | 'refund', with_category? }`
+   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' | 'refund' | 'refund_for',
+   *    with_category?, complete? }`
+   * `split_method`: 'bank' | 'other' (verdeeld) of 'track' (bijhouden: de hele uitgave wacht op geld terug).
+   * `flow: 'refund_for'`: inkomend geld gekoppeld aan een uitgave die op geld terug wacht;
+   * `complete` zegt of de gebruiker daarmee alles binnen meldde (de rest is van hem).
    */
   | "swipe"
   /** Transactie verplaatst via de detailpagina. `{ transaction_id, category_id }` */
@@ -84,6 +88,12 @@ export type EventType =
    */
   | "share_settled"
   /**
+   * Uitgave die op geld terug wachtte afgerond met "Alles binnen" (buiten Swipen om).
+   * `{ how: 'overview', refunds: number, age_days: number }` (aantal gekoppelde terugbetalingen
+   * en dagen sinds het indelen; nooit bedragen of de tegenpartij)
+   */
+  | "refund_closed"
+  /**
    * Nieuw potje gemaakt.
    * `{ source: 'plus_tile' | 'editor' | 'onboarding', suggestion: 'studie' | 'huisdier' | 'kinderen' | null }`
    */
@@ -108,7 +118,9 @@ export type EventType =
    * Bank-sync mislukt. `{ reason: string }` (vaste foutcode, geen banktekst):
    * 'geen_koppeling' | 'ontkoppeld' | 'niet_bereikbaar' | 'verlopen' | 'sync'.
    */
-  | "sync_failed";
+  | "sync_failed"
+  /** Eerdere kaartjes opgehaald. `{ choice: 'periode' | '30' | '90', inserted_bucket: '0' | '1-50' | '50+' }` */
+  | "import_earlier";
 
 export type OpenCardsBucket = "0" | "1-5" | "6-20" | "20+";
 
