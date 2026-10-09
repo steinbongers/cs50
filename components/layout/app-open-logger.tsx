@@ -2,10 +2,13 @@
 
 import { useEffect } from "react";
 import { logAppOpen } from "@/app/(app)/actions";
+import { syncIfStale } from "@/app/bank/actions";
 import { startTabForPath } from "@/lib/start-route";
 
 /** Na zo lang verborgen telt terugkomen als een nieuwe keer openen. */
 const AWAY_MS = 30 * 60 * 1000;
+/** Na zo lang verborgen vragen we de server of verversen nodig is (die kijkt zelf naar de laatste sync). */
+const SYNC_AWAY_MS = 5 * 60 * 1000;
 const LAST_OPEN_KEY = "app_open_at";
 
 function readLastOpen(): number {
@@ -35,7 +38,8 @@ function stripRefFromUrl(url: URL) {
 
 /**
  * Meet `app_open`: bij de eerste mount (ook na een pushmelding) en bij terugkomen
- * nadat de app langer dan 30 minuten verborgen was. Rendert niets.
+ * nadat de app langer dan 30 minuten verborgen was. Ververst daarbij ook de bank
+ * (zie syncIfStale). Rendert niets.
  */
 export function AppOpenLogger() {
   useEffect(() => {
@@ -54,6 +58,8 @@ export function AppOpenLogger() {
       }).catch(() => {});
     }
     stripRefFromUrl(url);
+    // Nieuwe betalingen ophalen zodra je de app opent; de server ververst hoogstens elke 30 minuten.
+    void syncIfStale().catch(() => {});
 
     let hiddenAt: number | null = document.visibilityState === "hidden" ? now : null;
     function onVisibilityChange() {
@@ -63,6 +69,7 @@ export function AppOpenLogger() {
       }
       const awayFor = hiddenAt === null ? 0 : Date.now() - hiddenAt;
       hiddenAt = null;
+      if (awayFor > SYNC_AWAY_MS) void syncIfStale().catch(() => {});
       if (awayFor <= AWAY_MS) return;
       writeLastOpen(Date.now());
       void logAppOpen({ source: "direct", startTab: startTabForPath(window.location.pathname) }).catch(() => {});

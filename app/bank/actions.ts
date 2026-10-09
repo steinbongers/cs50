@@ -143,6 +143,33 @@ export async function refreshConnection(): Promise<RefreshResult> {
   return { ok: true, inserted: result.inserted };
 }
 
+/** Bij het openen van de app verversen als de laatste sync langer geleden is dan dit. */
+const AUTO_SYNC_STALE_MS = 30 * 60 * 1000;
+
+/**
+ * Bij het openen van de app (de gebruiker is er zelf bij, dus geen PSD2-limiet van 4 keer per dag):
+ * stilletjes verversen als de laatste sync langer dan 30 minuten geleden is. Telt niet als
+ * handmatig verversen (geen wachttijd voor de knop). Fouten blijven stil; de knop meldt ze wel.
+ */
+export async function syncIfStale(): Promise<{ inserted: number }> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const connection = await getPrimaryConnection(supabase, user.id);
+  if (!connection) return { inserted: 0 };
+  const status = statusFor(connection);
+  if (status !== "active" && status !== "expiring") return { inserted: 0 };
+  const last = connection.last_synced_at ? new Date(connection.last_synced_at).getTime() : 0;
+  if (Date.now() - last < AUTO_SYNC_STALE_MS) return { inserted: 0 };
+
+  try {
+    const result = await syncConnection(supabase, connection);
+    if (result.inserted > 0) refresh();
+    return { inserted: result.inserted };
+  } catch {
+    return { inserted: 0 };
+  }
+}
+
 /**
  * Eerdere kaartjes ophalen bij een bestaande koppeling (bijvoorbeeld de afgelopen 90 dagen).
  * Dubbele kaartjes ontstaan niet: de sync ontdubbelt. Zelfde wachttijd als verversen.
