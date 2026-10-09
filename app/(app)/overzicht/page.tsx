@@ -10,7 +10,7 @@ import { FocusCard } from "@/components/overview/focus-card";
 import { FreeToSpendCard } from "@/components/overview/free-to-spend";
 import { IncomeView, type IncomeGroup } from "@/components/overview/income-view";
 import { MonthClosingSheet } from "@/components/overview/month-closing";
-import { MonthDonut, type DonutSlice } from "@/components/overview/month-donut";
+import { SpendBar, type SpendSlice } from "@/components/overview/spend-bar";
 import { MonthSeen } from "@/components/overview/month-seen";
 import { MonthViewed } from "@/components/overview/month-viewed";
 import { capitalize, compareLine, openCardsText, periodMonthName, periodSubtitle } from "@/components/overview/overview-copy";
@@ -104,7 +104,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   }
   unsorted = Math.max(0, Math.round(unsorted * 100) / 100);
 
-  const slices: DonutSlice[] = [];
+  const slices: SpendSlice[] = [];
   for (const [id, amount] of perCategory) {
     const cat = catMap.get(id);
     if (cat && amount > 0) slices.push({ id, name: cat.name, color: cat.color, amount });
@@ -318,7 +318,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
                 </Card>
               ) : (
                 <section aria-label="Uitgaven deze maand" className="flex flex-col items-center gap-3">
-                  <MonthDonut slices={slices} unsorted={unsorted} total={total} label={monthName} />
+                  <SpendBar slices={slices} unsorted={unsorted} total={total} label={monthName} />
                   {refundsLoose > 0 && (
                     <p className="text-center text-[13px] leading-[18px] text-text-muted">
                       {formatEuro(refundsLoose)} geld terug zonder potje is er al vanaf

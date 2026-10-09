@@ -279,3 +279,6 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
   Elke kaart heeft een kop die de conclusie zegt en een tabelweergave.
 - Bij vaste lasten op Meer inzicht telt een verdeelde afschrijving mee en de delen niet (zie Verdelen hierboven).
 
+- **Geen ring meer op Overzicht** (Stein). Bovenaan staat een groot bedrag met één dunne balk eronder: de vijf
+  grootste potjes elk een stuk, de rest samen als "Overige potjes", nog in te delen gearceerd. Tik op een stuk of
+  een naam en je ziet dat potje met bedrag en aandeel.
