@@ -777,3 +777,348 @@ export function connectionStats(connections: ConnectionLite[], reconnectEvents: 
   }
   return { total: connections.length, expired, reconnected: reconnectEvents };
 }
+
+// ---------------------------------------------------------------------------
+// Go / no-go (Haalbaarheid potjesapp, "De pilot moet het ritueel testen")
+// ---------------------------------------------------------------------------
+
+export type GoStatus = "go" | "grijs" | "nogo" | "te weinig data" | "niet gemeten";
+
+/** 95%-interval (0-1). */
+export interface Interval {
+  low: number;
+  high: number;
+}
+
+/** Wilson-scoreinterval voor een aandeel; null als `whole` 0 is. */
+export function wilson(part: number, whole: number, z = 1.96): Interval | null {
+  if (whole <= 0) return null;
+  const p = part / whole;
+  const z2 = z * z;
+  const denom = 1 + z2 / whole;
+  const center = (p + z2 / (2 * whole)) / denom;
+  const margin = (z * Math.sqrt((p * (1 - p)) / whole + z2 / (4 * whole * whole))) / denom;
+  return { low: Math.max(0, center - margin), high: Math.min(1, center + margin) };
+}
+
+export interface GoNoGoRow {
+  key: string;
+  label: string;
+  /** Aandeel (percentage), of seconden bij `unit: "seconds"`; null als niet gemeten. */
+  value: Ratio | number | null;
+  unit: "percent" | "seconds";
+  /** 95%-interval (0-1), alleen bij aandelen. */
+  interval: Interval | null;
+  /** Drempels zoals in het rapport: "≥70%", "50-70%", "<50%". */
+  go: string;
+  grey: string;
+  nogo: string;
+  status: GoStatus;
+  /** Kernmetric met vetorecht. */
+  core?: boolean;
+  /** Korte uitleg: hoe gemeten, of hoe je het buiten de app meet. */
+  hint?: string;
+}
+
+export interface GoNoGo {
+  rows: GoNoGoRow[];
+  /** Een kernmetric staat op no-go: dan is het geheel no-go. */
+  veto: boolean;
+}
+
+export interface GoNoGoInput {
+  profiles: ProfileLite[];
+  events: EventLite[];
+  txTimings: TxTiming[];
+  shares: ShareLite[];
+  today: Date;
+  /** Begin van het geladen eventvenster (ms). Wie eerder registreerde telt niet mee: hun events ontbreken. */
+  eventsSince?: number;
+}
+
+/**
+ * Status volgens de vooraf vastgelegde regel: rood alleen als ook de bovengrens van
+ * het 95%-interval onder de no-go-drempel ligt; groen bij een puntschatting op of boven
+ * de go-drempel; anders grijs. Bij `lowerIsBetter` precies gespiegeld.
+ * Drempels als fractie (0,7 = 70%).
+ */
+export function ratioStatus(r: Ratio, goAt: number, nogoAt: number, lowerIsBetter = false): GoStatus {
+  if (!enoughData(r.users) || r.whole === 0) return "te weinig data";
+  const p = r.part / r.whole;
+  const ci = wilson(r.part, r.whole) as Interval;
+  if (lowerIsBetter) {
+    if (ci.low > nogoAt) return "nogo";
+    if (p < goAt) return "go";
+    return "grijs";
+  }
+  if (ci.high < nogoAt) return "nogo";
+  if (p >= goAt) return "go";
+  return "grijs";
+}
+
+function ratioRow(
+  base: Omit<GoNoGoRow, "value" | "unit" | "interval" | "status">,
+  r: Ratio,
+  goAt: number,
+  nogoAt: number,
+  lowerIsBetter = false,
+): GoNoGoRow {
+  return { ...base, value: r, unit: "percent", interval: wilson(r.part, r.whole), status: ratioStatus(r, goAt, nogoAt, lowerIsBetter) };
+}
+
+function notMeasured(base: Omit<GoNoGoRow, "value" | "unit" | "interval" | "status">): GoNoGoRow {
+  return { ...base, value: null, unit: "percent", interval: null, status: "niet gemeten" };
+}
+
+/** Aantal (Nederlandse) kalenderdagen met een swipe in [from, to). */
+function activeDays(swipes: number[], from: number, to: number): number {
+  const days = new Set<string>();
+  for (const t of swipes) if (t >= from && t < to) days.add(dayKey(new Date(t).toISOString()));
+  return days.size;
+}
+
+/**
+ * Scoort de pilot tegen de drempeltabel uit het haalbaarheidsrapport.
+ * Basis is steeds de gekoppelde testers (bank_connected of bank_reconnect), behalve bij de
+ * bankkoppeling zelf (alle registraties). Admins moeten al uit de rijen zijn gefilterd.
+ */
+export function goNoGo({ profiles, events, txTimings, shares, today, eventsSince = Number.NEGATIVE_INFINITY }: GoNoGoInput): GoNoGo {
+  const now = today.getTime();
+  const pilot = profiles.filter((p) => ms(p.createdAt) >= eventsSince);
+  const signupAt = new Map(pilot.map((p) => [p.id, ms(p.createdAt)]));
+
+  const linked = new Set<string>();
+  const swipesByUser = new Map<string, number[]>();
+  const splitUsers = new Set<string>();
+  for (const e of events) {
+    if (!signupAt.has(e.userId)) continue;
+    if (e.type === "bank_connected" || (e.type === "bank_reconnect" && str(e.payload, "action") !== "disconnect")) linked.add(e.userId);
+    if (e.type === "swipe") {
+      const list = swipesByUser.get(e.userId) ?? [];
+      list.push(ms(e.createdAt));
+      swipesByUser.set(e.userId, list);
+      const persons = e.payload?.split_persons;
+      if (str(e.payload, "split_method") !== null || (typeof persons === "number" && persons > 0)) splitUsers.add(e.userId);
+    }
+  }
+  for (const s of shares) if (signupAt.has(s.userId)) splitUsers.add(s.userId);
+
+  const rows: GoNoGoRow[] = [];
+
+  // 1. Bankkoppeling: registraties met een geslaagde koppeling.
+  rows.push(
+    ratioRow(
+      { key: "bank", label: "Registraties met een geslaagde bankkoppeling", go: "≥70%", grey: "50-70%", nogo: "<50%", hint: "Basis: registraties, niet uitnodigingen." },
+      ratio(linked.size, pilot.length),
+      0.7,
+      0.5,
+    ),
+  );
+
+  // 2. Kern: gekoppelde testers die ≥80% van hun kaarten binnen 7 dagen indeelden.
+  const txByUser = new Map<string, TxTiming[]>();
+  for (const t of txTimings) {
+    if (!t.userId || !linked.has(t.userId)) continue;
+    const list = txByUser.get(t.userId) ?? [];
+    list.push(t);
+    txByUser.set(t.userId, list);
+  }
+  let sortEligible = 0;
+  let sorters = 0;
+  for (const list of txByUser.values()) {
+    const r = labeledWithin7Days(list, today);
+    if (r.eligible === 0) continue;
+    sortEligible++;
+    if (r.within / r.eligible >= 0.8) sorters++;
+  }
+  rows.push(
+    ratioRow(
+      {
+        key: "sorted",
+        label: "Gekoppelde testers die ≥80% van de kaarten binnen 7 dagen sorteren",
+        go: "≥60%",
+        grey: "40-60%",
+        nogo: "<40%",
+        core: true,
+        hint: "Alleen testers met kaarten ouder dan 7 dagen.",
+      },
+      ratio(sorters, sortEligible),
+      0.6,
+      0.4,
+    ),
+  );
+
+  // 3. Mediane seconden per kaart, zonder de eerste dag waarop iemand swipete.
+  const firstDay = new Map<string, string>();
+  for (const e of [...events].sort((a, b) => ms(a.createdAt) - ms(b.createdAt))) {
+    if (e.type === "swipe" && !firstDay.has(e.userId)) firstDay.set(e.userId, dayKey(e.createdAt));
+  }
+  const later = timePerCard(events.filter((e) => signupAt.has(e.userId) && e.type === "swipe" && dayKey(e.createdAt) !== firstDay.get(e.userId)));
+  const sec = later.medianMs === null ? null : later.medianMs / 1000;
+  rows.push({
+    key: "seconds",
+    label: "Mediane seconden per kaart na de eerste sessie",
+    value: sec,
+    unit: "seconds",
+    interval: null,
+    go: "≤3 s",
+    grey: "3-6 s",
+    nogo: ">6 s",
+    status: sec === null || !enoughData(later.users) ? "te weinig data" : sec <= 3 ? "go" : sec > 6 ? "nogo" : "grijs",
+    hint: "Eerste sessie = eerste dag met een swipe. Puntschatting, geen interval.",
+  });
+
+  // 4. Afgebroken sessies bij een backlog van >20 kaarten (benadering).
+  const completes = new Map<string, number[]>();
+  for (const e of events) {
+    if (e.type !== "swipe_session_complete") continue;
+    const list = completes.get(e.userId) ?? [];
+    list.push(ms(e.createdAt));
+    completes.set(e.userId, list);
+  }
+  let bigSessions = 0;
+  let aborted = 0;
+  const bigUsers = new Set<string>();
+  for (const e of events) {
+    if (e.type !== "app_open" || !signupAt.has(e.userId)) continue;
+    if (str(e.payload, "open_cards_bucket") !== "20+" || str(e.payload, "start_tab") !== "swipen") continue;
+    bigSessions++;
+    bigUsers.add(e.userId);
+    const opened = ms(e.createdAt);
+    const day = dayKey(e.createdAt);
+    const done = (completes.get(e.userId) ?? []).some((t) => t >= opened && dayKey(new Date(t).toISOString()) === day);
+    if (!done) aborted++;
+  }
+  rows.push(
+    ratioRow(
+      {
+        key: "aborted",
+        label: "Afgebroken sessies bij een backlog van >20 kaarten",
+        go: "<30%",
+        grey: "30-50%",
+        nogo: ">50%",
+        hint: "Benadering: geopend op Swipen met 20+ kaarten en die dag de stapel niet leeg.",
+      },
+      ratio(aborted, bigSessions, bigUsers.size),
+      0.3,
+      0.5,
+      true,
+    ),
+  );
+
+  // 5 en 6. Actief in week 2 en week 4: ≥3 dagen met een swipe.
+  const weekActive = (week: number): Ratio => {
+    let eligible = 0;
+    let active = 0;
+    for (const id of linked) {
+      const signup = signupAt.get(id) as number;
+      const from = signup + (week - 1) * WEEK_MS;
+      const to = signup + week * WEEK_MS;
+      if (now < to) continue;
+      eligible++;
+      if (activeDays(swipesByUser.get(id) ?? [], from, to) >= 3) active++;
+    }
+    return ratio(active, eligible);
+  };
+  rows.push(
+    ratioRow(
+      { key: "week2", label: "Actief in week 2 (≥3 dagen met een sorteeractie)", go: "≥50%", grey: "30-50%", nogo: "<30%", core: true, hint: "Dag 8-14 na registratie, gekoppelde testers." },
+      weekActive(2),
+      0.5,
+      0.3,
+    ),
+  );
+  rows.push(
+    ratioRow(
+      {
+        key: "week4",
+        label: "Actief in week 4 (≥3 dagen met een sorteeractie)",
+        go: "≥40%",
+        grey: "25-40%",
+        nogo: "<25%",
+        hint: "Dag 22-28 na registratie. Verwijderde accounts ontbreken. Kijk ook of de curve afvlakt.",
+      },
+      weekActive(4),
+      0.4,
+      0.25,
+    ),
+  );
+
+  // 7. Opens via de melding van 20:00 per verstuurde melding.
+  const evening = pushOpenRate(events.filter((e) => signupAt.has(e.userId))).find((r) => r.tag === "kaartjes") ?? { ...ratio(0, 0), tag: "kaartjes" };
+  rows.push(
+    ratioRow(
+      { key: "push", label: "Opens via de melding van 20:00 per verstuurde melding", go: "≥25%", grey: "10-25%", nogo: "<10%", hint: "Tag kaartjes: push_opened gedeeld door push_sent." },
+      evening,
+      0.25,
+      0.1,
+    ),
+  );
+
+  // 8. iOS: niet uit de app te halen.
+  rows.push(
+    notMeasured({
+      key: "ios",
+      label: "iOS-testers met de PWA geïnstalleerd en push aan",
+      go: "≥70%",
+      grey: "40-70%",
+      nogo: "<40%",
+      hint: "De app logt geen platform. Vraag het in de enquête of check het bij het interview.",
+    }),
+  );
+
+  // 9. Herkoppeling: gestart met reconnect:true, daarna een bank_reconnect.
+  const reconnectStart = new Map<string, number>();
+  for (const e of events) {
+    if (e.type !== "bank_connect_started" || e.payload?.reconnect !== true || !signupAt.has(e.userId)) continue;
+    const t = ms(e.createdAt);
+    const first = reconnectStart.get(e.userId);
+    if (first === undefined || t < first) reconnectStart.set(e.userId, t);
+  }
+  let reconnected = 0;
+  for (const [id, started] of reconnectStart) {
+    if (events.some((e) => e.userId === id && e.type === "bank_reconnect" && str(e.payload, "action") !== "disconnect" && ms(e.createdAt) >= started)) reconnected++;
+  }
+  const herkoppelBase = { key: "reconnect", label: "Gesimuleerde herkoppeling afgemaakt", go: "≥80%", grey: "60-80%", nogo: "<60%" };
+  rows.push(
+    reconnectStart.size === 0
+      ? notMeasured({ ...herkoppelBase, hint: "Nog geen herkoppeling gestart. Laat in week 2-3 een deel van de testers opnieuw koppelen." })
+      : ratioRow({ ...herkoppelBase, hint: "Testers die een herkoppeling startten en die afmaakten." }, ratio(reconnected, reconnectStart.size), 0.8, 0.6),
+  );
+
+  // 10. Sean Ellis.
+  rows.push(
+    notMeasured({
+      key: "ellis",
+      label: "Sean Ellis “zeer teleurgesteld” (n≥15)",
+      go: "≥40%",
+      grey: "25-40%",
+      nogo: "<25%",
+      hint: "Enquête aan het eind: hoe zou je je voelen als de app verdwijnt?",
+    }),
+  );
+
+  // 11. Splitfunctie.
+  rows.push(
+    ratioRow(
+      { key: "split", label: "Splitfunctie minstens 1× gebruikt", go: "≥30%", grey: "10-30%", nogo: "<10%", hint: "Bij no-go de feature heroverwegen, niet het concept." },
+      ratio([...linked].filter((id) => splitUsers.has(id)).length, linked.size),
+      0.3,
+      0.1,
+    ),
+  );
+
+  // 12. Betalingsbereidheid.
+  rows.push(
+    notMeasured({
+      key: "pay",
+      label: "Bereid te betalen €3,99/maand voor de bankkoppeling",
+      go: "≥30%",
+      grey: "15-30%",
+      nogo: "<15%",
+      hint: "Vraag het in het exitgesprek en meet het met een nepdeur.",
+    }),
+  );
+
+  return { rows, veto: rows.some((r) => r.core && r.status === "nogo") };
+}

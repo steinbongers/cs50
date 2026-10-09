@@ -356,3 +356,107 @@ test("retentie: churn telt mee in de cohort, kleine cohorten grijs, W4 over alle
   const small = cohortRetention([{ id: "z", createdAt: "2026-09-01T10:00:00Z" }], [], today);
   assert.equal(small[0].small, true);
 });
+
+// ---------------------------------------------------------------------------
+// Go / no-go
+// ---------------------------------------------------------------------------
+
+import { goNoGo, ratioStatus, wilson } from "../lib/admin/metrics";
+
+test("wilson-interval: 10 van 20 ruwweg 30-70%, randen binnen 0-1", () => {
+  const ci = wilson(10, 20);
+  assert.ok(ci);
+  assert.equal(Math.round(ci.low * 100), 30);
+  assert.equal(Math.round(ci.high * 100), 70);
+  assert.equal(wilson(0, 0), null);
+  assert.equal(wilson(0, 10)?.low, 0);
+  assert.equal(wilson(10, 10)?.high, 1);
+});
+
+test("go/no-go-regel: rood alleen als de bovengrens onder de drempel ligt", () => {
+  // 3 van 10 = 30%, interval ~11-60%: bovengrens boven 50% dus grijs, niet rood.
+  assert.equal(ratioStatus(ratio(3, 10), 0.7, 0.5), "grijs");
+  // 2 van 20 = 10%, bovengrens ~30%: rood.
+  assert.equal(ratioStatus(ratio(2, 20), 0.7, 0.5), "nogo");
+  assert.equal(ratioStatus(ratio(14, 20), 0.7, 0.5), "go");
+  assert.equal(ratioStatus(ratio(3, 4), 0.7, 0.5), "te weinig data");
+  // Lager is beter: rood als de ondergrens boven de drempel ligt.
+  assert.equal(ratioStatus(ratio(18, 20), 0.3, 0.5, true), "nogo");
+  assert.equal(ratioStatus(ratio(5, 20), 0.3, 0.5, true), "go");
+  assert.equal(ratioStatus(ratio(8, 20), 0.3, 0.5, true), "grijs");
+});
+
+test("go/no-go: koppeling, sorteren, tijd, afbreken, week 2 en 4, meldingen, herkoppeling, split", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  const signup = "2026-09-01T08:00:00Z";
+  const ids = ["a", "b", "c", "d", "e", "f"];
+  const profiles = [...ids, "x", "y"].map((id) => ({ id, createdAt: signup }));
+  const at = (day: number, hour = 10) => new Date(Date.parse(signup) + day * 864e5 + (hour - 8) * 36e5).toISOString();
+
+  const events: EventLite[] = [];
+  for (const id of ids) events.push(evp(id, "bank_connected", at(0)));
+  // a, b, c actief op 3 dagen in week 2 (dag 7-13) en week 4 (dag 21-27); d, e, f niet.
+  for (const id of ["a", "b", "c"]) for (const d of [8, 9, 10, 22, 23, 24]) events.push(evp(id, "swipe", at(d), {}, 2000));
+  // Eerste dag telt niet mee voor de tijd per kaart.
+  for (const id of ids) events.push(evp(id, "swipe", at(0, 9), { split_method: id === "a" ? "bank" : null }, 9000));
+  // Twee keer openen met 20+ kaarten: één keer stapel leeg, één keer niet.
+  events.push(evp("a", "app_open", at(8, 9), { start_tab: "swipen", open_cards_bucket: "20+" }));
+  events.push(evp("a", "swipe_session_complete", at(8, 11)));
+  events.push(evp("b", "app_open", at(8, 9), { start_tab: "swipen", open_cards_bucket: "20+" }));
+  events.push(evp("c", "app_open", at(8, 9), { start_tab: "overzicht", open_cards_bucket: "20+" })); // telt niet
+  // Meldingen: 10 verstuurd, 2 geopend.
+  for (let i = 0; i < 10; i++) events.push(evp(ids[i % 6], "push_sent", at(5), { tag: "kaartjes" }));
+  for (let i = 0; i < 2; i++) events.push(evp(ids[i], "push_opened", at(5), { tag: "kaartjes" }));
+  // Herkoppeling: a en b gestart, alleen a maakt af.
+  events.push(evp("a", "bank_connect_started", at(15), { reconnect: true }));
+  events.push(evp("a", "bank_reconnect", at(15, 11)));
+  events.push(evp("b", "bank_connect_started", at(15), { reconnect: true }));
+
+  // Kaarten: a-e sorteren alles binnen een dag, f niets.
+  const txTimings = ids.map((id) => ({ userId: id, createdAt: at(1), categorizedAt: id === "f" ? null : at(2), isInternal: false }));
+
+  const shares = [{ userId: "b", createdAt: at(3), status: "open", receivedAt: null }];
+  const { rows, veto } = goNoGo({ profiles, events, txTimings, shares, today: now });
+  const row = (key: string) => {
+    const r = rows.find((x) => x.key === key);
+    assert.ok(r, key);
+    return r;
+  };
+  const part = (key: string) => {
+    const v = row(key).value;
+    assert.ok(v !== null && typeof v === "object");
+    return [v.part, v.whole];
+  };
+
+  assert.deepEqual(part("bank"), [6, 8]);
+  assert.equal(row("bank").status, "go"); // 75%
+  assert.deepEqual(part("sorted"), [5, 6]);
+  assert.equal(row("sorted").status, "go");
+  assert.equal(row("sorted").core, true);
+  assert.equal(row("seconds").value, 2);
+  assert.equal(row("seconds").status, "te weinig data"); // maar 3 gebruikers na de eerste dag
+  assert.deepEqual(part("aborted"), [1, 2]);
+  assert.equal(row("aborted").status, "te weinig data");
+  assert.deepEqual(part("week2"), [3, 6]);
+  assert.equal(row("week2").status, "go");
+  assert.deepEqual(part("week4"), [3, 6]);
+  assert.deepEqual(part("push"), [2, 10]);
+  assert.equal(row("push").status, "grijs");
+  assert.deepEqual(part("reconnect"), [1, 2]);
+  assert.deepEqual(part("split"), [2, 6]);
+  assert.equal(row("split").status, "go");
+  for (const key of ["ios", "ellis", "pay"]) assert.equal(row(key).status, "niet gemeten");
+  assert.equal(veto, false);
+});
+
+test("go/no-go: veto bij een rode kernmetric, herkoppeling niet gemeten zonder start", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  const profiles = Array.from({ length: 20 }, (_, i) => ({ id: `u${i}`, createdAt: "2026-09-01T08:00:00Z" }));
+  const events = profiles.map((p) => evp(p.id, "bank_connected", "2026-09-01T09:00:00Z"));
+  const { rows, veto } = goNoGo({ profiles, events, txTimings: [], shares: [], today: now });
+  const week2 = rows.find((r) => r.key === "week2");
+  assert.equal(week2?.status, "nogo");
+  assert.equal(rows.find((r) => r.key === "reconnect")?.status, "niet gemeten");
+  assert.equal(rows.find((r) => r.key === "sorted")?.status, "te weinig data");
+  assert.equal(veto, true);
+});

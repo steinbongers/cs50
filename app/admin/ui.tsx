@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
-import { enoughData, partOf, tooLittleData, type Ratio } from "@/lib/admin/metrics";
+import { enoughData, partOf, tooLittleData, type GoNoGoRow, type GoStatus, type Ratio } from "@/lib/admin/metrics";
 
 /** Decimaal met komma: 3,4. */
 export function decimal(value: number, digits = 1): string {
@@ -83,5 +83,54 @@ export function NorthStar({
         <span>{enough ? `${detail} · ${goal}` : goal}</span>
       </p>
     </Card>
+  );
+}
+
+const STATUS_LABEL: Record<GoStatus, string> = {
+  go: "Go",
+  grijs: "Grijs",
+  nogo: "No-go",
+  "te weinig data": "Te weinig data",
+  "niet gemeten": "Niet gemeten",
+};
+
+const STATUS_CLASS: Record<GoStatus, string> = {
+  go: "bg-primary-soft text-primary",
+  grijs: "bg-surface-muted text-text",
+  nogo: "bg-negative-soft text-negative",
+  "te weinig data": "bg-surface-muted text-text-muted",
+  "niet gemeten": "bg-surface-muted text-text-muted",
+};
+
+/** "52% (34–70%) · 12 van 23", "3,4 s", of null als er (nog) geen getal is. */
+export function goValueText(row: GoNoGoRow): string | null {
+  if (row.status === "niet gemeten" || row.status === "te weinig data" || row.value === null) return null;
+  if (typeof row.value === "number") return seconds(row.value * 1000);
+  const r = row.value;
+  const ci = row.interval ? ` (${Math.round(row.interval.low * 100)}–${Math.round(row.interval.high * 100)}%)` : "";
+  return `${r.percentage}%${ci} · ${partOf(r)}`;
+}
+
+/** Eén regel van de go/no-go-tabel: status, metric, waarde met interval en de drempels. */
+export function GoRow({ row }: { row: GoNoGoRow }) {
+  const value = goValueText(row);
+  const users = row.value !== null && typeof row.value === "object" ? row.value.users : null;
+  return (
+    <li className="flex flex-col gap-1 border-t border-border pt-3 first:border-t-0 first:pt-0">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[15px] leading-5">
+          {row.label}
+          {row.core && <span className="text-text-muted"> (kern)</span>}
+        </p>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold leading-4 ${STATUS_CLASS[row.status]}`}>{STATUS_LABEL[row.status]}</span>
+      </div>
+      <p className="text-[13px] leading-[18px] tabular-nums">
+        {value ?? (row.status === "te weinig data" && users !== null ? tooLittleData(users) : <span className="text-text-muted">{row.status === "niet gemeten" ? "Niet uit de app te halen" : "Nog geen data"}</span>)}
+      </p>
+      <p className="text-[13px] leading-[18px] text-text-muted tabular-nums">
+        Go {row.go} · grijs {row.grey} · no-go {row.nogo}
+        {row.hint && <> · {row.hint}</>}
+      </p>
+    </li>
   );
 }

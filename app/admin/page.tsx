@@ -11,6 +11,7 @@ import {
   connectionStats,
   enoughData,
   funnel,
+  goNoGo,
   habit,
   labeledWithin7Days,
   laterRatio,
@@ -31,7 +32,7 @@ import { requireUser } from "@/lib/auth";
 import { QUICK_SUGGESTIONS } from "@/lib/categories/defaults";
 import { formatDayShort } from "@/lib/format";
 import { InviteCodes } from "./invite-codes";
-import { Line, NorthStar, Section, decimal, ratioText, seconds } from "./ui";
+import { GoRow, Line, NorthStar, Section, decimal, ratioText, seconds } from "./ui";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -73,6 +74,7 @@ export default async function AdminPage() {
   const pots = potjes(data.categories, data.potjeTxs, events);
   const reconnects = events.filter((e) => e.type === "bank_reconnect").length;
   const conn = connectionStats(data.connections, reconnects, today);
+  const verdict = goNoGo({ profiles, events, txTimings: data.txTimings, shares: data.shares, today, eventsSince: today.getTime() - WINDOW_DAYS * 864e5 });
 
   const maxWeekly = Math.max(1, ...weekly.map((w) => w.activeUsers));
   const topWeekly = weekly.reduce<(typeof weekly)[number] | null>((best, w) => (w.activeUsers > 0 && (!best || w.activeUsers > best.activeUsers) ? w : best), null);
@@ -138,6 +140,22 @@ export default async function AdminPage() {
           />
         </div>
       </section>
+
+      <Section
+        title="Go / no-go"
+        says="De pilot tegen de drempels uit het haalbaarheidsrapport. Rood alleen als ook de bovengrens van het 95%-interval onder de drempel ligt. Groen vraagt ook bevestiging in interviews."
+      >
+        <ul className="flex flex-col gap-3">
+          {verdict.rows.map((row) => (
+            <GoRow key={row.key} row={row} />
+          ))}
+        </ul>
+        <Line>
+          {verdict.veto
+            ? "Een kernmetric staat op no-go. Dat is een no-go, ook als de rest groen is."
+            : "Sorteren binnen 7 dagen en actief in week 2 hebben vetorecht: is een van beide rood, dan is het een no-go."}
+        </Line>
+      </Section>
 
       <Section title="Trechter" says="Hoeveel mensen elke stap van de start haalden. De grootste uitval is waar we eerst moeten kijken.">
         {signups === 0 && steps.steps.every((s) => s.count === 0) ? (
