@@ -11,7 +11,7 @@
 
 import { AnimatePresence } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { CategoryEditor } from "@/components/categories/category-editor";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -24,10 +24,12 @@ import { DEFAULT_CATEGORY_ICON } from "@/lib/categories/icons";
 import { CATEGORY_COLORS } from "@/lib/categories/palette";
 import { VOORGESCHOTEN_CATEGORY, type CategoryDraft } from "@/lib/categories/types";
 import type { CategoryOption, OpenShare, OpenTransaction } from "@/lib/transactions/queries";
+import { sameCounterparty } from "@/lib/transactions/same-counterparty";
 import { splitEqually } from "@/lib/transactions/split";
 import { cn } from "@/lib/utils";
 import {
   assignCategory,
+  assignMany,
   completeCoach,
   completeSession,
   createCategory,
@@ -35,6 +37,7 @@ import {
   settleSharesWithTransaction,
   skipTransaction,
   undoAssign,
+  undoMany,
   type SplitInput,
 } from "./actions";
 import { CategoryTiles, tileCount } from "./category-tiles";
@@ -63,6 +66,12 @@ const COACH_DONE_MS = 2500;
 /** Hoe lang een foutmelding in de pil blijft staan. */
 const ERROR_MS = 5000;
 const METHOD_MISSING = "Kies eerst: via de bank of buiten de bank.";
+
+/** Hoeveel er bij het potje bijkomt als deze kaart erin gaat (bij een verdeling alleen jouw deel). */
+function spentDelta(transaction: OpenTransaction, category: CategoryOption, ownShare?: number): number {
+  if (category.isIncome) return Math.max(transaction.amount, 0);
+  return transaction.amount < 0 ? (ownShare ?? -transaction.amount) : -transaction.amount;
+}
 
 const VOORGESCHOTEN_OPTION: CategoryOption = {
   id: "voorgeschoten",
@@ -98,6 +107,8 @@ export function SortScreen({
   const [undone, setUndone] = useState(0);
   const [exitKind, setExitKind] = useState<ExitKind>("assign");
   const [undo, setUndo] = useState<Decision | null>(null);
+  // Na "Ook de andere": de groep die in één keer is ingedeeld (en in één keer terug kan).
+  const [undoBulk, setUndoBulk] = useState<Decision[] | null>(null);
   const [pulse, setPulse] = useState<{ id: string | null; key: number }>({ id: null, key: 0 });
   const [error, setError] = useState<string | null>(null);
   // Een ontbrekende keuze is geen fout: die tonen we als rustige hint, niet in rood.
@@ -143,12 +154,15 @@ export function SortScreen({
 
   useEffect(() => {
     if (undoTimer.current) clearTimeout(undoTimer.current);
-    if (!undo) return;
-    undoTimer.current = setTimeout(() => setUndo(null), UNDO_WINDOW_MS);
+    if (!undo && !undoBulk) return;
+    undoTimer.current = setTimeout(() => {
+      setUndo(null);
+      setUndoBulk(null);
+    }, UNDO_WINDOW_MS);
     return () => {
       if (undoTimer.current) clearTimeout(undoTimer.current);
     };
-  }, [undo]);
+  }, [undo, undoBulk]);
 
   useEffect(() => {
     if (!error) return;
@@ -192,6 +206,7 @@ export function SortScreen({
     setSkipped(0);
     setUndone(0);
     setUndo(null);
+    setUndoBulk(null);
     setError(null);
     setSettledShareIds(new Set());
     setTotalAtStart(totalOpen);
@@ -240,11 +255,7 @@ export function SortScreen({
         : undefined;
       const decision: Decision = { transaction, category, ownShare };
 
-      const delta = category.isIncome
-        ? Math.max(transaction.amount, 0)
-        : transaction.amount < 0
-          ? (ownShare ?? -transaction.amount)
-          : -transaction.amount;
+      const delta = spentDelta(transaction, category, ownShare);
 
       setError(null);
       setHint(null);
@@ -253,6 +264,7 @@ export function SortScreen({
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, decision]);
       setUndo(decision);
+      setUndoBulk(null);
       setPulse((p) => ({ id: category.id, key: p.key + 1 }));
       bumpCategoryTotal(category.id, delta);
       setAnnouncement(
@@ -293,6 +305,7 @@ export function SortScreen({
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, decision]);
       setUndo(decision);
+      setUndoBulk(null);
       setSettledShareIds((prev) => new Set([...prev, ...shareIds]));
       settledByTransaction.current.set(transaction.id, shareIds);
       setAnnouncement(`${transaction.counterparty} verwerkt als terugbetaling`);
@@ -353,12 +366,7 @@ export function SortScreen({
     } else {
       // Delen die bij deze uitgave hoorden verdwijnen weer (de server verwijdert ze ook).
       if (ownShare !== undefined) setOpenShares((prev) => prev.filter((s) => s.transactionId !== transaction.id));
-      const delta = category.isIncome
-        ? Math.max(transaction.amount, 0)
-        : transaction.amount < 0
-          ? (ownShare ?? -transaction.amount)
-          : -transaction.amount;
-      bumpCategoryTotal(category.id, -delta);
+      bumpCategoryTotal(category.id, -spentDelta(transaction, category, ownShare));
     }
     setAnnouncement(`${transaction.counterparty} terug uit ${category.name}`);
     startTransition(async () => {
@@ -366,6 +374,64 @@ export function SortScreen({
       if (!result.ok) setError(result.error);
     });
   }, [undo, startTransition]);
+
+  // Aanbod na een gewone keuze: dezelfde tegenpartij staat nog vaker op de stapel.
+  // Nooit bij een verdeling of terugbetaling; jij tikt zelf op "Ook de andere".
+  const sameOffer = useMemo(
+    () =>
+      undo && !undoBulk && undo.ownShare === undefined && undo.category.id !== VOORGESCHOTEN_OPTION.id
+        ? sameCounterparty(undo.transaction, queue)
+        : [],
+    [undo, undoBulk, queue],
+  );
+
+  const assignSame = useCallback(() => {
+    if (!undo || sameOffer.length === 0) return;
+    const { category } = undo;
+    const group: Decision[] = sameOffer.map((transaction) => ({ transaction, category }));
+    const ids = new Set(group.map((d) => d.transaction.id));
+    tap();
+    setError(null);
+    setHint(null);
+    setExitKind("assign");
+    setQueue((q) => q.filter((t) => !ids.has(t.id)));
+    setDecisions((d) => [...d, ...group]);
+    setUndo(null);
+    setUndoBulk(group);
+    group.forEach((d) => bumpCategoryTotal(category.id, spentDelta(d.transaction, category)));
+    setAnnouncement(`Nog ${group.length} van ${undo.transaction.counterparty} in ${category.name}`);
+
+    startTransition(async () => {
+      const result = await assignMany([...ids], category.id);
+      if (!result.ok) {
+        setQueue((q) => [...group.map((d) => d.transaction), ...q.filter((t) => !ids.has(t.id))]);
+        setDecisions((d) => d.filter((x) => !ids.has(x.transaction.id)));
+        setUndoBulk((u) => (u === group ? null : u));
+        group.forEach((d) => bumpCategoryTotal(category.id, -spentDelta(d.transaction, category)));
+        setError(result.error);
+      }
+    });
+  }, [undo, sameOffer, startTransition]);
+
+  const handleUndoBulk = useCallback(() => {
+    if (!undoBulk) return;
+    const group = undoBulk;
+    const ids = new Set(group.map((d) => d.transaction.id));
+    const category = group[0].category;
+    warning();
+    setUndoBulk(null);
+    setError(null);
+    setExitKind("none");
+    setQueue((q) => [...group.map((d) => d.transaction), ...q]);
+    setDecisions((d) => d.filter((x) => !ids.has(x.transaction.id)));
+    setUndone((u) => u + group.length);
+    group.forEach((d) => bumpCategoryTotal(category.id, -spentDelta(d.transaction, category)));
+    setAnnouncement(`${group.length} kaartjes terug op de stapel`);
+    startTransition(async () => {
+      const result = await undoMany([...ids]);
+      if (!result.ok) setError(result.error);
+    });
+  }, [undoBulk, startTransition]);
 
   function openEditor() {
     const used = new Set(categories.map((c) => c.color));
@@ -417,13 +483,30 @@ export function SortScreen({
     setQueue((q) => q.map((t) => (t.id === transactionId ? { ...t, note } : t)));
   }
 
-  const undoToast = (
+  const undoToast = undoBulk ? (
+    <UndoToast
+      id={`bulk-${undoBulk[0].transaction.id}`}
+      text={`Nog ${undoBulk.length} in ${undoBulk[0].category.name}`}
+      onUndo={handleUndoBulk}
+      error={error}
+      hint={hint}
+    />
+  ) : (
     <UndoToast
       id={undo ? undo.transaction.id : null}
       text={
         undo?.category.id === VOORGESCHOTEN_OPTION.id ? "Verwerkt als terugbetaling" : `In ${undo?.category.name ?? ""}`
       }
       onUndo={handleUndo}
+      extra={
+        undo && sameOffer.length > 0
+          ? {
+              label: `Ook ${sameOffer.length} andere`,
+              ariaLabel: `Ook ${sameOffer.length === 1 ? "het andere kaartje" : `de ${sameOffer.length} andere kaartjes`} van ${undo.transaction.counterparty} in ${undo.category.name}`,
+              onClick: assignSame,
+            }
+          : undefined
+      }
       error={error}
       hint={hint}
     />

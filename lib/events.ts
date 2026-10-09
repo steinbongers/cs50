@@ -26,6 +26,13 @@ export type EventType =
   | "transaction_moved"
   /** Stapel leeg gemaakt. `{ assigned, skipped, undone, duration_ms }` (aantallen en duur) */
   | "swipe_session_complete"
+  /**
+   * "Ook de andere van deze winkel": meerdere kaartjes in één keer in hetzelfde potje.
+   * `{ category_id, count }` (telt niet als swipe; geen duur per kaart)
+   */
+  | "bulk_assign"
+  /** "Ook de andere" ongedaan gemaakt. `{ count }` */
+  | "bulk_undo"
   /** Laatste keuze ongedaan gemaakt. `{ transaction_id }` */
   | "undo"
   /** Kaart op Later gezet. `{ transaction_id, skipped_count }` */

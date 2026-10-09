@@ -13,6 +13,8 @@ interface UndoToastProps {
   error?: string | null;
   /** Hint (een keuze die nog ontbreekt, geen fout): dezelfde pil, rustig in amber. */
   hint?: string | null;
+  /** Tweede knop naast Ongedaan maken, bijvoorbeeld "Ook 3 andere". */
+  extra?: { label: string; ariaLabel: string; onClick: () => void };
 }
 
 const pillClasses =
@@ -23,7 +25,7 @@ const pillClasses =
  * met een streep van 2 px die leegloopt. Fouten verschijnen in dezelfde vorm,
  * zodat de layout nooit verspringt.
  */
-export function UndoToast({ id, text, onUndo, error, hint }: UndoToastProps) {
+export function UndoToast({ id, text, onUndo, error, hint, extra }: UndoToastProps) {
   const reduce = useReducedMotion();
   const enter = reduce ? { opacity: 0 } : { y: 12, opacity: 0 };
   const leave = reduce ? { opacity: 0 } : { y: 8, opacity: 0 };
@@ -67,6 +69,16 @@ export function UndoToast({ id, text, onUndo, error, hint }: UndoToastProps) {
             className={`${pillClasses} bg-text text-bg`}
           >
             <span className="min-w-0 truncate">{text}</span>
+            {extra && (
+              <button
+                type="button"
+                onClick={extra.onClick}
+                aria-label={extra.ariaLabel}
+                className="relative ml-auto flex h-8 shrink-0 items-center rounded-full bg-bg/15 px-3 font-semibold after:absolute after:-inset-y-1.5 after:inset-x-0 after:content-['']"
+              >
+                {extra.label}
+              </button>
+            )}
             <button
               type="button"
               onClick={onUndo}

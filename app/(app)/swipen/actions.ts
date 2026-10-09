@@ -13,6 +13,7 @@ import { isCategoryColor } from "@/lib/categories/palette";
 import type { CategoryDraft } from "@/lib/categories/types";
 import { logEvent } from "@/lib/events";
 import { createClient } from "@/lib/supabase/server";
+import { MAX_SAME_COUNTERPARTY } from "@/lib/transactions/same-counterparty";
 import { MAX_SPLIT_PERSONS, MIN_SPLIT_PERSONS, splitEqually } from "@/lib/transactions/split";
 import type { CategoryOption, OpenShare } from "@/lib/transactions/queries";
 
@@ -272,6 +273,66 @@ export async function undoAssign(transactionId: string): Promise<ActionResult> {
   if (error || !updated) return { ok: false, error: "Ongedaan maken lukte niet." };
 
   await logEvent("undo", { transaction_id: transactionId });
+  return { ok: true };
+}
+
+export type AssignManyResult = { ok: true; ids: string[] } | { ok: false; error: string };
+
+/**
+ * "Ook de andere van deze winkel": zet meerdere open kaartjes in één keer in hetzelfde potje.
+ * Alleen kaartjes zonder potje; het hele bedrag, nooit een verdeling.
+ */
+export async function assignMany(transactionIds: string[], categoryId: string): Promise<AssignManyResult> {
+  const user = await requireUser();
+  if (
+    !Array.isArray(transactionIds) ||
+    transactionIds.length === 0 ||
+    transactionIds.length > MAX_SAME_COUNTERPARTY ||
+    !transactionIds.every(isUuid) ||
+    !isUuid(categoryId)
+  ) {
+    return { ok: false, error: GENERIC_ERROR };
+  }
+
+  const supabase = await createClient();
+  const { data: category } = await supabase
+    .from("categories")
+    .select("id, system_key")
+    .eq("id", categoryId)
+    .eq("user_id", user.id)
+    .eq("archived", false)
+    .maybeSingle();
+  if (!category) return { ok: false, error: "Dit potje bestaat niet (meer)." };
+  if (category.system_key) return { ok: false, error: "Dit potje kun je niet kiezen." };
+
+  const { data: updated, error } = await supabase
+    .from("transactions")
+    .update({ category_id: categoryId, categorized_at: new Date().toISOString(), own_share: null })
+    .in("id", transactionIds)
+    .eq("user_id", user.id)
+    .is("category_id", null)
+    .select("id");
+  if (error || !updated) return { ok: false, error: GENERIC_ERROR };
+
+  await logEvent("bulk_assign", { category_id: categoryId, count: updated.length });
+  return { ok: true, ids: updated.map((t) => t.id) };
+}
+
+/** Maakt "ook de andere" ongedaan: de kaartjes gaan terug op de stapel. */
+export async function undoMany(transactionIds: string[]): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!Array.isArray(transactionIds) || transactionIds.length === 0 || !transactionIds.every(isUuid)) {
+    return { ok: false, error: GENERIC_ERROR };
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("transactions")
+    .update({ category_id: null, categorized_at: null, own_share: null })
+    .in("id", transactionIds)
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: "Ongedaan maken lukte niet." };
+
+  await logEvent("bulk_undo", { count: transactionIds.length });
   return { ok: true };
 }
 
