@@ -14,6 +14,10 @@ test("private key: leesbaar in alle vormen waarin hij uit een dashboard komt", (
     "met aanhalingstekens": `"${pem.replace(/\n/g, "\\n")}"`,
     "Windows-regeleinden": pem.replace(/\n/g, "\r\n"),
     base64: Buffer.from(pem).toString("base64"),
+    "zonder BEGIN-regel": pem.replace("-----BEGIN PRIVATE KEY-----", "").replace(/\n/g, " "),
+    "BEGIN met lange streepjes": pem.replace("-----BEGIN PRIVATE KEY-----", "——BEGIN PRIVATE KEY——").replace(/\n/g, " "),
+    "kop half weg": pem.replace("-----BEGIN PRIVATE KEY-----", "PRIVATE KEY-----").replace(/\n/g, " "),
+    "BEGIN zonder streepjes": pem.replace("-----BEGIN PRIVATE KEY-----", "BEGIN PRIVATE KEY").replace(/\n/g, " "),
   };
   for (const [name, raw] of Object.entries(variants)) {
     assert.doesNotThrow(() => createPrivateKey(normalizePrivateKey(raw)), name);

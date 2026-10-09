@@ -18,10 +18,17 @@ export function normalizePrivateKey(raw: string): string {
     }
   }
 
-  const match = /-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----/.exec(key);
-  if (!match) return key;
-  const label = match[1];
-  const body = match[2].replace(/\s+/g, "");
+  // Het type komt uit de END-regel; de BEGIN-regel raakt bij kopiëren nog weleens vervormd
+  // (andere streepjes, of hij valt weg). Alles vóór END zonder die kop is de sleutel zelf.
+  const end = /-+\s*END ([A-Z ]+?)\s*-+/.exec(key);
+  if (!end) return key;
+  const label = end[1].trim();
+  const body = key
+    .slice(0, end.index)
+    .replace(/[^\n]*BEGIN[^\n]*?KEY[^A-Za-z0-9+/=\s]*/i, "")
+    .replace(/[^A-Za-z0-9+/=]/g, "")
+    // Een RSA-sleutel begint altijd met "MII"; resten van een kapotte kop ervoor vallen weg.
+    .replace(/^[A-Za-z]*?(?=MII)/, "");
   const lines = body.match(/.{1,64}/g) ?? [];
   return `-----BEGIN ${label}-----\n${lines.join("\n")}\n-----END ${label}-----\n`;
 }
@@ -30,9 +37,10 @@ export function normalizePrivateKey(raw: string): string {
 export function describePrivateKeyShape(raw: string | undefined): string {
   if (!raw) return "er staat geen key in de variabele";
   const label = /-----BEGIN ([A-Z ]+)-----/.exec(raw)?.[1];
+  const looseBegin = !label && /BEGIN/i.test(raw);
   const lines = raw.trim().split(/\r?\n/).length;
   const parts = [
-    label ? `begint met BEGIN ${label}` : "zonder BEGIN-regel",
+    label ? `begint met BEGIN ${label}` : looseBegin ? "BEGIN-regel vervormd" : "zonder BEGIN-regel",
     /-----END /.test(raw) ? "met END-regel" : "zonder END-regel",
     `${lines} ${lines === 1 ? "regel" : "regels"}`,
     `${raw.length} tekens`,
