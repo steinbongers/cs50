@@ -198,7 +198,9 @@ export function CategoryEditor({
         </p>
       )}
 
-      <div className="flex gap-2">
+      {/* Altijd in beeld, ook met de hele lijst icoontjes erboven: niet eerst naar beneden scrollen.
+          De negatieve bottom en marge heffen de onderpadding van de sheet op, zodat er niets onder doorschemert. */}
+      <div className="sticky bottom-[calc(-1*(env(safe-area-inset-bottom)+1.25rem))] z-10 -mx-4 -mb-[calc(env(safe-area-inset-bottom)+1.25rem)] flex gap-2 border-t border-border bg-surface px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
         {onRemove && (
           <Button variant="ghost" onClick={onRemove}>
             Verwijderen

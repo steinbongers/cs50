@@ -204,6 +204,16 @@ export function SortScreen({
   const [adoptedBatch, setAdoptedBatch] = useState(transactions);
 
   const current = queue[0] ?? null;
+  // De rij onderin (Ik krijg een deel terug, Later): de pil Ongedaan maken komt erboven, niet eroverheen.
+  const bottomRowRef = useRef<HTMLDivElement>(null);
+  const [bottomRowHeight, setBottomRowHeight] = useState(0);
+  useEffect(() => {
+    const el = bottomRowRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setBottomRowHeight(el.offsetHeight));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [current?.id]);
   // De stapel zoals hij nu is, voor het antwoord van de server na een vaste ontvanger.
   const queueRef = useRef(queue);
   useEffect(() => {
@@ -785,6 +795,7 @@ export function SortScreen({
       id={`bulk-${undoBulk.decisions[0].transaction.id}`}
       text={undoBulk.text}
       onUndo={handleUndoBulk}
+      aboveBottom={current ? bottomRowHeight : 0}
       error={error}
       hint={hint}
     />
@@ -793,6 +804,7 @@ export function SortScreen({
       id={undo ? undo.transaction.id : null}
       text={undo ? decisionText(undo) : ""}
       onUndo={handleUndo}
+      aboveBottom={current ? bottomRowHeight : 0}
       extra={
         undo && sameOffer.length > 0
           ? {
@@ -909,7 +921,7 @@ export function SortScreen({
 
       {/* Onderaan het scherm, in de duimzone: Ik krijg een deel terug en Later. De bijhoudregel klapt erboven open.
           Bij een pinopname staan hier Verdelen en Nog contant (nog niet uitgegeven); een tik op een potje = alles daarin. */}
-      <div className="mt-auto px-4 pt-3 pb-2 compact:pt-1">
+      <div ref={bottomRowRef} className="mt-auto px-4 pt-3 pb-2 compact:pt-1">
         {!isIncoming && !isCash && (
           <SplitRow key={current.id} open={split.enabled} />
         )}

@@ -13,6 +13,8 @@ interface UndoToastProps {
   error?: string | null;
   /** Hint (een keuze die nog ontbreekt, geen fout): dezelfde pil, rustig in amber. */
   hint?: string | null;
+  /** Hoogte (px) van wat er onderin boven de tabbalk staat; de pil komt daar net boven. */
+  aboveBottom?: number;
   /** Tweede knop naast Ongedaan maken, bijvoorbeeld "Ook 3 andere". */
   extra?: { label: string; ariaLabel: string; onClick: () => void };
 }
@@ -25,14 +27,17 @@ const pillClasses =
  * met een streep van 2 px die leegloopt. Fouten verschijnen in dezelfde vorm,
  * zodat de layout nooit verspringt.
  */
-export function UndoToast({ id, text, onUndo, error, hint, extra }: UndoToastProps) {
+export function UndoToast({ id, text, onUndo, error, hint, extra, aboveBottom = 0 }: UndoToastProps) {
   const reduce = useReducedMotion();
   const enter = reduce ? { opacity: 0 } : { y: 12, opacity: 0 };
   const leave = reduce ? { opacity: 0 } : { y: 8, opacity: 0 };
   const transition = { duration: reduce ? 0.12 : 0.18, ease: [0.22, 1, 0.36, 1] as const };
 
   return (
-    <div className="pointer-events-none fixed inset-x-4 bottom-[calc(72px+env(safe-area-inset-bottom))] z-30 mx-auto max-w-[calc(28rem-2rem)]">
+    <div
+      className="pointer-events-none fixed inset-x-4 z-30 mx-auto max-w-[calc(28rem-2rem)]"
+      style={{ bottom: `calc(72px + env(safe-area-inset-bottom) + ${Math.max(0, Math.round(aboveBottom))}px)` }}
+    >
       <AnimatePresence mode="wait" initial={false}>
         {error ? (
           <motion.div
