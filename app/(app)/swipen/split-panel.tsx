@@ -51,7 +51,7 @@ const roundButton =
   "disabled:opacity-40 disabled:active:scale-100";
 
 /**
- * De regel die inschuift als "Ik krijg geld terug" aan staat: met hoeveel waren
+ * De regel die inschuift als "Ik krijg een deel terug" aan staat: met hoeveel waren
  * jullie, via of buiten de bank, en (optioneel) namen in een sheet.
  */
 export function SplitRow({ open, amountAbs, state, onChange, knownNames = [], methodMissing = false }: SplitRowProps) {

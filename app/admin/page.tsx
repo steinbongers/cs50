@@ -241,7 +241,7 @@ export default async function AdminPage() {
         <Line>Ongedaan gemaakt: {ratioText(undo)}</Line>
       </Section>
 
-      <Section title="Delen" says="Of ‘Ik krijg geld terug’ gebruikt wordt, en of mensen hun geld ook echt terugkrijgen.">
+      <Section title="Delen" says="Of ‘Ik krijg een deel terug’ gebruikt wordt, en of mensen hun geld ook echt terugkrijgen.">
         <Line>Actieve gebruikers die deelden (4 weken): {ratioText(shares.usersWithShare)}</Line>
         <Line>Binnen 14 dagen terugbetaald: {ratioText(shares.settledWithin14)}</Line>
         <Line>

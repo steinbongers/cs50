@@ -8,7 +8,7 @@ Stand: 8 oktober 2026, voor de pilot van volgende week. Bij een conflict wint `d
 3. We winnen van Copilot, Emma en de bank-apps door minder te tonen: alleen getallen die helpen bij een beslissing, in een strak Voorgeschoten-jasje.
 
 ## 2. Tone of voice
-- **Vorm.** Altijd jij-vorm. De ik-vorm alleen op knoppen die de gebruiker zelf "zegt" ("Ik krijg geld terug").
+- **Vorm.** Altijd jij-vorm. De ik-vorm alleen op knoppen die de gebruiker zelf "zegt" ("Ik krijg een deel terug").
 - **Kort.** Eén gedachte per zin, het liefst onder de 12 woorden. Koppen zonder punt.
 - **Vaste woorden:** kaartje, potje, stapel, maand (nooit "periode"), Later, Ongedaan maken, Voorgeschoten, Nog te krijgen, Terugbetaling.
 - **Geen jargon.** Niet "transactie", "sessie", "server", "omgeving" of "data", maar "kaartje", "bank", "gegevens".
@@ -35,7 +35,7 @@ Stand: 8 oktober 2026, voor de pilot van volgende week. Bij een conflict wint `d
 **F2 Swipen zonder scrollen**
 - Op 390×844 passen header, kaart, actieregel en 4 rijen tegels (14 of 15 tegels) zonder scrollen. Op 375×667 ook, in de compacte variant.
 - Het bedrag van deze maand blijft op de tegel (dat is een besluit). Alleen in de compacte variant (hoogte ≤ 700 px) valt het weg.
-- Later staat in één regel naast "Ik krijg geld terug", direct onder de kaart.
+- Later staat in één regel naast "Ik krijg een deel terug", direct onder de kaart.
 - De hulpregel boven de tegels wordt `sr-only` ("Welk potje?").
 - Haptiek: een korte tik bij elke keuze, succes bij een lege stapel. Werkt waar het toestel het ondersteunt.
 

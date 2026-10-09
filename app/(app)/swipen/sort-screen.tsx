@@ -512,7 +512,7 @@ export function SortScreen({
         />
       </section>
 
-      {/* Onderaan het scherm, in de duimzone: Ik krijg geld terug en Later. Het verdeelpaneel klapt erboven open. */}
+      {/* Onderaan het scherm, in de duimzone: Ik krijg een deel terug en Later. Het verdeelpaneel klapt erboven open. */}
       <div className="mt-auto px-4 pt-3 pb-2 compact:pt-1">
         {!isIncoming && (
           <SplitRow
@@ -538,13 +538,13 @@ export function SortScreen({
               Waar hoort dit geld bij?
             </p>
           ) : (
-            <label className="flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-control bg-surface px-3 text-[15px] font-medium shadow-card">
+            <label className="flex h-11 min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-control bg-surface px-3 text-[15px] font-medium shadow-card max-[389px]:text-[14px]">
               <span className="truncate" aria-hidden>
-                Ik krijg geld terug
+                Ik krijg een deel terug
               </span>
               <Switch
                 size="sm"
-                label="Ik krijg geld terug"
+                label="Ik krijg een deel terug"
                 checked={split.enabled}
                 onCheckedChange={(enabled) => {
                   setMethodMissing(false);
@@ -559,7 +559,7 @@ export function SortScreen({
             onClick={skip}
             disabled={isLast}
             aria-describedby={isLast ? "later-laatste" : undefined}
-            className="w-24 shrink-0"
+            className="shrink-0 px-3"
           >
             Later
             <ArrowRight size={16} aria-hidden />

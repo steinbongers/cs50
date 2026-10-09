@@ -45,7 +45,7 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 
 ### Geld terugkrijgen (nieuw, kern van de app)
 
-- Op de kaart, **vóór** je een potje kiest, een schakelaar **"Ik krijg geld terug"**.
+- Op de kaart, **vóór** je een potje kiest, een schakelaar **"Ik krijg een deel terug"**.
 - Aangezet: kies **met hoeveel personen** je was (jij + 1, 2, 3 ...). Gelijk delen: **jouw deel
   gaat naar het gekozen potje**, de rest naar het ingebouwde potje **Voorgeschoten**.
 - **Namen zijn optioneel** (met suggesties uit eerdere namen).
@@ -172,7 +172,7 @@ Deze lijst is leidend boven de spec waar ze elkaar tegenspreken.
 
 ## Integratie golf 2 (8 oktober 2026, nacht)
 
-- **Via de bank of buiten de bank is niet voorgeselecteerd.** Met "Ik krijg geld terug" aan kies je zelf;
+- **Via de bank of buiten de bank is niet voorgeselecteerd.** Met "Ik krijg een deel terug" aan kies je zelf;
   tik je zonder keuze op een potje, dan vraagt de app eerst die keuze. Het aantal personen begint op 2
   (een teller kan niet leeg zijn). Stein kan terug naar "via de bank" als standaard.
 - **Zoeken (F7):** `/transacties` met zoekveld, chips voor maand en potje, en per kaartje de banktekst,
@@ -199,3 +199,5 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
 - **Welkom:** "Beginnen" is de hoofdknop; de Apple-knop heet "Doorgaan met Apple" (werkt voor nieuw en bestaand).
 - **Klaar-scherm zonder bank:** "Klaar. Nog één stap" met "Bank koppelen" en "Eerst rondkijken", in plaats van de
   belofte dat er kaartjes komen.
+
+- **Schakelaar heet "Ik krijg een deel terug"** (9 oktober 2026) en staat onderaan het hoofdscherm, naast Later.
