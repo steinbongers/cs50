@@ -23,7 +23,7 @@ export async function GET() {
     fetchAll((from, to) =>
       supabase
         .from("transactions")
-        .select("booking_date, booking_time, amount, own_share, currency, counterparty, description, raw_counterparty, raw_description, category_id, categorized_at, is_internal_transfer, balance_after, note, source")
+        .select("id, booking_date, booking_time, amount, own_share, currency, counterparty, description, raw_counterparty, raw_description, category_id, categorized_at, is_internal_transfer, balance_after, note, source, awaiting_refund, refund_for_id")
         .order("booking_date", { ascending: false })
         .order("id")
         .range(from, to),
@@ -36,6 +36,8 @@ export async function GET() {
   const header = [
     "datum", "tijd", "bedrag", "jouw_deel", "valuta", "tegenpartij", "omschrijving", "tegenpartij_bank", "omschrijving_bank",
     "potje", "in_potje_gezet_op", "eigen_overboeking", "saldo_erna", "notitie", "bron",
+    // Achteraan, zodat bestaande kolommen op hun plek blijven. terug_voor verwijst naar een id.
+    "id", "wacht_op_geld_terug", "terug_voor",
   ];
   const lines = [header.join(";")];
   for (const t of transactions) {
@@ -57,6 +59,9 @@ export async function GET() {
         t.note ?? "",
         // bank, csv of cash (contante uitgave zonder rekening)
         t.source,
+        t.id,
+        t.awaiting_refund ? "ja" : "nee",
+        t.refund_for_id ?? "",
       ]
         .map(csvField)
         .join(";"),

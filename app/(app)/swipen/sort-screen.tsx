@@ -5,8 +5,8 @@
  *   header 52 + 12 + kaart 168 + 12 + tegels (4 × 80 + 3 × 6) + 12 + actieregel onderaan 44 + 8
  *   = 52+12+168+12+44+12+(4×80+3×6) = 638 px.
  * Blijft 49 px over voor de Ongedaan-maken-pil (40). Compact (≤ 700 px hoog):
- * kaart 136 en tegels 64 zonder bedrag, ±518 px van 583. Met de verdeelregel open (+52)
- * worden de tegels 60, zodat ook 375 × 667 niet scrolt.
+ * kaart 136 en tegels 64 zonder bedrag, ±518 px van 583. Met "Ik krijg een deel terug" aan
+ * schuift er één regel in (+52); dan worden de tegels 60, zodat ook 375 × 667 niet scrolt.
  */
 
 import { AnimatePresence } from "framer-motion";
@@ -25,15 +25,16 @@ import { CATEGORY_COLORS } from "@/lib/categories/palette";
 import { CONTANT_CATEGORY, GELD_TERUG_CATEGORY, VOORGESCHOTEN_CATEGORY, type CategoryDraft } from "@/lib/categories/types";
 import { formatEuro } from "@/lib/format";
 import { isCashWithdrawal } from "@/lib/transactions/cash";
-import type { CategoryOption, OpenShare, OpenTransaction } from "@/lib/transactions/queries";
+import type { AwaitingRefund, CategoryOption, OpenShare, OpenTransaction } from "@/lib/transactions/queries";
+import { refundOutcome, refundUndoText } from "@/lib/transactions/refunds";
 import { sameCounterparty } from "@/lib/transactions/same-counterparty";
-import { splitEqually } from "@/lib/transactions/split";
 import { cn } from "@/lib/utils";
 import {
   assignAlways,
   assignCategory,
   assignMany,
   assignRefund,
+  assignRefundFor,
   completeCoach,
   completeSession,
   createCategory,
@@ -45,7 +46,6 @@ import {
   undoAssign,
   undoMany,
   type CashSpendInput,
-  type SplitInput,
 } from "./actions";
 import { CashSplitSheet } from "./cash-split-sheet";
 import { CategoryTiles, tileCount } from "./category-tiles";
@@ -63,8 +63,8 @@ interface SortScreenProps {
   transactions: OpenTransaction[];
   totalOpen: number;
   openShares: OpenShare[];
-  /** Eerder gebruikte namen, als suggesties bij het verdelen. */
-  knownNames?: string[];
+  /** Uitgaven die nog op geld terug wachten (bijhouden), voor de tegel Terugbetaling. */
+  awaitingRefunds?: AwaitingRefund[];
   coachStep: number;
 }
 
@@ -74,7 +74,6 @@ const STICKY_FROM_TILES = 21;
 const COACH_DONE_MS = 2500;
 /** Hoe lang een foutmelding in de pil blijft staan. */
 const ERROR_MS = 5000;
-const METHOD_MISSING = "Kies eerst: via de bank of buiten de bank.";
 
 /** Een groep keuzes die in één keer terug kan; bij een vaste ontvanger gaat ook de regel weg. */
 interface UndoGroup {
@@ -152,14 +151,17 @@ export function SortScreen({
   transactions,
   totalOpen,
   openShares: initialOpenShares,
-  knownNames = [],
+  awaitingRefunds: initialAwaiting = [],
   coachStep: initialCoachStep,
 }: SortScreenProps) {
   const [queue, setQueue] = useState<OpenTransaction[]>(transactions);
   const [categories, setCategories] = useState<CategoryOption[]>(initialCategories);
-  // Openstaande delen houden we lokaal bij: nieuwe delen komen terug uit assignCategory,
-  // zodat er geen refresh (en dus geen verlies van ongedaan maken) nodig is.
+  // Openstaande delen (van vroeger verdelen) houden we lokaal bij, zodat afstrepen zonder
+  // refresh (en dus zonder verlies van ongedaan maken) kan. Nieuwe delen ontstaan hier niet meer.
   const [openShares, setOpenShares] = useState<OpenShare[]>(initialOpenShares);
+  // Zo ook de uitgaven die op geld terug wachten: nieuwe komen erbij na "Ik krijg een deel terug",
+  // een terugbetaling telt lokaal op (en haalt hem weg als alles binnen is).
+  const [awaiting, setAwaiting] = useState<AwaitingRefund[]>(initialAwaiting);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [skipped, setSkipped] = useState(0);
   const [undone, setUndone] = useState(0);
@@ -172,7 +174,7 @@ export function SortScreen({
   // Een ontbrekende keuze is geen fout: die tonen we als rustige hint, niet in rood.
   const [hint, setHint] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
-  // Verdeling hoort bij één kaart: wisselt de kaart, dan begint hij schoon.
+  // "Ik krijg een deel terug" hoort bij één kaart: wisselt de kaart, dan begint hij weer uit.
   const [splitFor, setSplitFor] = useState<{ id: string | null; state: SplitState }>({ id: null, state: EMPTY_SPLIT });
   const [settledShareIds, setSettledShareIds] = useState<Set<string>>(() => new Set());
   const [settleOpen, setSettleOpen] = useState(false);
@@ -186,7 +188,6 @@ export function SortScreen({
   const [editorError, setEditorError] = useState<string | null>(null);
   const [coachStep, setCoach] = useState(initialCoachStep);
   const [coachDone, setCoachDone] = useState(false);
-  const [methodMissing, setMethodMissing] = useState(false);
   const [totalAtStart, setTotalAtStart] = useState(totalOpen);
   const [isPending, startTransition] = useTransition();
 
@@ -197,6 +198,8 @@ export function SortScreen({
   const completedFor = useRef<OpenTransaction[] | null>(null);
   // Per Terugbetaling: welke delen ermee betaald zijn, zodat ongedaan maken ze lokaal terugzet.
   const settledByTransaction = useRef(new Map<string, string[]>());
+  // Per terugbetaling voor een uitgave: hoe die uitgave ervoor stond en of hij nu klaar is.
+  const refundForByTransaction = useRef(new Map<string, { before: AwaitingRefund; complete: boolean }>());
   // De stapel waarmee de lokale staat is gevuld.
   const [adoptedBatch, setAdoptedBatch] = useState(transactions);
 
@@ -209,6 +212,8 @@ export function SortScreen({
   const split = splitFor.id === current?.id ? splitFor.state : EMPTY_SPLIT;
   const availableShares = openShares.filter((s) => !settledShareIds.has(s.id));
   const openSharesTotal = availableShares.reduce((a, s) => a + s.amount, 0);
+  // Alleen uitgaven in een potje dat er nog is: daar gaat de terugbetaling heen.
+  const availableAwaiting = awaiting.filter((a) => categories.some((c) => c.id === a.categoryId));
 
   useEffect(() => {
     sessionStart.current = Date.now();
@@ -269,6 +274,7 @@ export function SortScreen({
     setQueue(transactions);
     setCategories(initialCategories);
     setOpenShares(initialOpenShares);
+    setAwaiting(initialAwaiting);
     setDecisions([]);
     setSkipped(0);
     setUndone(0);
@@ -306,27 +312,14 @@ export function SortScreen({
       if (!current) return;
       const transaction = current;
       const durationMs = performance.now() - shownAt.current;
-      const useSplit = split.enabled && transaction.amount < 0;
-      if (useSplit && split.method === null) {
-        // We kiezen niet voor de gebruiker: eerst via of buiten de bank.
-        warning();
-        setMethodMissing(true);
-        setError(null);
-        setHint(METHOD_MISSING);
-        return;
-      }
-      const method = split.method ?? "bank";
-      const ownShare = useSplit ? splitEqually(transaction.amount, split.persons).ownShare : undefined;
-      const splitInput: SplitInput | undefined = useSplit
-        ? { persons: split.persons, method, names: method === "bank" ? split.names : undefined }
-        : undefined;
-      const decision: Decision = { transaction, category, ownShare };
+      // Ik krijg een deel terug: de hele uitgave in het potje, de app houdt bij wat er terugkomt.
+      const track = split.enabled && transaction.amount < 0 && !category.isIncome;
+      const decision: Decision = { transaction, category, track: track || undefined };
 
-      const delta = spentDelta(transaction, category, ownShare);
+      const delta = spentDelta(transaction, category);
 
       setError(null);
       setHint(null);
-      setMethodMissing(false);
       setExitKind("assign");
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, decision]);
@@ -334,25 +327,38 @@ export function SortScreen({
       setUndoBulk(null);
       setPulse((p) => ({ id: category.id, key: p.key + 1 }));
       bumpCategoryTotal(category.id, delta);
+      if (track) {
+        // Meteen beschikbaar voor de tegel Terugbetaling, zonder refresh.
+        setAwaiting((prev) => [
+          {
+            id: transaction.id,
+            counterparty: transaction.counterparty,
+            bookingDate: transaction.bookingDate,
+            amount: Math.abs(transaction.amount),
+            categoryId: category.id,
+            categoryName: category.name,
+            received: 0,
+          },
+          ...prev.filter((a) => a.id !== transaction.id),
+        ]);
+      }
       setAnnouncement(
-        useSplit
-          ? `${transaction.counterparty}: jouw deel in ${category.name}, de rest in Voorgeschoten`
+        track
+          ? `${transaction.counterparty} in ${category.name}, je houdt bij wat terugkomt`
           : `${transaction.counterparty} in ${category.name}`,
       );
 
       startTransition(async () => {
-        const result = await assignCategory(transaction.id, category.id, durationMs, splitInput, { coach: showCoach });
+        const result = await assignCategory(transaction.id, category.id, durationMs, track ? { track: true } : undefined, {
+          coach: showCoach,
+        });
         if (!result.ok) {
           setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
           setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
           setUndo((u) => (u?.transaction.id === transaction.id ? null : u));
           bumpCategoryTotal(category.id, -delta);
+          if (track) setAwaiting((prev) => prev.filter((a) => a.id !== transaction.id));
           setError(result.error);
-          return;
-        }
-        // Nieuwe openstaande delen meteen beschikbaar voor de tegel Terugbetaling.
-        if (result.shares.length > 0) {
-          setOpenShares((prev) => [...prev.filter((s) => s.transactionId !== transaction.id), ...result.shares]);
         }
       });
     },
@@ -434,6 +440,58 @@ export function SortScreen({
       });
     },
     [current, showCoach, startTransition],
+  );
+
+  // Inkomend geld hoort bij een uitgave die op geld terug wacht: van hetzelfde potje af.
+  const refundFor = useCallback(
+    (expenseId: string, complete: boolean, estimate?: number) => {
+      if (!current || current.amount <= 0) return;
+      const expense = awaiting.find((a) => a.id === expenseId);
+      const category = expense ? categories.find((c) => c.id === expense.categoryId) : undefined;
+      if (!expense || !category) return;
+      const transaction = current;
+      const durationMs = performance.now() - shownAt.current;
+      const decision: Decision = { transaction, category, refund: { complete, estimate } };
+      const delta = spentDelta(transaction, category);
+      const received = refundOutcome(expense.amount, expense.received, transaction.amount).received;
+
+      setSettleOpen(false);
+      setError(null);
+      setHint(null);
+      setExitKind("assign");
+      setQueue((q) => q.slice(1));
+      setDecisions((d) => [...d, decision]);
+      setUndo(decision);
+      setUndoBulk(null);
+      setPulse((p) => ({ id: category.id, key: p.key + 1 }));
+      bumpCategoryTotal(category.id, delta);
+      refundForByTransaction.current.set(transaction.id, { before: expense, complete });
+      setAwaiting((prev) =>
+        complete ? prev.filter((a) => a.id !== expense.id) : prev.map((a) => (a.id === expense.id ? { ...a, received } : a)),
+      );
+      setAnnouncement(refundUndoText(transaction.amount, category.name, complete, estimate));
+
+      startTransition(async () => {
+        const result = await assignRefundFor(
+          transaction.id,
+          expense.id,
+          complete,
+          durationMs,
+          { coach: showCoach },
+          estimate ?? null,
+        );
+        if (!result.ok) {
+          setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
+          setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
+          setUndo((u) => (u?.transaction.id === transaction.id ? null : u));
+          bumpCategoryTotal(category.id, -delta);
+          refundForByTransaction.current.delete(transaction.id);
+          setAwaiting((prev) => [expense, ...prev.filter((a) => a.id !== expense.id)]);
+          setError(result.error);
+        }
+      });
+    },
+    [current, awaiting, categories, showCoach, startTransition],
   );
 
   // Pinopname verdeeld over potjes, of helemaal bewaard als contant (geen uitgaven).
@@ -524,8 +582,13 @@ export function SortScreen({
         return next;
       });
     } else {
-      // Delen die bij deze uitgave hoorden verdwijnen weer (de server verwijdert ze ook).
-      if (ownShare !== undefined) setOpenShares((prev) => prev.filter((s) => s.transactionId !== transaction.id));
+      // Bijgehouden uitgave: wacht niet meer. Terugbetaling voor een uitgave: die uitgave staat weer zoals hij stond.
+      if (undo.track) setAwaiting((prev) => prev.filter((a) => a.id !== transaction.id));
+      const refundFor = refundForByTransaction.current.get(transaction.id);
+      if (refundFor) {
+        refundForByTransaction.current.delete(transaction.id);
+        setAwaiting((prev) => [refundFor.before, ...prev.filter((a) => a.id !== refundFor.before.id)]);
+      }
       bumpCategoryTotal(category.id, -spentDelta(transaction, category, ownShare));
     }
     setAnnouncement(`${transaction.counterparty} terug uit ${category.name}`);
@@ -542,6 +605,8 @@ export function SortScreen({
       undo &&
       !undoBulk &&
       undo.ownShare === undefined &&
+      !undo.track &&
+      !undo.refund &&
       undo.category.systemKey === null &&
       !isCashWithdrawal(undo.transaction)
         ? sameCounterparty(undo.transaction, queue)
@@ -585,7 +650,7 @@ export function SortScreen({
       if (!current || isCashWithdrawal(current)) return;
       if (split.enabled) {
         warning();
-        setHint("Een vaste ontvanger gaat zonder delen. Zet de schakelaar eerst uit.");
+        setHint("Een vaste ontvanger gaat zonder geld terug. Zet de schakelaar eerst uit.");
         return;
       }
       const transaction = current;
@@ -593,7 +658,6 @@ export function SortScreen({
       success();
       setError(null);
       setHint(null);
-      setMethodMissing(false);
       setExitKind("assign");
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, { transaction, category }]);
@@ -705,6 +769,17 @@ export function SortScreen({
     setQueue((q) => q.map((t) => (t.id === transactionId ? { ...t, note } : t)));
   }
 
+  /** Tekst in de pil na een keuze. */
+  function decisionText({ transaction, category, track, refund }: Decision): string {
+    if (refund) return refundUndoText(transaction.amount, category.name, refund.complete, refund.estimate);
+    if (track) return `In ${category.name}, je houdt bij wat terugkomt`;
+    if (category.id === VOORGESCHOTEN_OPTION.id) return "Verwerkt als terugbetaling";
+    if (category.id === CONTANT_OPTION.id) return cashSplits.get(transaction.id)?.text ?? "Bewaard als contant";
+    if (category.id === GELD_TERUG_OPTION.id) return "Geld terug, van je totaal af";
+    if (transaction.amount > 0 && !category.isIncome) return `Geld terug, van ${category.name} af`;
+    return `In ${category.name}`;
+  }
+
   const undoToast = undoBulk ? (
     <UndoToast
       id={`bulk-${undoBulk.decisions[0].transaction.id}`}
@@ -716,17 +791,7 @@ export function SortScreen({
   ) : (
     <UndoToast
       id={undo ? undo.transaction.id : null}
-      text={
-        undo?.category.id === VOORGESCHOTEN_OPTION.id
-          ? "Verwerkt als terugbetaling"
-          : undo?.category.id === CONTANT_OPTION.id
-            ? (cashSplits.get(undo.transaction.id)?.text ?? "Bewaard als contant")
-            : undo?.category.id === GELD_TERUG_OPTION.id
-              ? "Geld terug, van je totaal af"
-              : undo && undo.transaction.amount > 0 && !undo.category.isIncome
-                ? `Geld terug, van ${undo.category.name} af`
-                : `In ${undo?.category.name ?? ""}`
-      }
+      text={undo ? decisionText(undo) : ""}
       onUndo={handleUndo}
       extra={
         undo && sameOffer.length > 0
@@ -755,10 +820,15 @@ export function SortScreen({
   // Pinopname: de app herkent hem aan de banktekst en vraagt waar het geld heen ging. Geen delen, geen vaste ontvanger.
   const isCash = isCashWithdrawal(current);
   const splitActive = !isIncoming && !isCash && split.enabled;
-  const ownShare = splitActive ? splitEqually(current.amount, split.persons).ownShare : null;
+  // Terugbetaling bij open delen (van vroeger verdelen) én bij uitgaven die op geld terug wachten.
   const repayment =
-    isIncoming && availableShares.length > 0
-      ? { total: openSharesTotal, count: availableShares.length, onOpen: () => setSettleOpen(true) }
+    isIncoming && (availableShares.length > 0 || availableAwaiting.length > 0)
+      ? {
+          total: openSharesTotal,
+          count: availableShares.length,
+          awaiting: availableAwaiting.length,
+          onOpen: () => setSettleOpen(true),
+        }
       : null;
   // Inkomend geld: alleen de inkomstenpotjes (besluit van Stein). Zonder inkomstenpotje
   // toch alles, anders kun je het kaartje nergens kwijt.
@@ -792,7 +862,6 @@ export function SortScreen({
             <TransactionCard
               key={current.id}
               transaction={current}
-              ownShare={ownShare}
               cash={isCash}
               onOpenDetails={() => setRawOpen(true)}
             />
@@ -820,9 +889,7 @@ export function SortScreen({
             ? "Waar hoort dit geld bij?"
             : isCash
               ? CASH_QUESTION
-              : splitActive
-                ? "Welk potje voor jouw deel?"
-                : "Welk potje?"}
+              : "Welk potje?"}
         </h2>
         <CategoryTiles
           categories={tileCategories}
@@ -840,25 +907,11 @@ export function SortScreen({
         />
       </section>
 
-      {/* Onderaan het scherm, in de duimzone: Ik krijg een deel terug en Later. Het verdeelpaneel klapt erboven open.
+      {/* Onderaan het scherm, in de duimzone: Ik krijg een deel terug en Later. De bijhoudregel klapt erboven open.
           Bij een pinopname staan hier Verdelen en Nog contant (nog niet uitgegeven); een tik op een potje = alles daarin. */}
       <div className="mt-auto px-4 pt-3 pb-2 compact:pt-1">
         {!isIncoming && !isCash && (
-          <SplitRow
-            key={current.id}
-            open={split.enabled}
-            amountAbs={Math.abs(current.amount)}
-            knownNames={knownNames}
-            state={split}
-            methodMissing={methodMissing && split.method === null}
-            onChange={(patch) => {
-              if (patch.method) {
-                setMethodMissing(false);
-                setHint(null);
-              }
-              setSplitFor({ id: current.id, state: { ...split, ...patch } });
-            }}
-          />
+          <SplitRow key={current.id} open={split.enabled} />
         )}
         <div className={cn("mt-2 flex h-11 items-center", isCash ? "gap-1.5" : "gap-2")}>
           {isIncoming ? (
@@ -900,7 +953,6 @@ export function SortScreen({
                 label="Ik krijg een deel terug"
                 checked={split.enabled}
                 onCheckedChange={(enabled) => {
-                  setMethodMissing(false);
                   setHint(null);
                   setSplitFor({ id: current.id, state: { ...split, enabled } });
                 }}
@@ -955,10 +1007,13 @@ export function SortScreen({
         open={settleOpen}
         onClose={() => setSettleOpen(false)}
         shares={availableShares}
+        awaiting={availableAwaiting}
         incomingAmount={current.amount}
         incomingCounterparty={current.counterparty}
+        incomingDescription={current.description}
         pending={isPending}
         onConfirm={settle}
+        onRefundFor={refundFor}
       />
 
       <Sheet open={editorDraft !== null} onClose={() => setEditorDraft(null)} title="Nieuw potje">

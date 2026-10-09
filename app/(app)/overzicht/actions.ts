@@ -4,7 +4,9 @@ import { refresh } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { logEvent } from "@/lib/events";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
+import { formatEuro } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
+import { estimatedOwnShare, isValidEstimate, receivedPerExpense } from "@/lib/transactions/refunds";
 
 type Result = { ok: true; settled: number } | { ok: false; error: string };
 
@@ -93,4 +95,59 @@ export async function settlePersonShares(shareIds: string[]): Promise<Result> {
 
   refresh();
   return { ok: true, settled: data?.length ?? 0 };
+}
+
+/**
+ * "Alles binnen" bij een uitgave die op geld terug wachtte: hij wacht niet meer. Zonder
+ * schatting is de rest van jou (wat er via de bank terugkwam blijft van het potje af). Met
+ * `estimate` kwam een deel buiten de bank terug: dan telt het potje precies die schatting.
+ * Logt alleen aantallen en hoe oud de uitgave is; nooit bedragen of de tegenpartij.
+ */
+export async function closeAwaitingRefund(
+  transactionId: string,
+  estimate: number | null = null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await requireUser();
+  if (!isUuid(transactionId)) return { ok: false, error: "Dat lukte niet. Probeer het nog eens." };
+  const supabase = await createClient();
+
+  const [{ data: expense }, { data: refunds }] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select("id, amount, awaiting_refund, categorized_at, created_at")
+      .eq("id", transactionId)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase.from("transactions").select("refund_for_id, amount").eq("refund_for_id", transactionId).eq("user_id", user.id),
+  ]);
+  if (!expense) return { ok: false, error: "Dat lukte niet. Probeer het nog eens." };
+  // Al afgerond (bijvoorbeeld op een ander toestel): niets te doen, wel klaar.
+  if (!expense.awaiting_refund) {
+    refresh();
+    return { ok: true };
+  }
+  if (estimate !== null && !isValidEstimate(estimate, Number(expense.amount))) {
+    return { ok: false, error: `Vul een bedrag in tussen € 0 en ${formatEuro(Math.abs(Number(expense.amount)))}.` };
+  }
+
+  const linked = (refunds ?? []).map((r) => ({ refundForId: r.refund_for_id, amount: Number(r.amount) }));
+  const received = receivedPerExpense(linked).get(transactionId) ?? 0;
+  const { error } = await supabase
+    .from("transactions")
+    .update({ awaiting_refund: false, own_share: estimate === null ? null : estimatedOwnShare(estimate, received) })
+    .eq("id", transactionId)
+    .eq("user_id", user.id)
+    .eq("awaiting_refund", true);
+  if (error) return { ok: false, error: "Dat lukte niet. Probeer het nog eens." };
+
+  const since = Date.parse(expense.categorized_at ?? expense.created_at);
+  await logEvent("refund_closed", {
+    how: "overview",
+    refunds: linked.length,
+    estimate: estimate !== null,
+    age_days: Number.isFinite(since) ? Math.max(0, Math.floor((Date.now() - since) / DAY_MS)) : 0,
+  });
+
+  refresh();
+  return { ok: true };
 }

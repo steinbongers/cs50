@@ -22,9 +22,12 @@ interface CategoryTilesProps {
   pulseKey: number;
   /** Altijd bij inkomend geld: de tegel 'Geld terug' (retour, refund, iets terugbetaald). */
   refund?: { onOpen: () => void } | null;
-  /** Alleen bij inkomend geld met openstaande delen: de tegel 'Terugbetaling'. */
-  repayment?: { total: number; count: number; onOpen: () => void } | null;
-  /** De verdeelregel staat open (52 px extra): in de compacte stand dan 4 px lagere tegels. */
+  /**
+   * Alleen bij inkomend geld met openstaande delen of uitgaven die op geld terug wachten: de tegel
+   * 'Terugbetaling'. `total` is het bedrag van de open delen; `awaiting` het aantal wachtende uitgaven.
+   */
+  repayment?: { total: number; count: number; awaiting: number; onOpen: () => void } | null;
+  /** De bijhoudregel staat open (52 px extra): in de compacte stand dan 4 px lagere tegels. */
   tight?: boolean;
 }
 
@@ -45,7 +48,7 @@ function tileClasses(dense: boolean, tight: boolean) {
   return cn(
     // Inhoud verticaal gecentreerd: zonder bedrag oogt een tegel anders topzwaar.
     "relative flex w-full flex-col items-center justify-center overflow-visible rounded-2xl px-1 py-1 select-none",
-    // Compact: 6 + 28 + 26 = 60 past precies, dus bij een open verdeelregel kan het 4 px lager.
+    // Compact: 6 + 28 + 26 = 60 past precies, dus bij een open bijhoudregel kan het 4 px lager.
     tight ? "compact:h-[60px]" : "compact:h-16",
     dense ? "h-[72px]" : "h-20",
     "transition-[transform,background-color] duration-100 ease-out-soft active:scale-[0.96]",
@@ -60,6 +63,15 @@ const nameClasses =
   "line-clamp-2 w-full shrink-0 text-center text-[11px] leading-[13px] font-medium hyphens-manual break-words max-[389px]:text-[10.5px] max-[389px]:tracking-[-0.01em]";
 // Op 375 px brede toestellen (SE, mini) is een tegel ±73 px: iets kleinere letter zodat 'verzekeringen' heel blijft.
 const amountClasses = "mt-0.5 text-[10px] leading-3 tabular-nums compact:hidden";
+
+/**
+ * Onder Terugbetaling: het bedrag van de open delen, of zonder delen het aantal uitgaven dat
+ * op geld terug wacht (daar is geen afgesproken bedrag, dus ook geen bedrag om te tonen).
+ */
+function repaymentLabel({ total, count, awaiting }: { total: number; count: number; awaiting: number }): string {
+  if (count > 0 && total > 0) return `${formatEuroWhole(total)} open`;
+  return awaiting === 1 ? "1 uitgave" : `${awaiting} uitgaven`;
+}
 
 /** Bedrag deze maand in hele euro's; leeg bij € 0. */
 function wholeAmount(value: number): string | null {
@@ -217,14 +229,14 @@ export function CategoryTiles({
               tap();
               repayment.onOpen();
             }}
-            aria-label={`Terugbetaling, ${formatEuroWhole(repayment.total)} open`}
+            aria-label={`Terugbetaling, ${repaymentLabel(repayment)}`}
             className={cn(tileClasses(dense, tight), "bg-accent-soft ring-1 ring-accent/40 ring-inset active:bg-accent-soft")}
           >
             <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface text-accent" aria-hidden>
               <CategoryIcon icon={VOORGESCHOTEN_CATEGORY.icon} size={16} strokeWidth={1.75} />
             </span>
             <span className={nameClasses}>{tileName("Terugbetaling")}</span>
-            <span className={cn(amountClasses, "text-accent-strong")}>{formatEuroWhole(repayment.total)} open</span>
+            <span className={cn(amountClasses, "text-accent-strong")}>{repaymentLabel(repayment)}</span>
           </button>
         </li>
       )}

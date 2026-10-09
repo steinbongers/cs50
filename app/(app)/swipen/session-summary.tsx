@@ -16,6 +16,10 @@ export interface Decision {
   category: CategoryOption;
   /** Jouw deel bij een gedeelde uitgave; undefined = het hele bedrag. */
   ownShare?: number;
+  /** "Ik krijg een deel terug": de hele uitgave, de app houdt bij wat er terugkomt. */
+  track?: boolean;
+  /** Terugbetaling voor een uitgave die op geld terug wachtte; `complete` = alles binnen. */
+  refund?: { complete: boolean; estimate?: number };
 }
 
 interface SessionSummaryProps {

@@ -20,10 +20,11 @@ export type EventType =
    * Transactie in een potje gezet.
    * `{ transaction_id, category_id, duration_ms, skipped_before?, split_persons?, split_method?,
    *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' | 'refund' | 'refund_for',
-   *    with_category?, complete? }`
+   *    with_category?, complete?, estimate? }`
    * `split_method`: 'bank' | 'other' (verdeeld) of 'track' (bijhouden: de hele uitgave wacht op geld terug).
    * `flow: 'refund_for'`: inkomend geld gekoppeld aan een uitgave die op geld terug wacht;
-   * `complete` zegt of de gebruiker daarmee alles binnen meldde (de rest is van hem).
+   * `complete` zegt of de gebruiker daarmee alles binnen meldde (de rest is van hem); `estimate` of hij
+   * daarbij zelf schatte wat hij uitgaf (een deel kwam buiten de bank terug). Nooit het bedrag zelf.
    */
   | "swipe"
   /** Transactie verplaatst via de detailpagina. `{ transaction_id, category_id }` */
@@ -89,8 +90,8 @@ export type EventType =
   | "share_settled"
   /**
    * Uitgave die op geld terug wachtte afgerond met "Alles binnen" (buiten Swipen om).
-   * `{ how: 'overview', refunds: number, age_days: number }` (aantal gekoppelde terugbetalingen
-   * en dagen sinds het indelen; nooit bedragen of de tegenpartij)
+   * `{ how: 'overview', refunds: number, estimate: boolean, age_days: number }` (aantal gekoppelde
+   * terugbetalingen, of er een eigen schatting bij was, dagen sinds het indelen; nooit bedragen of de tegenpartij)
    */
   | "refund_closed"
   /**

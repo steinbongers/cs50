@@ -46,6 +46,10 @@ export interface SearchResult {
   categoryId: string | null;
   /** Contante uitgave (geen rekening, geen banktekst). */
   isCash: boolean;
+  /** Uitgave die nog op geld terug wacht. */
+  awaitingRefund: boolean;
+  /** Terugbetaling: tegenpartij van de uitgave waar hij bij hoort, anders null. */
+  refundFor: string | null;
 }
 
 export interface SearchOptions {
@@ -71,7 +75,7 @@ export async function searchTransactions(
   let query = supabase
     .from("transactions")
     .select(
-      "id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note, category_id, source",
+      "id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note, category_id, source, awaiting_refund, refund_for_id",
     )
     .eq("is_internal_transfer", false);
 
@@ -91,6 +95,14 @@ export async function searchTransactions(
   // Geen banktekst of zoekterm in de foutmelding: alleen dat het misging.
   if (error) throw new Error("Zoeken lukte niet.");
 
+  // Bij terugbetalingen de uitgave erbij (één extra query, alleen als er zulke regels zijn).
+  const targetIds = [...new Set((data ?? []).flatMap((t) => (t.refund_for_id ? [t.refund_for_id] : [])))];
+  const targets = new Map<string, string>();
+  if (targetIds.length > 0) {
+    const { data: rows } = await supabase.from("transactions").select("id, counterparty").in("id", targetIds);
+    for (const row of rows ?? []) targets.set(row.id, row.counterparty?.trim() || "Onbekende tegenpartij");
+  }
+
   return (data ?? []).map((t) => ({
     id: t.id,
     bookingDate: t.booking_date,
@@ -104,6 +116,8 @@ export async function searchTransactions(
     note: t.note?.trim() || null,
     categoryId: t.category_id,
     isCash: t.source === "cash",
+    awaitingRefund: t.awaiting_refund,
+    refundFor: t.refund_for_id ? (targets.get(t.refund_for_id) ?? "een uitgave") : null,
   }));
 }
 

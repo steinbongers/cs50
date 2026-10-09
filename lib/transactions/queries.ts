@@ -2,6 +2,9 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { Period } from "@/lib/periods";
 import type { CategorySystemKey } from "@/lib/supabase/types";
+import { receivedPerExpense, type AwaitingRefund } from "@/lib/transactions/refunds";
+
+export type { AwaitingRefund } from "@/lib/transactions/refunds";
 
 /** Smalle transactie voor het hoofdscherm; alleen wat de kaart nodig heeft. */
 export interface OpenTransaction {
@@ -174,4 +177,46 @@ export async function getOpenShares(): Promise<OpenShare[]> {
       createdAt: s.created_at,
     };
   });
+}
+
+/**
+ * Uitgaven die nog op geld terug wachten ("Ik krijg een deel terug", bijhouden), nieuwste
+ * eerst, met per uitgave wat er al binnen is. Een vast bedrag voor "nog te krijgen" bestaat
+ * hier niet: er is niets afgesproken, je houdt alleen bij wat er terugkomt.
+ */
+export async function getAwaitingRefunds(): Promise<AwaitingRefund[]> {
+  const supabase = await createClient();
+  const { data: expenses, error } = await supabase
+    .from("transactions")
+    .select("id, counterparty, booking_date, amount, category_id")
+    .eq("awaiting_refund", true)
+    .not("category_id", "is", null)
+    .lt("amount", 0)
+    .order("booking_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error || !expenses || expenses.length === 0) return [];
+
+  const ids = expenses.map((e) => e.id);
+  const categoryIds = [...new Set(expenses.map((e) => e.category_id as string))];
+  const [{ data: refunds }, { data: categories }] = await Promise.all([
+    supabase.from("transactions").select("refund_for_id, amount").in("refund_for_id", ids),
+    supabase.from("categories").select("id, name").in("id", categoryIds),
+  ]);
+
+  const received = receivedPerExpense(
+    (refunds ?? []).map((r) => ({ refundForId: r.refund_for_id, amount: Number(r.amount) })),
+  );
+  const names = new Map((categories ?? []).map((c) => [c.id, c.name]));
+
+  return expenses.map((e) => ({
+    id: e.id,
+    counterparty: e.counterparty?.trim() || "Onbekende tegenpartij",
+    bookingDate: e.booking_date,
+    amount: Math.abs(Number(e.amount)),
+    categoryId: e.category_id as string,
+    categoryName: names.get(e.category_id as string) ?? "",
+    received: received.get(e.id) ?? 0,
+  }));
 }

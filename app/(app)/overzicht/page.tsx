@@ -43,7 +43,7 @@ import { recurringMonthlyTotal } from "@/lib/insights/recurring";
 import { weekReview } from "@/lib/insights/week";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
-import { countOpenTransactions, getOpenShares } from "@/lib/transactions/queries";
+import { countOpenTransactions, getAwaitingRefunds, getOpenShares } from "@/lib/transactions/queries";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Overzicht" };
@@ -68,11 +68,12 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const period = isCurrent ? current : previousPeriods(profile.salary_day, today, back)[back - 1];
   const justConnected = params.bank === "gekoppeld";
 
-  const [connection, insight, accounts, openShares, openCount, fixed] = await Promise.all([
+  const [connection, insight, accounts, openShares, awaitingRefunds, openCount, fixed] = await Promise.all([
     getPrimaryConnection(supabase, user.id),
     loadInsightData(supabase, today),
     loadAccountBalances(supabase),
     getOpenShares(),
+    getAwaitingRefunds().catch(() => []),
     countOpenTransactions().catch(() => 0),
     // Vaste lasten en "Vrij tot je salaris" alleen voor de lopende maand; mislukt het, dan staat er niets.
     isCurrent ? loadFreeToSpendDetails(supabase, user.id, today).catch(() => null) : null,
@@ -360,7 +361,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
               </Card>
             )}
 
-            {isCurrent && <StillToReceive shares={openShares} />}
+            {isCurrent && <StillToReceive shares={openShares} awaiting={awaitingRefunds} />}
 
             {isCurrent && fixed && fixed.recurring.length > 0 && (
               <Link

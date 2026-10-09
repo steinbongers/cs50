@@ -12,13 +12,14 @@ import { DEFAULT_CATEGORY_ICON, isCategoryIcon } from "@/lib/categories/icons";
 import { isCategoryColor } from "@/lib/categories/palette";
 import type { CategoryDraft } from "@/lib/categories/types";
 import { logEvent } from "@/lib/events";
-import { toISODate } from "@/lib/format";
+import { formatEuro, toISODate } from "@/lib/format";
 import { amsterdamToday } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import { applyRules } from "@/lib/transactions/apply-rules";
 import { CASH_COUNTERPARTY, MAX_CASH_SPENDS, cashAmount, cashNote, isCashWithdrawal } from "@/lib/transactions/cash";
 import { ruleKey } from "@/lib/transactions/rules";
 import { MAX_SAME_COUNTERPARTY } from "@/lib/transactions/same-counterparty";
+import { estimatedOwnShare, isValidEstimate, receivedPerExpense } from "@/lib/transactions/refunds";
 import { MAX_SPLIT_PERSONS, MIN_SPLIT_PERSONS, splitEqually } from "@/lib/transactions/split";
 import type { CategoryOption, OpenShare } from "@/lib/transactions/queries";
 
@@ -38,6 +39,14 @@ export interface SplitInput {
   names?: string[];
 }
 
+/**
+ * "Ik krijg een deel terug" zonder verdelen: de hele uitgave gaat in het potje en wacht op
+ * geld terug. Wat er binnenkomt gaat ervan af; is alles binnen, dan is de rest van jou.
+ */
+export interface TrackInput {
+  track: true;
+}
+
 /** Extra context voor de meting: stond er een coachtip open bij deze kaart? */
 export interface SwipeMeta {
   coach?: boolean;
@@ -51,6 +60,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 function isUuid(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value);
+}
+
+function isTrack(value: unknown): value is TrackInput {
+  return typeof value === "object" && value !== null && (value as Record<string, unknown>).track === true;
 }
 
 function isValidSplit(value: unknown): value is SplitInput {
@@ -87,17 +100,18 @@ function cashCandidate(t: {
  * Zet een transactie in een potje. Dit is de kernhandeling van de app.
  * Met `split` gaat alleen jouw deel naar het potje; de delen van de anderen
  * komen in Voorgeschoten (open) of zijn direct afgehandeld (anders geregeld).
+ * Met `{ track: true }` gaat de hele uitgave in het potje en wacht hij op geld terug.
  */
 export async function assignCategory(
   transactionId: string,
   categoryId: string,
   durationMs: number,
-  split?: SplitInput,
+  split?: SplitInput | TrackInput,
   meta?: SwipeMeta,
 ): Promise<AssignResult> {
   const user = await requireUser();
   if (!isUuid(transactionId) || !isUuid(categoryId)) return { ok: false, error: GENERIC_ERROR };
-  if (split !== undefined && !isValidSplit(split)) return { ok: false, error: GENERIC_ERROR };
+  if (split !== undefined && !isTrack(split) && !isValidSplit(split)) return { ok: false, error: GENERIC_ERROR };
 
   const supabase = await createClient();
 
@@ -120,7 +134,8 @@ export async function assignCategory(
   if (!transaction) return { ok: false, error: GENERIC_ERROR };
 
   const amount = Number(transaction.amount);
-  const useSplit = split !== undefined && amount < 0;
+  const useTrack = isTrack(split) && amount < 0;
+  const useSplit = split !== undefined && !isTrack(split) && amount < 0;
   const result = useSplit ? splitEqually(amount, split.persons) : null;
   const ownShare = result ? result.ownShare : null;
 
@@ -128,7 +143,12 @@ export async function assignCategory(
   // delen hangen aan een transactie die nog geen potje heeft.
   const { data: updated, error } = await supabase
     .from("transactions")
-    .update({ category_id: categoryId, categorized_at: new Date().toISOString(), own_share: ownShare })
+    .update({
+      category_id: categoryId,
+      categorized_at: new Date().toISOString(),
+      own_share: ownShare,
+      awaiting_refund: useTrack,
+    })
     .eq("id", transactionId)
     .eq("user_id", user.id)
     .select("id")
@@ -140,7 +160,7 @@ export async function assignCategory(
   await supabase.from("transaction_shares").delete().eq("transaction_id", transactionId).eq("user_id", user.id);
 
   let shares: OpenShare[] = [];
-  if (result && split) {
+  if (result && split && !isTrack(split)) {
     const names = (split.names ?? []).map((n) => n.trim().slice(0, 60));
     const status = split.method === "bank" ? ("open" as const) : ("settled_elsewhere" as const);
     const { data: inserted, error: sharesError } = await supabase
@@ -183,7 +203,7 @@ export async function assignCategory(
     duration_ms: Math.max(0, Math.round(Number.isFinite(durationMs) ? durationMs : 0)),
     skipped_before: transaction.skipped_count,
     split_persons: useSplit ? split.persons : null,
-    split_method: useSplit ? split.method : null,
+    split_method: useSplit ? split.method : useTrack ? "track" : null,
     coach: coachFlag(meta),
     flow: "normal",
   });
@@ -266,6 +286,121 @@ export async function settleSharesWithTransaction(
     ),
   );
 
+  return { ok: true };
+}
+
+/**
+ * Binnengekomen geld hoort bij een uitgave die op geld terug wacht. Het gaat in hetzelfde
+ * potje als die uitgave (dus daar van af) en wijst ernaar. Met `complete` is alles binnen:
+ * de uitgave wacht niet meer en de rest is van jou. Met `estimate` (alleen bij complete) kwam
+ * een deel buiten de bank terug: dan telt het potje precies die schatting.
+ */
+export async function assignRefundFor(
+  transactionId: string,
+  expenseId: string,
+  complete: boolean,
+  durationMs: number,
+  meta?: SwipeMeta,
+  estimate: number | null = null,
+): Promise<ActionResult> {
+  const user = await requireUser();
+  if (!isUuid(transactionId) || !isUuid(expenseId) || typeof complete !== "boolean") {
+    return { ok: false, error: GENERIC_ERROR };
+  }
+  if (estimate !== null && !complete) return { ok: false, error: GENERIC_ERROR };
+
+  const supabase = await createClient();
+  const [{ data: transaction }, { data: expense }] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select("id, amount, category_id, skipped_count")
+      .eq("id", transactionId)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("transactions")
+      .select("id, amount, category_id, awaiting_refund")
+      .eq("id", expenseId)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+  if (!transaction || Number(transaction.amount) <= 0) {
+    return { ok: false, error: "Alleen inkomend geld kan een terugbetaling zijn." };
+  }
+  if (transaction.category_id !== null) return { ok: false, error: "Dit kaartje zit al in een potje." };
+  if (!expense || Number(expense.amount) >= 0 || !expense.awaiting_refund || !expense.category_id) {
+    return { ok: false, error: "Deze uitgave wacht niet (meer) op geld terug." };
+  }
+  if (estimate !== null && !isValidEstimate(estimate, Number(expense.amount))) {
+    return { ok: false, error: `Vul een bedrag in tussen € 0 en ${formatEuro(Math.abs(Number(expense.amount)))}.` };
+  }
+
+  const { data: category } = await supabase
+    .from("categories")
+    .select("id, system_key, is_income")
+    .eq("id", expense.category_id)
+    .eq("user_id", user.id)
+    .eq("archived", false)
+    .maybeSingle();
+  if (!category || category.system_key || category.is_income) return { ok: false, error: "Dit potje bestaat niet (meer)." };
+
+  const { data: updated, error } = await supabase
+    .from("transactions")
+    .update({
+      category_id: category.id,
+      categorized_at: new Date().toISOString(),
+      own_share: null,
+      refund_for_id: expense.id,
+    })
+    .eq("id", transactionId)
+    .eq("user_id", user.id)
+    .is("category_id", null)
+    .select("id")
+    .maybeSingle();
+  if (error || !updated) return { ok: false, error: GENERIC_ERROR };
+
+  if (complete) {
+    // Met een schatting: alles wat via de bank terugkwam (ook deze) telt mee in own_share.
+    let ownShare: number | null = null;
+    if (estimate !== null) {
+      const { data: refunds } = await supabase
+        .from("transactions")
+        .select("refund_for_id, amount")
+        .eq("refund_for_id", expense.id)
+        .eq("user_id", user.id);
+      const received =
+        receivedPerExpense((refunds ?? []).map((r) => ({ refundForId: r.refund_for_id, amount: Number(r.amount) }))).get(
+          expense.id,
+        ) ?? 0;
+      ownShare = estimatedOwnShare(estimate, received);
+    }
+    const { error: closeError } = await supabase
+      .from("transactions")
+      .update({ awaiting_refund: false, own_share: ownShare })
+      .eq("id", expense.id)
+      .eq("user_id", user.id);
+    if (closeError) {
+      // Terugdraaien: liever het kaartje opnieuw op de stapel dan een halve afronding.
+      await supabase
+        .from("transactions")
+        .update({ category_id: null, categorized_at: null, refund_for_id: null })
+        .eq("id", transactionId)
+        .eq("user_id", user.id);
+      return { ok: false, error: GENERIC_ERROR };
+    }
+  }
+
+  // Alleen of alles binnen is; nooit bedragen of de tegenpartij.
+  await logEvent("swipe", {
+    transaction_id: transactionId,
+    category_id: category.id,
+    duration_ms: Math.max(0, Math.round(Number.isFinite(durationMs) ? durationMs : 0)),
+    skipped_before: transaction.skipped_count,
+    coach: coachFlag(meta),
+    flow: "refund_for",
+    complete,
+    estimate: estimate !== null,
+  });
   return { ok: true };
 }
 
@@ -410,6 +545,14 @@ export async function undoAssign(transactionId: string): Promise<ActionResult> {
 
   const supabase = await createClient();
 
+  // Was dit een terugbetaling voor een uitgave? Dan wacht die uitgave straks weer.
+  const { data: before } = await supabase
+    .from("transactions")
+    .select("refund_for_id")
+    .eq("id", transactionId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   // Delen die bij deze uitgave hoorden weg; delen die deze Tikkie afbetaalde weer open.
   await supabase.from("transaction_shares").delete().eq("transaction_id", transactionId).eq("user_id", user.id);
   // Contante uitgaven die net uit deze pinopname zijn verdeeld, weer weg.
@@ -428,13 +571,22 @@ export async function undoAssign(transactionId: string): Promise<ActionResult> {
 
   const { data: updated, error } = await supabase
     .from("transactions")
-    .update({ category_id: null, categorized_at: null, own_share: null })
+    .update({ category_id: null, categorized_at: null, own_share: null, awaiting_refund: false, refund_for_id: null })
     .eq("id", transactionId)
     .eq("user_id", user.id)
     .select("id")
     .maybeSingle();
 
   if (error || !updated) return { ok: false, error: "Ongedaan maken lukte niet." };
+
+  if (before?.refund_for_id) {
+    // De uitgave wacht weer; een eventuele schatting van daarnet vervalt.
+    await supabase
+      .from("transactions")
+      .update({ awaiting_refund: true, own_share: null })
+      .eq("id", before.refund_for_id)
+      .eq("user_id", user.id);
+  }
 
   await logEvent("undo", { transaction_id: transactionId });
   return { ok: true };

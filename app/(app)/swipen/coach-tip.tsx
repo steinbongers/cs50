@@ -20,7 +20,7 @@ export const COACH_STEPS: ReadonlyArray<{ title: string; text?: string; arrow: C
   },
   {
     title: "Samen betaald?",
-    text: "Zet ‘Ik krijg een deel terug’ aan. Wij rekenen jouw deel uit.",
+    text: "Zet ‘Ik krijg een deel terug’ aan. Wat terugkomt, gaat er vanzelf af.",
     arrow: "left",
   },
 ];

@@ -22,6 +22,36 @@ import { GoalRing } from "./goal-ring";
 import { GoalSheet } from "./goal-sheet";
 import { TransactionSheet } from "./transaction-sheet";
 
+/**
+ * Wat er onder de datum staat: bij een terugbetaling waar hij bij hoort, bij een uitgave of hij
+ * nog op geld terug wacht en wat er al terug is, anders (oude verdeling) jouw deel.
+ */
+function refundNote(tx: DetailTransaction): string {
+  if (tx.refundFor) return ` · Terug voor: ${tx.refundFor}`;
+  const received = tx.refundReceived ?? 0;
+  if (tx.awaitingRefund) {
+    return received > 0
+      ? ` · Wacht op geld terug, ${formatEuro(received)} van ${formatEuro(Math.abs(tx.amount))} terug`
+      : " · Wacht op geld terug";
+  }
+  if (received > 0) {
+    // Afgerond. Met een eigen schatting is own_share schatting plus wat via de bank terugkwam.
+    const own = Math.max(0, (tx.ownShare ?? Math.abs(tx.amount)) - received);
+    return ` · ${formatEuro(received)} terug, jouw deel ${formatEuro(own)}`;
+  }
+  if (tx.ownShare !== null) return ` · jouw deel van ${formatEuro(Math.abs(tx.amount))}`;
+  return "";
+}
+
+/**
+ * Bedrag op de rij. Met gekoppelde terugbetalingen de uitgave zoals de bank hem afschreef (de
+ * terugbetalingen staan als eigen regel); anders jouw deel als dat er is.
+ */
+function rowAmount(tx: DetailTransaction): number {
+  if ((tx.refundReceived ?? 0) > 0) return tx.amount;
+  return tx.ownShare !== null ? -tx.ownShare : tx.amount;
+}
+
 export interface DetailTransaction {
   id: string;
   bookingDate: string;
@@ -36,6 +66,12 @@ export interface DetailTransaction {
   note: string | null;
   /** Contante uitgave: de korte notitie van het verdelen (staat in de omschrijving), anders null. */
   cashNote?: string | null;
+  /** Uitgave die nog op geld terug wacht. */
+  awaitingRefund?: boolean;
+  /** Al terug voor deze uitgave via gekoppelde terugbetalingen (positief). */
+  refundReceived?: number;
+  /** Terugbetaling: de tegenpartij van de uitgave waar hij bij hoort, anders null. */
+  refundFor?: string | null;
   inPeriod: boolean;
 }
 
@@ -297,7 +333,7 @@ export function PotjeDetail({
                     type="button"
                     onClick={() => setOpenTx(tx)}
                     className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left hover:bg-surface-muted"
-                    aria-label={`${tx.counterparty}, ${formatDay(tx.bookingDate)}, ${formatSignedEuro(tx.ownShare !== null ? -tx.ownShare : tx.amount)}${tx.note ? `, notitie: ${tx.note}` : ""}`}
+                    aria-label={`${tx.counterparty}, ${formatDay(tx.bookingDate)}, ${formatSignedEuro(rowAmount(tx))}${tx.note ? `, notitie: ${tx.note}` : ""}`}
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[15px] leading-5 font-medium">{tx.counterparty}</p>
@@ -306,11 +342,11 @@ export function PotjeDetail({
                       )}
                       <p className="truncate text-[13px] leading-[18px] text-text-muted">
                         {formatDay(tx.bookingDate)}
-                        {tx.ownShare !== null && ` · jouw deel van ${formatEuro(Math.abs(tx.amount))}`}
+                        {refundNote(tx)}
                       </p>
                     </div>
                     <p className={cn("text-[15px] font-semibold tabular-nums", tx.amount > 0 && "text-positive")}>
-                      {tx.ownShare !== null ? formatSignedEuro(-tx.ownShare) : formatSignedEuro(tx.amount)}
+                      {formatSignedEuro(rowAmount(tx))}
                     </p>
                   </button>
                 </li>

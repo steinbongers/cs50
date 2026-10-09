@@ -105,6 +105,12 @@ export async function moveTransaction(transactionId: string, categoryId: string)
     .eq("id", transactionId)
     .eq("user_id", user.id);
   if (error) return { ok: false, error: GENERIC };
+  // Terugbetalingen die bij deze uitgave horen gaan mee, zodat ze van hetzelfde potje af blijven gaan.
+  await supabase
+    .from("transactions")
+    .update({ category_id: categoryId })
+    .eq("refund_for_id", transactionId)
+    .eq("user_id", user.id);
 
   // Eigen type: verplaatsen is geen swipe en telt niet mee in de swipe- en retentiecijfers.
   await logEvent("transaction_moved", { transaction_id: transactionId, category_id: categoryId });

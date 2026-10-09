@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CircleHelp, Download, Info, Landmark, LayoutGrid, Pin, ShieldCheck, Users } from "lucide-react";
+import { CircleHelp, Download, Info, Landmark, LayoutGrid, Pin, ShieldCheck } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
 import { AppLockToggle } from "@/components/native/app-lock-toggle";
 import { WidgetSetupRow } from "@/components/native/widget-setup-row";
@@ -60,13 +60,6 @@ export default async function InstellingenPage() {
           icon={Pin}
           iconClass="bg-cat-paars-soft text-cat-paars"
           label={<RowLabel label="Vaste ontvangers" hint="Potje ingedrukt gehouden: gaat er altijd in" />}
-          className={ROW_FOCUS}
-        />
-        <ListRow
-          href="/instellingen/groepen"
-          icon={Users}
-          iconClass="bg-cat-oranje-soft text-cat-oranje"
-          label={<RowLabel label="Groepen" hint="Vaste mensen om mee te delen" />}
           className={ROW_FOCUS}
         />
         <SalaryDayRow salaryDay={profile.salary_day} />

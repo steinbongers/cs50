@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   countOpenTransactions,
   getActiveCategories,
+  getAwaitingRefunds,
   getOpenShares,
   getOpenTransactions,
 } from "@/lib/transactions/queries";
@@ -21,40 +22,17 @@ import { SortScreen } from "./sort-screen";
 
 export const metadata: Metadata = { title: ACTION_LABEL };
 
-const MAX_KNOWN_NAMES = 20;
-
-/** Eerder ingevulde namen van anderen, als suggesties bij het verdelen. Uniek, nieuwste eerst. */
-async function getKnownNames(): Promise<string[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("transaction_shares")
-    .select("person_name")
-    .not("person_name", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(200);
-  const names: string[] = [];
-  const seen = new Set<string>();
-  for (const row of data ?? []) {
-    const name = row.person_name?.trim();
-    if (!name || seen.has(name.toLowerCase())) continue;
-    seen.add(name.toLowerCase());
-    names.push(name);
-    if (names.length >= MAX_KNOWN_NAMES) break;
-  }
-  return names;
-}
-
 export default async function SwipenPage() {
   const user = await requireUser();
   const profile = await ensureProfile(user);
   const period = currentPeriod(profile.salary_day, amsterdamToday());
 
-  const [categories, transactions, totalOpen, openShares, knownNames] = await Promise.all([
+  const [categories, transactions, totalOpen, openShares, awaitingRefunds] = await Promise.all([
     getActiveCategories(period),
     getOpenTransactions(),
     countOpenTransactions(),
     getOpenShares(),
-    getKnownNames(),
+    getAwaitingRefunds(),
   ]);
 
   if (categories.filter((c) => c.systemKey === null).length === 0) {
@@ -122,7 +100,7 @@ export default async function SwipenPage() {
       transactions={transactions}
       totalOpen={totalOpen}
       openShares={openShares}
-      knownNames={knownNames}
+      awaitingRefunds={awaitingRefunds}
       coachStep={profile.coach_step}
     />
   );

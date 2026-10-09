@@ -44,7 +44,8 @@ export function TransactionList({ groups, categories }: TransactionListProps) {
                 <ul className="divide-y">
                   {group.rows.map((tx) => {
                     const category = tx.categoryId ? byId.get(tx.categoryId) : undefined;
-                    const sub = tx.note ?? tx.description;
+                    const link = tx.refundFor ? `Terug voor: ${tx.refundFor}` : tx.awaitingRefund ? "Wacht op geld terug" : null;
+                    const sub = link ? [link, tx.note ?? tx.description].filter(Boolean).join(" · ") : (tx.note ?? tx.description);
                     const where = category ? category.name : "Nog op de stapel";
                     return (
                       <li key={tx.id}>

@@ -7,6 +7,7 @@ import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { fetchAll } from "@/lib/supabase/fetch-all";
 import { createClient } from "@/lib/supabase/server";
 import { CASH_COUNTERPARTY } from "@/lib/transactions/cash";
+import { receivedPerExpense } from "@/lib/transactions/refunds";
 import { DetailViewed } from "./detail-viewed";
 import { PotjeDetail, type DetailTransaction } from "./potje-detail";
 
@@ -95,10 +96,28 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
 
   const { data: rows } = await supabase
     .from("transactions")
-    .select("id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note, source")
+    .select(
+      "id, booking_date, booking_time, amount, own_share, counterparty, description, raw_counterparty, raw_description, note, source, awaiting_refund, refund_for_id",
+    )
     .eq("category_id", category.id)
     .order("booking_date", { ascending: false })
     .limit(60);
+
+  // Geld terug bijhouden: per uitgave wat er al terug is, en bij een terugbetaling waar hij bij hoort.
+  const expenseIds = (rows ?? []).filter((t) => Number(t.amount) < 0).map((t) => t.id);
+  const refundForIds = [...new Set((rows ?? []).flatMap((t) => (t.refund_for_id ? [t.refund_for_id] : [])))];
+  const [{ data: linkedRefunds }, { data: refundTargets }] = await Promise.all([
+    expenseIds.length > 0
+      ? supabase.from("transactions").select("refund_for_id, amount").in("refund_for_id", expenseIds)
+      : Promise.resolve({ data: [] as { refund_for_id: string | null; amount: number }[] }),
+    refundForIds.length > 0
+      ? supabase.from("transactions").select("id, counterparty").in("id", refundForIds)
+      : Promise.resolve({ data: [] as { id: string; counterparty: string | null }[] }),
+  ]);
+  const receivedFor = receivedPerExpense(
+    (linkedRefunds ?? []).map((r) => ({ refundForId: r.refund_for_id, amount: Number(r.amount) })),
+  );
+  const targetName = new Map((refundTargets ?? []).map((t) => [t.id, t.counterparty?.trim() || "Onbekende tegenpartij"]));
 
   const transactions: DetailTransaction[] = (rows ?? []).map((t) => {
     // Contante uitgave: geen bank en geen banktekst, alleen eventueel de korte notitie van het verdelen.
@@ -114,6 +133,9 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
       bookingTime: t.booking_time ? t.booking_time.slice(0, 5) : null,
       note: t.note,
       cashNote: isCash ? t.description : null,
+      awaitingRefund: t.awaiting_refund,
+      refundReceived: receivedFor.get(t.id) ?? 0,
+      refundFor: t.refund_for_id ? (targetName.get(t.refund_for_id) ?? "een uitgave") : null,
       inPeriod: t.booking_date >= period.startISO && t.booking_date < period.endISO,
     };
   });

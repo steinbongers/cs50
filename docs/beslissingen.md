@@ -219,3 +219,25 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
   het bedrag daar van af (minder uitgegeven). Kies je "Zonder potje", dan gaat het in het ingebouwde potje Geld
   terug: het gaat van je totaal af, van geen enkel potje, en telt nooit als inkomen. Overzicht noemt het bedrag
   onder de ring. Terugbetaling (open delen afstrepen) blijft een eigen tegel.
+
+## Geld terug bijhouden (9 oktober 2026, Stein)
+
+- **"Ik krijg een deel terug" = bijhouden, niet verdelen.** Aan betekent: de hele uitgave gaat in het potje en
+  wacht op geld terug ("Je houdt bij wat er terugkomt. Je eigen deel volgt vanzelf."). Geen aantal personen, geen
+  via of buiten de bank, geen namen of groepen meer op Swipen. Je eigen deel hoef je dus niet vooraf te bepalen.
+- **Terugbetaling wijst naar de uitgave.** De tegel Terugbetaling staat er ook als er alleen uitgaven wachten.
+  Bovenaan de sheet "Hoort bij een uitgave" (meest waarschijnlijke eerst: naam die overeenkomt, dan de nieuwste),
+  met "€ 30 van € 90 terug". Kies je er een, dan vraagt de app of alles binnen is, met de som erbij: "Ja, de rest
+  is van mij", "Er komt nog meer" of "Een deel kwam buiten de bank terug". Het geld gaat in hetzelfde potje als de
+  uitgave, dus daar van af. Is er al genoeg terug, dan staat afronden voorop; de gebruiker tikt zelf.
+- **Buiten de bank terug: zelf schatten.** Bij "Een deel kwam buiten de bank terug" vul je in hoeveel je zelf
+  uitgaf (voorgevuld met bedrag min wat er via de bank terugkwam, tussen € 0 en het hele bedrag). Het potje telt
+  daarna precies die schatting (`own_share` = schatting + wat via de bank terugkwam). Ongedaan maken wist hem weer.
+- **Nog te krijgen op Overzicht** toont wachtende uitgaven apart als aantal ("Wacht nog op geld terug: 2 uitgaven"),
+  zonder bedrag: er is niets afgesproken, dus we verzinnen geen getal. Per uitgave "Alles binnen", met dezelfde
+  twee wegen (de rest is van mij, of zelf schatten).
+- **Oude verdelingen blijven werken.** Open delen van vroeger staan nog in Nog te krijgen en onder de wachtende
+  uitgaven in de Terugbetaling-sheet, en zijn daar af te strepen. Nieuwe delen ontstaan niet meer.
+- **Groepen** verdwijnen uit Instellingen (ze waren alleen voor verdelen). De pagina `/instellingen/groepen` blijft
+  bestaan maar is niet meer gelinkt.
+- Verplaats je een wachtende uitgave naar een ander potje, dan gaan de gekoppelde terugbetalingen mee.
