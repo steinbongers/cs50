@@ -1,5 +1,6 @@
 import "server-only";
 import { EnableBankingError } from "./client";
+import { describePrivateKeyShape } from "./private-key";
 
 /**
  * Technische uitleg van een Enable Banking-fout, alleen voor beheerders en de serverlog.
@@ -16,7 +17,8 @@ export function describeEnableBankingError(error: unknown): string {
   }
   if (error instanceof Error) {
     if (/DECODER|PEM|asn1|key/i.test(error.message)) {
-      return "De private key kan niet worden gelezen. Plak de hele key in Vercel, met de regels BEGIN en END erbij.";
+      const shape = describePrivateKeyShape(process.env.ENABLE_BANKING_PRIVATE_KEY);
+      return `De private key kan niet worden gelezen (${shape}). Plak de hele key in Vercel, met de regels BEGIN en END erbij.`;
     }
     return `${error.name}: ${error.message.slice(0, 160)}`;
   }

@@ -1,5 +1,6 @@
 import "server-only";
 import { createSign } from "node:crypto";
+import { normalizePrivateKey } from "./private-key";
 
 /**
  * JWT voor de Enable Banking API: RS256, kid = application ID,
@@ -13,7 +14,7 @@ export function createEnableBankingJwt(ttlSeconds = 3600): string {
     throw new Error("ENABLE_BANKING_APP_ID en ENABLE_BANKING_PRIVATE_KEY ontbreken (zie .env.example).");
   }
 
-  const privateKey = rawKey.includes("\\n") ? rawKey.replace(/\\n/g, "\n") : rawKey;
+  const privateKey = normalizePrivateKey(rawKey);
   const now = Math.floor(Date.now() / 1000);
 
   const header = base64url(JSON.stringify({ typ: "JWT", alg: "RS256", kid: appId }));
