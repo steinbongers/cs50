@@ -201,3 +201,7 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
   belofte dat er kaartjes komen.
 
 - **Schakelaar heet "Ik krijg een deel terug"** (9 oktober 2026) en staat onderaan het hoofdscherm, naast Later.
+- **Vergevingsgezinde streak** (9 oktober 2026). Eén gemiste dag per 7 dagen breekt de reeks niet; een klein
+  sneeuwvlokje op Overzicht laat zien dat er een dag is opgevangen. Dagen zonder kaartjes tellen mee. De streak
+  beloont sorteren, niet uitgeven. Meldingen wisselen per dag, nooit met schuldgevoel; bij meer dan 15 kaartjes:
+  "Doe er een paar, de rest kan morgen ook nog."

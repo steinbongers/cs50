@@ -232,22 +232,34 @@ export interface Streak {
   days: number;
   /** Is de stapel op dit moment leeg? */
   todayDone: boolean;
+  /** Is er in de afgelopen 7 dagen een gemiste dag opgevangen? */
+  forgivenRecently: boolean;
 }
 
+/** Eén gemiste dag per zoveel dagen wordt opgevangen zonder dat de reeks breekt. */
+export const STREAK_GRACE_WINDOW = 7;
+
 /**
- * Dagstreak: een dag telt als er aan het eind van die dag niets open stond.
- * Dagen zonder nieuwe kaartjes tellen gewoon door. We tellen terug vanaf gisteren
- * tot de dag waarop de eerste transactie binnenkwam.
+ * Dagstreak, vergevingsgezind:
+ * - Een dag telt als er aan het eind van die dag niets open stond.
+ * - Dagen zonder nieuwe kaartjes tellen gewoon door.
+ * - Eén gemiste dag per 7 dagen wordt opgevangen: hij telt niet mee, maar breekt de reeks
+ *   ook niet. Pas een tweede gemiste dag binnen 7 dagen breekt hem. (Een gebroken reeks
+ *   demotiveert sterk; een herstelkans dempt dat, zie docs/productplan.md.)
+ * - Vandaag telt nog niet mee en breekt ook niets.
+ * We tellen terug vanaf gisteren tot de dag waarop de eerste transactie binnenkwam.
  */
 export function dailyStreak(txs: TxLite[], today: Date, maxDays = 365): Streak {
   const relevant = txs.filter((t) => !t.isInternal);
-  if (relevant.length === 0) return { days: 0, todayDone: true };
+  if (relevant.length === 0) return { days: 0, todayDone: true, forgivenRecently: false };
 
   const firstCreated = relevant.reduce((min, t) => (t.createdAt < min ? t.createdAt : min), relevant[0].createdAt);
   const firstDay = toISODate(new Date(firstCreated));
   const todayDone = !relevant.some((t) => t.categorizedAt === null);
 
   let days = 0;
+  /** Index (dagen terug) van de laatst opgevangen gemiste dag. */
+  let forgivenAt: number | null = null;
   for (let i = 1; i <= maxDays; i++) {
     const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
     const dayISO = toISODate(day);
@@ -259,10 +271,16 @@ export function dailyStreak(txs: TxLite[], today: Date, maxDays = 365): Streak {
       if (t.categorizedAt === null) return true;
       return new Date(t.categorizedAt).getTime() > endOfDay;
     });
-    if (openThatDay) break;
+    if (openThatDay) {
+      if (forgivenAt === null || i - forgivenAt >= STREAK_GRACE_WINDOW) {
+        forgivenAt = i;
+        continue;
+      }
+      break;
+    }
     days++;
   }
-  return { days, todayDone };
+  return { days, todayDone, forgivenRecently: days > 0 && forgivenAt !== null && forgivenAt <= STREAK_GRACE_WINDOW };
 }
 
 export interface WeekPoint {

@@ -119,7 +119,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
       <div className="safe-top">
         {showTopRow && (
           <div className="mt-2 flex h-11 items-center justify-between px-4">
-            <StreakChip days={streak.days} />
+            <StreakChip days={streak.days} forgiven={streak.forgivenRecently} />
             <div className="ml-auto flex items-center gap-1">
               <BalanceButton accounts={accounts} />
             </div>

@@ -255,3 +255,21 @@ test("opvaller: neemt het eerste item dat aan alle drempels voldoet", () => {
   assert.equal(pickStandout([noHistory, second], 14), second);
   assert.equal(pickStandout([], 14), null);
 });
+
+test("dagstreak is vergevingsgezind: één gemiste dag per week breekt de reeks niet", () => {
+  const today = new Date(2026, 9, 8, 15, 0, 0);
+  const base = tx({ bookingDate: "2026-10-01", amount: -10, categoryId: "bood", createdAt: "2026-10-01T08:00:00.000Z", categorizedAt: "2026-10-01T09:00:00.000Z" });
+  // binnengekomen 5 okt, pas 6 okt ingedeeld: alleen 5 okt gemist
+  const oneMiss = tx({ bookingDate: "2026-10-05", amount: -10, categoryId: "bood", createdAt: "2026-10-05T08:00:00.000Z", categorizedAt: "2026-10-06T09:00:00.000Z" });
+  const s = dailyStreak([base, oneMiss], today);
+  assert.equal(s.days, 6); // 1-4 en 6-7 okt; 5 okt opgevangen
+  assert.equal(s.forgivenRecently, true);
+
+  // twee losse gemiste dagen binnen een week: de tweede breekt
+  const secondMiss = tx({ bookingDate: "2026-10-02", amount: -10, categoryId: "bood", createdAt: "2026-10-02T08:00:00.000Z", categorizedAt: "2026-10-03T09:00:00.000Z" });
+  const s2 = dailyStreak([base, oneMiss, secondMiss], today);
+  assert.equal(s2.days, 4); // 7, 6, (5 opgevangen), 4, 3 okt; 2 okt breekt
+
+  // zonder gemiste dag geen opvang
+  assert.equal(dailyStreak([base], today).forgivenRecently, false);
+});
