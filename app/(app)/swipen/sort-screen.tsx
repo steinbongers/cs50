@@ -1034,6 +1034,10 @@ export function SortScreen({
         pending={isPending}
         onConfirm={settle}
         onRefundFor={refundFor}
+        onNoLink={() => {
+          setSettleOpen(false);
+          setRefundOpen(true);
+        }}
       />
 
       <Sheet open={editorDraft !== null} onClose={() => setEditorDraft(null)} title="Nieuw potje">

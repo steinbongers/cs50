@@ -31,6 +31,8 @@ interface SettleSheetProps {
   incomingDescription?: string | null;
   pending?: boolean;
   onConfirm: (shareIds: string[]) => void;
+  /** Hoort niet bij een eerdere uitgave: door naar Geld terug (potje kiezen of zonder potje). */
+  onNoLink?: () => void;
   /**
    * Hoort bij deze uitgave; `complete` = alles binnen. Zonder `estimate` is de rest van jou;
    * met `estimate` kwam een deel buiten de bank terug en telt het potje precies dat bedrag.
@@ -59,6 +61,7 @@ export function SettleSheet({
   pending = false,
   onConfirm,
   onRefundFor,
+  onNoLink,
 }: SettleSheetProps) {
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [expenseId, setExpenseId] = useState<string | null>(null);
@@ -254,6 +257,17 @@ export function SettleSheet({
           {selected.size === 0 ? "Verwerken" : `${formatEuro(incomingAmount)} verwerken`}
         </Button>
         </>
+        )}
+
+        {onNoLink && (
+          <div className="flex flex-col gap-1.5 border-t border-border pt-4">
+            <Button size="lg" variant="secondary" fullWidth disabled={pending} onClick={onNoLink}>
+              Hoort niet bij een uitgave
+            </Button>
+            <p className="text-center text-[13px] leading-[18px] text-text-muted">
+              Dan kies je zelf een potje waar het van af gaat, of zonder potje.
+            </p>
+          </div>
         )}
       </div>
     </Sheet>
