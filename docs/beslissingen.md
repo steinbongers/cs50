@@ -282,3 +282,7 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
 - **Geen ring meer op Overzicht** (Stein). Bovenaan staat een groot bedrag met één dunne balk eronder: de vijf
   grootste potjes elk een stuk, de rest samen als "Overige potjes", nog in te delen gearceerd. Tik op een stuk of
   een naam en je ziet dat potje met bedrag en aandeel.
+- **Niet meetellen** (Stein). Onder de kaart staat "Niet meetellen": het kaartje gaat in het ingebouwde potje
+  Telt niet mee en telt nergens mee (maand, Overzicht, potjes, grafieken). Ook later te kiezen bij een kaartje in
+  een potje of in Alle kaartjes; daar zet "Toch meetellen" het terug op de stapel. Niet voor kaartjes die aan iets
+  anders vastzitten (verdeeld, contant, geld terug bijhouden).

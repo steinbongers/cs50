@@ -55,6 +55,7 @@ export default async function TransactiesPage({ searchParams }: PageProps<"/tran
     icon: c.icon,
     color: c.color,
     isSystem: c.system_key !== null,
+    systemKey: c.system_key,
     archived: c.archived,
   }));
 

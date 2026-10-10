@@ -3,6 +3,7 @@
 import { CategoryPickerGrid, type CategoryPickerGridItem } from "@/components/categories/category-picker-grid";
 import { KaartjeDetails } from "@/components/transactions/kaartje-details";
 import { NoteField } from "@/components/transactions/note-field";
+import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import type { DetailTransaction } from "./potje-detail";
 
@@ -12,6 +13,8 @@ interface TransactionSheetProps {
   categories: CategoryPickerGridItem[];
   onClose: () => void;
   onMove: (transaction: DetailTransaction, categoryId: string) => void;
+  /** Niet meetellen: buiten maand, Overzicht en potjes. */
+  onExclude?: (transaction: DetailTransaction) => void;
   onNoteSaved: (transactionId: string, note: string | null) => void;
 }
 
@@ -22,6 +25,7 @@ export function TransactionSheet({
   categories,
   onClose,
   onMove,
+  onExclude,
   onNoteSaved,
 }: TransactionSheetProps) {
   return (
@@ -56,6 +60,17 @@ export function TransactionSheet({
               label="Naar ander potje"
             />
           </section>
+
+          {onExclude && (
+            <section className="flex flex-col gap-1.5 border-t border-border pt-4">
+              <Button variant="secondary" fullWidth onClick={() => onExclude(transaction)}>
+                Niet meetellen
+              </Button>
+              <p className="text-center text-[13px] leading-[18px] text-text-muted">
+                Dan telt dit kaartje niet mee in je maand, Overzicht en potjes. Terugzetten kan bij Alle kaartjes.
+              </p>
+            </section>
+          )}
         </div>
       )}
     </Sheet>

@@ -4,12 +4,12 @@ import { useId, useState, useTransition } from "react";
 import { CategoryPickerGrid } from "@/components/categories/category-picker-grid";
 import { KaartjeDetails } from "@/components/transactions/kaartje-details";
 import { NoteField } from "@/components/transactions/note-field";
-import { ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { ACTION_LABEL } from "@/config/app";
 import type { SearchResult } from "@/lib/transactions/search";
 import { splitPartLine, splitSummary } from "@/lib/transactions/split-parts";
-import { moveTransaction } from "../potjes/actions";
+import { moveTransaction, setCounted } from "../potjes/actions";
 import type { ListCategory } from "./transaction-list";
 
 interface TransactionSheetProps {
@@ -66,7 +66,9 @@ function SheetBody({ transaction, categories }: { transaction: SearchResult; cat
 
       <NoteField key={transaction.id} transactionId={transaction.id} initialNote={transaction.note} />
 
-      {onStack ? (
+      {current?.systemKey === "negeer" ? (
+        <CountedSection transactionId={transaction.id} counted={false} />
+      ) : onStack ? (
         <section className="flex flex-col gap-3" aria-label="Indelen">
           <p className="text-[15px] text-text-muted">
             Dit kaartje ligt nog op de stapel. Daar kies je het potje, en deel je het als je geld terugkrijgt.
@@ -74,6 +76,7 @@ function SheetBody({ transaction, categories }: { transaction: SearchResult; cat
           <ButtonLink href="/swipen" fullWidth>
             Naar {ACTION_LABEL}
           </ButtonLink>
+          <CountedSection transactionId={transaction.id} counted />
         </section>
       ) : current?.isSystem ? (
         <p className="text-[15px] text-text-muted">
@@ -82,7 +85,10 @@ function SheetBody({ transaction, categories }: { transaction: SearchResult; cat
             : `Dit kaartje hoort bij ${current.name}. Dat verplaats je hier niet.`}
         </p>
       ) : (
-        <MoveSection transaction={transaction} categories={categories} />
+        <>
+          <MoveSection transaction={transaction} categories={categories} />
+          {!transaction.splitParent && !transaction.isCash && <CountedSection transactionId={transaction.id} counted />}
+        </>
       )}
     </div>
   );
@@ -132,6 +138,44 @@ function MoveSection({ transaction, categories }: { transaction: SearchResult; c
           <span className="text-negative">{error}</span>
         ) : moved && target ? (
           <span className="text-text-muted">Verplaatst naar {target.name}.</span>
+        ) : null}
+      </p>
+    </section>
+  );
+}
+
+/** Niet meetellen (buiten maand, Overzicht en potjes) of toch weer meetellen (terug op de stapel). */
+function CountedSection({ transactionId, counted }: { transactionId: string; counted: boolean }) {
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function run() {
+    setError(null);
+    startTransition(async () => {
+      const result = await setCounted(transactionId, !counted);
+      if (!result.ok) setError(result.error);
+      else setDone(true);
+    });
+  }
+
+  return (
+    <section className="flex flex-col gap-1.5 border-t border-border pt-4" aria-label={counted ? "Niet meetellen" : "Telt niet mee"}>
+      {!counted && (
+        <p className="pb-1 text-[15px] text-text-muted">
+          Dit kaartje telt niet mee in je maand, Overzicht en potjes.
+        </p>
+      )}
+      <Button variant="secondary" fullWidth onClick={run} loading={isPending} disabled={done}>
+        {counted ? "Niet meetellen" : "Toch meetellen"}
+      </Button>
+      <p className="min-h-[18px] text-center text-[13px] leading-[18px] text-text-muted" role="status">
+        {error ? (
+          <span className="text-negative">{error}</span>
+        ) : done ? (
+          counted ? "Telt niet meer mee." : `Terug op de stapel. Kies het potje bij ${ACTION_LABEL}.`
+        ) : counted ? (
+          "Dan telt het nergens mee. Terugzetten kan altijd hier."
         ) : null}
       </p>
     </section>

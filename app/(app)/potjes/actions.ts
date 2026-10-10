@@ -11,6 +11,7 @@ import {
 } from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON, isCategoryIcon } from "@/lib/categories/icons";
 import { isCategoryColor } from "@/lib/categories/palette";
+import { ensureNietMeetellenCategory } from "@/lib/categories/system";
 import type { CategoryDraft } from "@/lib/categories/types";
 import { logEvent } from "@/lib/events";
 import { createClient } from "@/lib/supabase/server";
@@ -297,6 +298,68 @@ export async function restoreCategory(categoryId: string): Promise<Result> {
     .eq("user_id", user.id)
     .is("system_key", null);
   if (error) return { ok: false, error: GENERIC };
+  refresh();
+  return { ok: true };
+}
+
+/**
+ * Kaartje wel of niet meetellen. Niet meetellen: het gaat in het ingebouwde potje Telt niet
+ * mee en telt nergens mee (maand, Overzicht, potjes, grafieken). Toch meetellen: het gaat terug
+ * op de stapel, zodat je zelf het potje kiest. Niet voor kaartjes die aan iets anders vastzitten
+ * (verdeeld, contant, geld terug bijhouden, een terugbetaling of oude open delen).
+ */
+export async function setCounted(transactionId: string, counted: boolean): Promise<Result> {
+  const user = await requireUser();
+  if (!isUuid(transactionId)) return { ok: false, error: GENERIC };
+  const supabase = await createClient();
+
+  const { data: tx } = await supabase
+    .from("transactions")
+    .select("id, category_id, source, awaiting_refund, refund_for_id, split_parent_id")
+    .eq("id", transactionId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!tx) return { ok: false, error: GENERIC };
+
+  const { data: current } = tx.category_id
+    ? await supabase.from("categories").select("system_key").eq("id", tx.category_id).eq("user_id", user.id).maybeSingle()
+    : { data: null };
+
+  if (!counted) {
+    if (current?.system_key === "negeer") return { ok: true };
+    const linked = tx.source !== "bank" || tx.awaiting_refund || tx.refund_for_id !== null || tx.split_parent_id !== null || Boolean(current?.system_key);
+    const { count: shares } = await supabase
+      .from("transaction_shares")
+      .select("id", { count: "exact", head: true })
+      .eq("transaction_id", transactionId)
+      .eq("user_id", user.id);
+    if (linked || (shares ?? 0) > 0) return { ok: false, error: "Dit kaartje hangt aan iets anders vast. Dat kan hier niet." };
+
+    let negeerId: string;
+    try {
+      negeerId = await ensureNietMeetellenCategory(supabase, user.id);
+    } catch {
+      return { ok: false, error: GENERIC };
+    }
+    const { error } = await supabase
+      .from("transactions")
+      .update({ category_id: negeerId, categorized_at: new Date().toISOString(), own_share: null })
+      .eq("id", transactionId)
+      .eq("user_id", user.id);
+    if (error) return { ok: false, error: GENERIC };
+    await logEvent("counted_changed", { counted: false, from: tx.category_id ? "potje" : "stapel" });
+    refresh();
+    return { ok: true };
+  }
+
+  if (current?.system_key !== "negeer") return { ok: true };
+  const { error } = await supabase
+    .from("transactions")
+    .update({ category_id: null, categorized_at: null, own_share: null })
+    .eq("id", transactionId)
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: GENERIC };
+  await logEvent("counted_changed", { counted: true, from: "potje" });
   refresh();
   return { ok: true };
 }

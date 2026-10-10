@@ -17,7 +17,7 @@ import { formatDay, formatDayShort, formatEuro, formatEuroWhole, formatSignedEur
 import { budgetLabel, budgetStatus, goalLabel, goalStatus } from "@/lib/insights/budget";
 import type { WeekPoint } from "@/lib/insights/compute";
 import { cn } from "@/lib/utils";
-import { archiveCategory, moveTransaction, updateCategory } from "../actions";
+import { archiveCategory, moveTransaction, setCounted, updateCategory } from "../actions";
 import { GoalRing } from "./goal-ring";
 import { GoalSheet } from "./goal-sheet";
 import { TransactionSheet } from "./transaction-sheet";
@@ -150,6 +150,23 @@ export function PotjeDetail({
     setHiddenIds((prev) => new Set([...prev, tx.id]));
     startTransition(async () => {
       const result = await moveTransaction(tx.id, targetId);
+      if (!result.ok) {
+        setHiddenIds((prev) => {
+          const next = new Set(prev);
+          next.delete(tx.id);
+          return next;
+        });
+        setError(result.error);
+      } else setError(null);
+    });
+  }
+
+  // Telt niet mee: het kaartje verdwijnt uit dit potje en telt nergens meer mee.
+  function exclude(tx: DetailTransaction) {
+    setOpenTx(null);
+    setHiddenIds((prev) => new Set([...prev, tx.id]));
+    startTransition(async () => {
+      const result = await setCounted(tx.id, false);
       if (!result.ok) {
         setHiddenIds((prev) => {
           const next = new Set(prev);
@@ -366,6 +383,7 @@ export function PotjeDetail({
         categories={pickableCategories}
         onClose={() => setOpenTx(null)}
         onMove={move}
+        onExclude={exclude}
         onNoteSaved={noteSaved}
       />
 

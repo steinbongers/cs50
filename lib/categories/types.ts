@@ -18,6 +18,17 @@ export const VOORGESCHOTEN_CATEGORY = {
 } as const;
 
 /**
+ * Vaste gegevens van het ingebouwde potje Telt niet mee: kaartjes die je bewust buiten je
+ * maand, Overzicht en potjes houdt (een borg, iets zakelijks, geld dat je voor een ander doorsluist).
+ */
+export const NIET_MEETELLEN_CATEGORY = {
+  systemKey: "negeer",
+  name: "Telt niet mee",
+  icon: "tag",
+  color: "grijs",
+} as const;
+
+/**
  * Vaste gegevens van het ingebouwde potje Geld terug: terugbetalingen zonder potje.
  * Ze gaan van je totaal af (minder uitgegeven), maar van geen enkel potje.
  */

@@ -16,6 +16,8 @@ export interface ListCategory {
   color: string;
   /** Ingebouwd potje (Voorgeschoten): daar verplaats je niets naartoe of vandaan. */
   isSystem: boolean;
+  /** Welk ingebouwd potje ('negeer' = Telt niet mee), of null. */
+  systemKey: string | null;
   archived: boolean;
 }
 

@@ -24,6 +24,7 @@ import { CATEGORY_COLORS } from "@/lib/categories/palette";
 import {
   CONTANT_CATEGORY,
   GELD_TERUG_CATEGORY,
+  NIET_MEETELLEN_CATEGORY,
   VERDEELD_CATEGORY,
   VOORGESCHOTEN_CATEGORY,
   type CategoryDraft,
@@ -55,6 +56,7 @@ import {
   undoMany,
   type CashSpendInput,
 } from "./actions";
+import { setCounted } from "../potjes/actions";
 import { AmountsSheet } from "./amounts-sheet";
 import { CategoryTiles, tileCount } from "./category-tiles";
 import { COACH_STEPS, CoachTip } from "./coach-tip";
@@ -105,6 +107,19 @@ const VOORGESCHOTEN_OPTION: CategoryOption = {
   color: VOORGESCHOTEN_CATEGORY.color,
   isIncome: false,
   systemKey: VOORGESCHOTEN_CATEGORY.systemKey,
+  spentThisPeriod: 0,
+  monthlyBudget: null,
+  goalAmount: null,
+};
+
+/** Telt niet mee: buiten maand, Overzicht en potjes. Het echte id kent alleen de server. */
+const NIET_MEETELLEN_OPTION: CategoryOption = {
+  id: "negeer",
+  name: NIET_MEETELLEN_CATEGORY.name,
+  icon: NIET_MEETELLEN_CATEGORY.icon,
+  color: NIET_MEETELLEN_CATEGORY.color,
+  isIncome: false,
+  systemKey: NIET_MEETELLEN_CATEGORY.systemKey,
   spentThisPeriod: 0,
   monthlyBudget: null,
   goalAmount: null,
@@ -439,6 +454,31 @@ export function SortScreen({
     },
     [current, showCoach, startTransition],
   );
+
+  // Niet meetellen: weg van de stapel, telt nergens mee. Ongedaan maken zet hem terug.
+  const exclude = useCallback(() => {
+    if (!current) return;
+    const transaction = current;
+    const decision: Decision = { transaction, category: NIET_MEETELLEN_OPTION };
+    tap();
+    setError(null);
+    setHint(null);
+    setExitKind("assign");
+    setQueue((q) => q.slice(1));
+    setDecisions((d) => [...d, decision]);
+    setUndo(decision);
+    setUndoBulk(null);
+    setAnnouncement(`${transaction.counterparty} telt niet mee`);
+    startTransition(async () => {
+      const result = await setCounted(transaction.id, false);
+      if (!result.ok) {
+        setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
+        setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
+        setUndo((u) => (u?.transaction.id === transaction.id ? null : u));
+        setError(result.error);
+      }
+    });
+  }, [current, startTransition]);
 
   const settle = useCallback(
     (shareIds: string[]) => {
@@ -858,6 +898,7 @@ export function SortScreen({
     if (category.id === CONTANT_OPTION.id) return partSplits.get(transaction.id)?.text ?? "Bewaard als contant";
     if (category.id === VERDEELD_OPTION.id) return partSplits.get(transaction.id)?.text ?? "Verdeeld over je potjes";
     if (category.id === GELD_TERUG_OPTION.id) return "Geld terug, van je totaal af";
+    if (category.id === NIET_MEETELLEN_OPTION.id) return "Telt niet mee in je maand en potjes";
     if (transaction.amount > 0 && !category.isIncome) return `Geld terug, van ${category.name} af`;
     return `In ${category.name}`;
   }
@@ -979,14 +1020,22 @@ export function SortScreen({
                 Ik krijg een deel terug
               </button>
               {split.enabled && (
-                <span className="min-w-0 truncate text-[12px] leading-4 text-text-muted">Je houdt bij wat terugkomt</span>
+                <span className="min-w-0 truncate text-[12px] leading-4 text-text-muted max-[389px]:hidden">Je houdt bij wat terugkomt</span>
               )}
             </>
           ) : isIncoming ? (
-            <p className="px-1 text-[13px] text-text-muted" aria-hidden>
+            <p className="min-w-0 truncate px-1 text-[13px] text-text-muted" aria-hidden>
               Waar hoort dit geld bij?
             </p>
           ) : null}
+          {/* Telt niet mee: buiten je maand, Overzicht en potjes (een borg, iets zakelijks). */}
+          <button
+            type="button"
+            onClick={exclude}
+            className="ml-auto inline-flex h-8 shrink-0 items-center rounded-full px-2.5 text-[13px] font-medium text-text-muted transition-colors duration-150 active:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            Niet meetellen
+          </button>
         </div>
 
         <div className="relative">

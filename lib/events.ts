@@ -123,7 +123,9 @@ export type EventType =
    */
   | "sync_failed"
   /** Eerdere kaartjes opgehaald. `{ choice: 'periode' | '30' | '90', inserted_bucket: '0' | '1-50' | '50+' }` */
-  | "import_earlier";
+  | "import_earlier"
+  /** Kaartje wel of niet meetellen. `{ counted: boolean, from: 'stapel' | 'potje' }` */
+  | "counted_changed";
 
 export type OpenCardsBucket = "0" | "1-5" | "6-20" | "20+";
 
