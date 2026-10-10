@@ -309,6 +309,7 @@ export default async function AdminPage() {
           {pots.sharedNames.length === 0 ? "nog geen" : pots.sharedNames.map((n) => `${n.name} (${n.users})`).join(", ")}
         </Line>
         <Line>Met budget of doel: {ratioText(pots.withBudgetOrGoal)}</Line>
+        <Line>Met een spaarpotje: {ratioText(pots.withSavings)}</Line>
       </Section>
 
       <Section title="Bank" says="Of koppelingen blijven werken.">

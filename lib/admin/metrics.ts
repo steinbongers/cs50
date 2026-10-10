@@ -665,6 +665,8 @@ export interface PotjeCategory {
   userId: string;
   name: string;
   isIncome: boolean;
+  /** Spaarpotje: telt niet als uitgegeven. */
+  isSavings?: boolean;
   systemKey: string | null;
   archived: boolean;
   monthlyBudget: number | null;
@@ -690,6 +692,8 @@ export interface Potjes {
   sharedNames: { name: string; users: number }[];
   /** Gebruikers met minstens één potje met budget of doel. */
   withBudgetOrGoal: Ratio;
+  /** Gebruikers met minstens één actief spaarpotje. */
+  withSavings: Ratio;
 }
 
 const OVERIG = "overig";
@@ -721,7 +725,7 @@ export function potjes(categories: PotjeCategory[], txs: PotjeTx[], events: Even
   for (const t of txs) {
     if (t.isInternal || t.amount >= 0 || !t.categoryId) continue;
     const cat = byId.get(t.categoryId);
-    if (!cat || cat.isIncome || cat.systemKey) continue;
+    if (!cat || cat.isIncome || cat.isSavings || cat.systemKey) continue;
     const spend = t.ownShare ?? -t.amount;
     total += spend;
     spendUsers.add(cat.userId);
@@ -740,10 +744,12 @@ export function potjes(categories: PotjeCategory[], txs: PotjeTx[], events: Even
   const names = new Map<string, { name: string; users: Set<string> }>();
   const allUsers = new Set<string>();
   const budgetUsers = new Set<string>();
+  const savingsUsers = new Set<string>();
   for (const c of categories) {
     if (c.systemKey) continue;
     allUsers.add(c.userId);
     if (!c.archived && (c.monthlyBudget !== null || c.goalAmount !== null)) budgetUsers.add(c.userId);
+    if (!c.archived && c.isSavings) savingsUsers.add(c.userId);
     const key = normalizeName(c.name);
     if (!key || KNOWN_NAMES.has(key)) continue;
     const entry = names.get(key) ?? { name: c.name.trim(), users: new Set<string>() };
@@ -762,6 +768,7 @@ export function potjes(categories: PotjeCategory[], txs: PotjeTx[], events: Even
     suggestions,
     sharedNames,
     withBudgetOrGoal: ratio(budgetUsers.size, allUsers.size),
+    withSavings: ratio(savingsUsers.size, allUsers.size),
   };
 }
 

@@ -13,6 +13,9 @@ export interface FlowPoint {
   long: string;
   income: number;
   spent: number;
+  /** Netto gespaard (erin min eruit). Geen staaf: alleen in de tooltip (en de tabel). */
+  saved: number;
+  /** Inkomsten − uitgaven − gespaard. */
   net: number;
 }
 
@@ -30,7 +33,8 @@ function signed(amount: number): string {
 
 /**
  * Inkomsten en uitgaven per maand als staafparen op één as. Onder elke maand klein
- * wat er over bleef. Tik op een maand voor de cijfers.
+ * wat er over bleef (na sparen). Tik op een maand voor de cijfers; gespaard staat daar
+ * als eigen regel, zonder staaf of tweede as.
  */
 export function FlowChart({ points }: { points: FlowPoint[] }) {
   const { ref, width } = useWidth<HTMLDivElement>();
@@ -56,9 +60,16 @@ export function FlowChart({ points }: { points: FlowPoint[] }) {
           rows={[
             { value: formatEuroWhole(focus.income), label: "Inkomsten", color: "var(--chart-in)" },
             { value: formatEuroWhole(focus.spent), label: "Uitgaven", color: "var(--chart-out)" },
+            ...(Math.round(focus.saved) !== 0
+              ? [
+                  Math.round(focus.saved) > 0
+                    ? { value: formatEuroWhole(focus.saved), label: "gespaard" }
+                    : { value: formatEuroWhole(-focus.saved), label: "uit je spaarpot" },
+                ]
+              : []),
             {
               value: formatEuroWhole(Math.abs(focus.net)),
-              label: Math.round(focus.net) >= 0 ? "over" : "meer uitgegeven",
+              label: Math.round(focus.net) >= 0 ? "over" : Math.round(focus.saved) > 0 ? "meer dan binnenkwam" : "meer uitgegeven",
             },
           ]}
         />
@@ -92,7 +103,9 @@ export function FlowChart({ points }: { points: FlowPoint[] }) {
               role="button"
               tabIndex={0}
               aria-pressed={selected === i}
-              aria-label={`${p.long}: inkomsten ${formatEuroWhole(p.income)}, uitgaven ${formatEuroWhole(p.spent)}`}
+              aria-label={`${p.long}: inkomsten ${formatEuroWhole(p.income)}, uitgaven ${formatEuroWhole(p.spent)}${
+                Math.round(p.saved) > 0 ? `, gespaard ${formatEuroWhole(p.saved)}` : Math.round(p.saved) < 0 ? `, uit je spaarpot ${formatEuroWhole(-p.saved)}` : ""
+              }`}
               className="group cursor-pointer outline-none"
               onClick={toggle}
               onKeyDown={(e) => {

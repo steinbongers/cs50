@@ -74,17 +74,20 @@ export default async function InzichtPage() {
   const monthName = periodMonthName(current);
   const subtitle = periodSubtitle(current, today, true, Boolean(salaryDay));
 
-  // a. Inkomsten en uitgaven per maand.
+  // a. Inkomsten en uitgaven per maand. Sparen telt niet als uitgave; het staat als eigen getal
+  // in de tooltip en de tabel, en gaat van "over" af.
   const flows = incomeAndSpendPerPeriod(insight.txs, catMap, periods, today);
   const shown = periods.slice(periods.length - flows.length);
   const months = shown.map((p) => periodMonthName(p));
   const average = averageFlow(flows);
-  const hasData = flows.some((f) => f.income > 0 || f.spent > 0);
+  const hasData = flows.some((f) => f.income > 0 || f.spent > 0 || f.saved !== 0);
+  const anySaved = flows.some((f) => Math.round(f.saved) !== 0);
   const flowPoints: FlowPoint[] = flows.map((f, i) => ({
     short: shortMonth(months[i]),
     long: f.current ? `${capitalize(months[i])} (tot nu toe)` : capitalize(months[i]),
     income: f.income,
     spent: f.spent,
+    saved: f.saved,
     net: f.net,
   }));
 
@@ -120,7 +123,8 @@ export default async function InzichtPage() {
   const largest = largestExpenses(insight.txs, catMap, current.startISO, current.endISO, 5);
 
   // f. Vaste lasten tegenover de rest van een gemiddelde maand.
-  const recurringIn = recurringInput(insight.txs, insight.cats);
+  // Vaste spaaroverboekingen niet: hier staan vaste lasten tegenover je uitgaven, en sparen is geen uitgave.
+  const recurringIn = recurringInput(insight.txs, insight.cats, { withoutSavings: true });
   const recurring = detectRecurring(recurringIn.txs, recurringIn.systemIds, salaryDay, today);
   const recurringTotal = recurringMonthlyTotal(recurring);
   const split = average ? fixedVersusRest(recurringTotal, average.spent) : null;
@@ -147,8 +151,12 @@ export default async function InzichtPage() {
       <PageHeader title="Meer inzicht" subtitle={subtitle} backHref="/overzicht" />
       <div className="flex flex-col gap-4 px-4 pb-8">
         <ChartCard
-          title={flowTitle(average, flows.at(-1)?.net ?? 0)}
-          subtitle={`Inkomsten en uitgaven per maand. ${capitalize(monthName)} loopt nog.`}
+          title={flowTitle(average, flows.at(-1)?.net ?? 0, flows.at(-1)?.saved ?? 0)}
+          subtitle={
+            anySaved
+              ? `Inkomsten en uitgaven per maand. Sparen telt niet als uitgave. ${capitalize(monthName)} loopt nog.`
+              : `Inkomsten en uitgaven per maand. ${capitalize(monthName)} loopt nog.`
+          }
           legend={
             <Legend
               items={[
@@ -160,8 +168,14 @@ export default async function InzichtPage() {
           footnote={average ? basisText(average.periods) : "Na je eerste volle maand zie je hier je gemiddelde."}
           table={
             <ChartTable
-              head={["Maand", "In", "Uit", "Over"]}
-              rows={flowPoints.map((p) => [p.long, formatEuroWhole(p.income), formatEuroWhole(p.spent), formatEuroWhole(p.net)])}
+              head={anySaved ? ["Maand", "In", "Uit", "Gespaard", "Over"] : ["Maand", "In", "Uit", "Over"]}
+              rows={flowPoints.map((p) => [
+                p.long,
+                formatEuroWhole(p.income),
+                formatEuroWhole(p.spent),
+                ...(anySaved ? [formatEuroWhole(p.saved)] : []),
+                formatEuroWhole(p.net),
+              ])}
             />
           }
         >

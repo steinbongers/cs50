@@ -3,7 +3,7 @@
  * en met zondag) naast de week ervoor. Geen database; alles testbaar.
  */
 import { toISODate } from "@/lib/format";
-import { round2, spentPerCategory, totalSpent, type CatLite, type TxLite } from "./compute";
+import { isExpenseCategory, round2, spentPerCategory, totalSpent, type CatLite, type TxLite } from "./compute";
 
 export interface WeekReviewRow {
   categoryId: string;
@@ -53,7 +53,7 @@ export function weekReview(txs: readonly TxLite[], cats: Map<string, CatLite>, t
   const rows: WeekReviewRow[] = [];
   for (const [categoryId, spent] of now) {
     const cat = cats.get(categoryId);
-    if (!cat || cat.isIncome || cat.systemKey || spent <= 0) continue;
+    if (!cat || !isExpenseCategory(cat) || spent <= 0) continue;
     const previous = Math.max(0, before.get(categoryId) ?? 0);
     rows.push({ categoryId, spent, previous, diff: round2(spent - previous) });
   }

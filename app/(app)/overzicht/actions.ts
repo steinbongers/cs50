@@ -35,13 +35,13 @@ export async function setMonthFocus(categoryId: string): Promise<{ ok: boolean }
   const [{ data: category }, { data: profile }] = await Promise.all([
     supabase
       .from("categories")
-      .select("id, is_income, system_key, archived")
+      .select("id, is_income, is_savings, system_key, archived")
       .eq("id", categoryId)
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase.from("profiles").select("salary_day").eq("id", user.id).maybeSingle(),
   ]);
-  if (!category || category.archived || category.is_income || category.system_key !== null) return { ok: false };
+  if (!category || category.archived || category.is_income || category.is_savings || category.system_key !== null) return { ok: false };
 
   const period = currentPeriod(profile?.salary_day ?? null, amsterdamToday());
   const { error } = await supabase

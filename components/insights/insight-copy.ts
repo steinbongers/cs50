@@ -35,9 +35,23 @@ export function basisText(periods: number): string {
   return periods === 1 ? "Op basis van 1 maand" : `Op basis van ${periods} maanden`;
 }
 
-/** "Inkomsten − uitgaven: € 230 over" of "€ 40 meer uitgegeven dan binnenkwam". */
-export function netLine(net: number): string {
+/**
+ * "Inkomsten − uitgaven: € 230 over" of "€ 40 meer uitgegeven dan binnenkwam". `net` is al
+ * inkomsten − uitgaven − gespaard; met `saved` erbij zegt de regel dat ook:
+ * "Inkomsten − uitgaven − gespaard: € 130 over". Kwam er geld uit je spaarpot (saved negatief),
+ * dan "Inkomsten − uitgaven + uit je spaarpot: € 30 over".
+ */
+export function netLine(net: number, saved = 0): string {
   const rounded = Math.round(net);
+  const savedRounded = Math.round(saved);
+  if (savedRounded > 0) {
+    if (rounded >= 0) return `Inkomsten ${MINUS} uitgaven ${MINUS} gespaard: ${formatEuroWhole(rounded)} over`;
+    return `${formatEuroWhole(-rounded)} meer uitgegeven en gespaard dan binnenkwam`;
+  }
+  if (savedRounded < 0) {
+    if (rounded >= 0) return `Inkomsten ${MINUS} uitgaven + uit je spaarpot: ${formatEuroWhole(rounded)} over`;
+    return `${formatEuroWhole(-rounded)} meer uitgegeven dan binnenkwam, ook met wat uit je spaarpot kwam`;
+  }
   if (rounded >= 0) return `Inkomsten ${MINUS} uitgaven: ${formatEuroWhole(rounded)} over`;
   return `${formatEuroWhole(-rounded)} meer uitgegeven dan binnenkwam`;
 }
@@ -57,17 +71,23 @@ export function incomeCompareText(comparison: IncomeComparison, isCurrent: boole
   return { text: `${formatEuroWhole(size)} ${diff > 0 ? "meer" : "minder"} dan je gemiddelde${suffix}`, basis };
 }
 
-/** Kop van "Inkomsten en uitgaven": wat er gemiddeld overblijft. */
-export function flowTitle(average: FlowAverage | null, currentNet: number): string {
+/**
+ * Kop van "Inkomsten en uitgaven": wat er gemiddeld overblijft (inkomsten − uitgaven − gespaard).
+ * Wat je opzij zet is niet "over", maar ook niet uitgegeven: kom je tekort en spaarde je, dan noemt
+ * de kop het sparen erbij.
+ */
+export function flowTitle(average: FlowAverage | null, currentNet: number, currentSaved = 0): string {
   if (average) {
     const net = Math.round(average.net);
-    return net >= 0
-      ? `Gemiddeld hou je ${formatEuroWhole(net)} per maand over`
+    if (net >= 0) return `Gemiddeld hou je ${formatEuroWhole(net)} per maand over`;
+    return Math.round(average.saved) > 0
+      ? `Gemiddeld geef en spaar je ${formatEuroWhole(-net)} per maand meer dan er binnenkomt`
       : `Gemiddeld geef je ${formatEuroWhole(-net)} per maand meer uit dan er binnenkomt`;
   }
   const net = Math.round(currentNet);
-  return net >= 0
-    ? `Deze maand hou je tot nu toe ${formatEuroWhole(net)} over`
+  if (net >= 0) return `Deze maand hou je tot nu toe ${formatEuroWhole(net)} over`;
+  return Math.round(currentSaved) > 0
+    ? `Deze maand gaf en spaarde je tot nu toe ${formatEuroWhole(-net)} meer dan er binnenkwam`
     : `Deze maand gaf je tot nu toe ${formatEuroWhole(-net)} meer uit dan er binnenkwam`;
 }
 

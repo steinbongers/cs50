@@ -26,19 +26,28 @@ export interface CatLite {
   icon: string;
   color: string;
   isIncome: boolean;
+  /** Spaarpotje: telt als gespaard (`savedOf`), nooit als uitgegeven of inkomen. */
+  isSavings: boolean;
   systemKey: string | null;
   monthlyBudget: number | null;
   goalAmount: number | null;
 }
 
+/** Een gewoon uitgavepotje: geen inkomen, geen sparen, geen ingebouwd potje. */
+export function isExpenseCategory(cat: Pick<CatLite, "isIncome" | "isSavings" | "systemKey">): boolean {
+  return !cat.isIncome && !cat.isSavings && !cat.systemKey;
+}
+
 /**
  * Wat een transactie bijdraagt aan "uitgegeven": het eigen deel van een uitgave,
  * of een negatieve bijdrage voor een terugbetaling in een uitgavepotje of in Geld terug.
- * Inkomen, Voorgeschoten, Contant en eigen overboekingen tellen niet.
+ * Inkomen, sparen, Voorgeschoten, Contant en eigen overboekingen tellen niet.
  */
 export function spendOf(tx: TxLite, cats: Map<string, CatLite>): number {
   if (tx.isInternal) return 0;
   const cat = tx.categoryId ? cats.get(tx.categoryId) : null;
+  // Opzij gezet geld is niet weg (docs/spaarplan.md); dat telt `savedOf`.
+  if (cat?.isSavings) return 0;
   // Geld terug zonder potje: gaat van het totaal af, bij geen enkel potje.
   if (cat?.systemKey === "terug") return -tx.amount;
   if (cat && (cat.isIncome || cat.systemKey)) return 0;
@@ -56,8 +65,44 @@ export function spendOf(tx: TxLite, cats: Map<string, CatLite>): number {
 export function incomeOf(tx: TxLite, cats: Map<string, CatLite>): number {
   if (tx.isInternal || !tx.categoryId) return 0;
   const cat = cats.get(tx.categoryId);
-  if (!cat || !cat.isIncome || cat.systemKey) return 0;
+  if (!cat || !cat.isIncome || cat.isSavings || cat.systemKey) return 0;
   return tx.amount;
+}
+
+/**
+ * Wat een transactie bijdraagt aan "gespaard": geld dat naar een spaarpotje gaat telt
+ * positief, geld dat eruit terugkomt negatief (uit je spaarpot gehaald). Erin en eruit in
+ * dezelfde maand tellen netto. Alle andere potjes en eigen overboekingen: 0.
+ */
+export function savedOf(tx: TxLite, cats: Map<string, CatLite>): number {
+  if (tx.isInternal || !tx.categoryId) return 0;
+  const cat = cats.get(tx.categoryId);
+  if (!cat?.isSavings) return 0;
+  return -tx.amount;
+}
+
+/** Netto gespaard in [from, to): erin min eruit. Kan negatief zijn (meer eruit gehaald). */
+export function totalSaved(txs: TxLite[], cats: Map<string, CatLite>, from: string, to: string): number {
+  let total = 0;
+  for (const tx of txs) if (inRange(tx.bookingDate, from, to)) total += savedOf(tx, cats);
+  return round2(total);
+}
+
+/** Netto gespaard per spaarpotje in [from, to). Zonder `from`/`to`: over alles (de stand). */
+export function savedPerCategory(
+  txs: TxLite[],
+  cats: Map<string, CatLite>,
+  from = "",
+  to = "9999-12-31",
+): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const tx of txs) {
+    if (!tx.categoryId || !inRange(tx.bookingDate, from, to)) continue;
+    const value = savedOf(tx, cats);
+    if (value === 0) continue;
+    totals.set(tx.categoryId, round2((totals.get(tx.categoryId) ?? 0) + value));
+  }
+  return totals;
 }
 
 /** Inkomsten in [from, to). Nooit negatief. */
@@ -204,7 +249,7 @@ export interface DeviationOptions {
 }
 
 /**
- * Per potje (zonder Inkomen en systeempotjes): uitgegeven deze periode tot en met
+ * Per potje (zonder Inkomen, spaarpotjes en systeempotjes): uitgegeven deze periode tot en met
  * vandaag, tegenover het gemiddelde van de vorige periodes op hetzelfde punt.
  * Zelfde mechanisme als `compareWithAverage`: periodes zonder meetellende
  * uitgaven tellen niet mee. Gesorteerd op grootste afwijking (|diff|) eerst.
@@ -234,7 +279,7 @@ export function categoryDeviations(
 
   const rows: CategoryDeviation[] = [];
   for (const cat of catList) {
-    if (cat.isIncome || cat.systemKey) continue;
+    if (!isExpenseCategory(cat)) continue;
     const current = Math.max(0, currentPer.get(cat.id) ?? 0);
     const average = samples.length
       ? round2(samples.reduce((sum, m) => sum + Math.max(0, m.get(cat.id) ?? 0), 0) / samples.length)
@@ -397,7 +442,7 @@ export function monthReview(
   const earlierPer = usable.map((p) => spentPerCategory(txs, cats, p.startISO, p.endISO));
 
   const categories = catList
-    .filter((c) => !c.isIncome && !c.systemKey)
+    .filter(isExpenseCategory)
     .map((category) => ({
       category,
       spent: lastPer.get(category.id) ?? 0,

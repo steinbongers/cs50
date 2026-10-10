@@ -11,7 +11,7 @@ import {
 import { isCategoryIcon } from "../lib/categories/icons";
 import { isCategoryColor } from "../lib/categories/palette";
 import { VOORGESCHOTEN_CATEGORY } from "../lib/categories/types";
-import { isSavingsPot, tileName } from "../lib/categories/display";
+import { tileName } from "../lib/categories/display";
 
 const COLUMNS = 4;
 
@@ -145,9 +145,10 @@ test("tegelnamen krijgen zachte afbreekstreepjes, de tekst blijft gelijk", () =>
   for (const c of DEFAULT_CATEGORIES) assert.equal(tileName(c.name).replaceAll("\u00AD", ""), c.name);
 });
 
-test("spaarpotje: spaarvarken-icoon of spaardoel, nooit inkomen", () => {
-  assert.equal(isSavingsPot({ icon: "piggy-bank", goalAmount: null }), true);
-  assert.equal(isSavingsPot({ icon: "plane", goalAmount: 1500 }), true);
-  assert.equal(isSavingsPot({ icon: "shopping-cart", goalAmount: null }), false);
-  assert.equal(isSavingsPot({ icon: "piggy-bank", goalAmount: null, isIncome: true }), false);
+test("spaarpotje: alleen 'Sparen & beleggen' uit de standaardset, nooit samen met inkomen", () => {
+  assert.deepEqual(
+    DEFAULT_CATEGORIES.filter((c) => c.isSavings).map((c) => c.key),
+    ["sparen"],
+  );
+  assert.ok(!DEFAULT_CATEGORIES.some((c) => c.isSavings && c.isIncome));
 });

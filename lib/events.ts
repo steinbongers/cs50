@@ -20,7 +20,8 @@ export type EventType =
    * Transactie in een potje gezet.
    * `{ transaction_id, category_id, duration_ms, skipped_before?, split_persons?, split_method?,
    *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' | 'refund' | 'refund_for' | 'split_parts',
-   *    with_category?, complete?, estimate?, parts? }`
+   *    with_category?, complete?, estimate?, parts?, savings? }`
+   * `savings` (flow 'normal'): 'in' (geld naar een spaarpotje), 'out' (uit je spaarpot gehaald) of null.
    * `split_method`: 'bank' | 'other' (verdeeld) of 'track' (bijhouden: de hele uitgave wacht op geld terug).
    * `flow: 'refund_for'`: inkomend geld gekoppeld aan een uitgave die op geld terug wacht;
    * `complete` zegt of de gebruiker daarmee alles binnen meldde (de rest is van hem); `estimate` of hij
@@ -98,7 +99,8 @@ export type EventType =
   | "refund_closed"
   /**
    * Nieuw potje gemaakt.
-   * `{ source: 'plus_tile' | 'editor' | 'onboarding', suggestion: 'studie' | 'huisdier' | 'kinderen' | null }`
+   * `{ source: 'plus_tile' | 'editor' | 'onboarding', suggestion: 'studie' | 'huisdier' | 'kinderen' | null, savings?: boolean }`
+   * (`savings`: het nieuwe potje is een spaarpotje)
    */
   | "potje_created"
   /** Potje gearchiveerd. `{}` */

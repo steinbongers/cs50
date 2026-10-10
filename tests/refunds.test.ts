@@ -102,6 +102,7 @@ test("own_share met schatting: het potje telt precies de schatting", () => {
     icon: "utensils",
     color: "oranje",
     isIncome: false,
+    isSavings: false,
     systemKey: null,
     monthlyBudget: null,
     goalAmount: null,

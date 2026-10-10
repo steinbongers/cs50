@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { IconChevronLeft, IconPencil } from "@/components/ui/icons";
 import { Sheet } from "@/components/ui/sheet";
-import { isSavingsPot } from "@/lib/categories/display";
+import { SAVINGS_SINCE, savingsStandText, signedWhole } from "@/components/overview/overview-copy";
 import { categoryColorClasses } from "@/lib/categories/palette";
 import type { CategoryDraft } from "@/lib/categories/types";
 import { formatDay, formatDayShort, formatEuro, formatEuroWhole, formatSignedEuro } from "@/lib/format";
@@ -86,13 +86,16 @@ interface PotjeDetailProps {
     icon: string;
     color: string;
     isIncome: boolean;
+    isSavings: boolean;
     monthlyBudget: number | null;
     goalAmount: number | null;
   };
   /** Uitgegeven (of bij Inkomen: binnengekomen) deze maand. */
   spent: number;
-  /** Alles wat ooit in dit potje is gestopt; alleen gevuld bij een spaardoel. */
+  /** Alles wat ooit in dit potje is gestopt; gevuld bij een spaarpotje of een spaardoel. */
   saved: number | null;
+  /** Spaarpotje: de stand en wat er deze maand in ging en uit kwam (beide positief). */
+  savings?: { stand: number; monthIn: number; monthOut: number } | null;
   periodLabel: string;
   series: WeekPoint[];
   transactions: DetailTransaction[];
@@ -104,6 +107,7 @@ export function PotjeDetail({
   category,
   spent,
   saved,
+  savings = null,
   periodLabel,
   series,
   transactions,
@@ -124,14 +128,19 @@ export function PotjeDetail({
   const goal = category.goalAmount;
   const canTrack = !category.isIncome;
   const monthLabel = periodLabel.charAt(0).toUpperCase() + periodLabel.slice(1);
-  // Inkomen komt binnen, een spaarpotje vul je, een gewoon potje geef je uit.
-  const amountLabel = category.isIncome
-    ? "Binnengekomen"
-    : isSavingsPot(category)
-      ? "Deze maand erin"
-      : "Uitgegeven deze maand";
+  // Inkomen komt binnen, een gewoon potje geef je uit. Een spaarpotje heeft een stand (hieronder).
+  const amountLabel = category.isIncome ? "Binnengekomen" : "Uitgegeven deze maand";
+  // Deze maand erin en eruit, apart: "+ € 150 erin · − € 50 eruit".
+  const savingsMonth = savings
+    ? [
+        signedWhole(savings.monthIn) && `${signedWhole(savings.monthIn)} erin`,
+        signedWhole(-savings.monthOut) && `${signedWhole(-savings.monthOut)} eruit`,
+      ].filter(Boolean)
+    : [];
 
-  const budgetState = canTrack && budget !== null && budget > 0 ? budgetStatus(spent, budget) : null;
+  // Een budget hoort bij uitgeven; bij een spaarpotje alleen een spaardoel.
+  const budgetState =
+    canTrack && !category.isSavings && budget !== null && budget > 0 ? budgetStatus(spent, budget) : null;
   const goalState = canTrack && budgetState === null && goal !== null && goal > 0 ? goalStatus(saved ?? 0, goal) : null;
 
   const maxWeek = Math.max(...series.map((p) => p.spent), 1);
@@ -187,7 +196,13 @@ export function PotjeDetail({
     if (!editDraft) return;
     const draft = editDraft;
     startTransition(async () => {
-      const result = await updateCategory(category.id, { name: draft.name, icon: draft.icon, color: draft.color, isIncome: draft.isIncome });
+      const result = await updateCategory(category.id, {
+        name: draft.name,
+        icon: draft.icon,
+        color: draft.color,
+        isIncome: draft.isIncome,
+        isSavings: draft.isSavings ?? false,
+      });
       if (!result.ok) setError(result.error);
       else setEditDraft(null);
     });
@@ -218,7 +233,14 @@ export function PotjeDetail({
         <button
           type="button"
           onClick={() =>
-            setEditDraft({ name: category.name, icon: category.icon, color: category.color, isIncome: category.isIncome, enabled: true })
+            setEditDraft({
+              name: category.name,
+              icon: category.icon,
+              color: category.color,
+              isIncome: category.isIncome,
+              isSavings: category.isSavings,
+              enabled: true,
+            })
           }
           aria-label="Potje bewerken"
           className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-full text-text-muted hover:bg-surface-muted hover:text-text"
@@ -229,12 +251,24 @@ export function PotjeDetail({
 
       <div className="flex flex-col gap-6 px-4 pb-6">
         <Card className="flex flex-col gap-4">
-          <div>
-            <p className="text-[13px] leading-[18px] text-text-muted">
-              {amountLabel} · {monthLabel}
-            </p>
-            <p className="text-[28px] leading-[34px] font-semibold tabular-nums tracking-[-0.02em]">{formatEuroWhole(spent)}</p>
-          </div>
+          {savings ? (
+            <div>
+              <p className="text-[13px] leading-[18px] text-text-muted">{SAVINGS_SINCE}</p>
+              <p className="text-[28px] leading-[34px] font-semibold tabular-nums tracking-[-0.02em]">
+                {savingsStandText(savings.stand)}
+              </p>
+              <p className="mt-1 text-[13px] leading-[18px] text-text-muted tabular-nums">
+                {monthLabel}: {savingsMonth.length > 0 ? savingsMonth.join(" · ") : "nog niets erin of eruit"}
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-[13px] leading-[18px] text-text-muted">
+                {amountLabel} · {monthLabel}
+              </p>
+              <p className="text-[28px] leading-[34px] font-semibold tabular-nums tracking-[-0.02em]">{formatEuroWhole(spent)}</p>
+            </div>
+          )}
 
           {budgetState && budget !== null && (
             <div className="flex flex-col gap-1.5">
@@ -291,7 +325,7 @@ export function PotjeDetail({
               onClick={() => setGoalOpen(true)}
               className="-ml-2 min-h-11 self-start px-2 text-[15px] font-medium text-primary"
             >
-              Budget of spaardoel instellen
+              {category.isSavings ? "Spaardoel instellen" : "Budget of spaardoel instellen"}
             </button>
           )}
         </Card>
@@ -394,6 +428,7 @@ export function PotjeDetail({
           categoryId={category.id}
           monthlyBudget={budget}
           goalAmount={goal}
+          goalOnly={category.isSavings}
         />
       )}
 

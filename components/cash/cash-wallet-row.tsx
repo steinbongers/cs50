@@ -17,6 +17,8 @@ export async function CashWalletRow() {
       .select("id, name, icon, color")
       .eq("archived", false)
       .eq("is_income", false)
+      // Contant uitgeven is uitgeven: geen spaarpotjes.
+      .eq("is_savings", false)
       .is("system_key", null)
       .order("sort_order", { ascending: true }),
   ]);

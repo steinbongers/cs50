@@ -18,7 +18,11 @@ export interface InsightOptions {
   since?: string;
 }
 
-/** Laadt transacties (recente plus alle open) en actieve potjes voor de rekenfuncties. */
+/**
+ * Laadt transacties (recente plus alle open) en actieve potjes voor de rekenfuncties.
+ * Van spaarpotjes komt alles mee, ook van vóór de standaardhistorie: hun stand telt over
+ * alle kaartjes (`savedPerCategory` zonder datums).
+ */
 export async function loadInsightData(
   supabase: SupabaseClient<Database>,
   today = new Date(),
@@ -36,14 +40,23 @@ export async function loadInsightData(
     ),
     supabase
       .from("categories")
-      .select("id, name, icon, color, is_income, system_key, monthly_budget, goal_amount")
+      .select("id, name, icon, color, is_income, is_savings, system_key, monthly_budget, goal_amount")
       .eq("archived", false)
       .order("sort_order", { ascending: true }),
   ]);
 
+  // Oudere kaartjes in spaarpotjes, voor de stand. Alleen als er spaarpotjes zijn.
+  const savingsIds = (categories ?? []).filter((c) => c.is_savings).map((c) => c.id);
+  const savingsOld =
+    savingsIds.length > 0
+      ? await fetchAll((from, to) =>
+          supabase.from("transactions").select(columns).in("category_id", savingsIds).lt("booking_date", cutoff).order("id").range(from, to),
+        )
+      : [];
+
   const seen = new Set<string>();
   const txs: TxLite[] = [];
-  for (const row of [...recent, ...openOld]) {
+  for (const row of [...recent, ...openOld, ...savingsOld]) {
     if (seen.has(row.id)) continue;
     seen.add(row.id);
     txs.push({
@@ -66,6 +79,7 @@ export async function loadInsightData(
     icon: c.icon,
     color: c.color,
     isIncome: c.is_income,
+    isSavings: c.is_savings,
     systemKey: c.system_key,
     monthlyBudget: c.monthly_budget === null ? null : Number(c.monthly_budget),
     goalAmount: c.goal_amount === null ? null : Number(c.goal_amount),

@@ -6,6 +6,8 @@ export interface CategoryDraft {
   icon: string;
   color: string;
   isIncome: boolean;
+  /** Spaarpotje (nooit samen met `isIncome`). Ontbreekt: geen spaarpotje, of (bij bijwerken) ongewijzigd. */
+  isSavings?: boolean;
   enabled: boolean;
 }
 
@@ -57,3 +59,22 @@ export const VERDEELD_CATEGORY = {
   icon: "credit-card",
   color: "grijs",
 } as const;
+
+/**
+ * Soort van een potje uit een concept: inkomen, sparen of (allebei uit) uitgaven. Allebei aan
+ * kan niet; dan null. Ontbreekt `isSavings`, dan blijft dat ongewijzigd, behalve als het potje
+ * inkomen wordt (dan gaat sparen uit).
+ */
+export function categoryKind(draft: { isIncome?: unknown; isSavings?: unknown }): {
+  is_income: boolean;
+  is_savings?: boolean;
+} | null {
+  const isIncome = draft.isIncome === true;
+  if (draft.isSavings === undefined) return isIncome ? { is_income: true, is_savings: false } : { is_income: false };
+  const isSavings = draft.isSavings === true;
+  if (isIncome && isSavings) return null;
+  return { is_income: isIncome, is_savings: isSavings };
+}
+
+/** Foutmelding als een potje tegelijk inkomen en spaarpotje zou zijn. */
+export const KIND_ERROR = "Een potje is inkomend geld óf een spaarpotje, niet allebei.";

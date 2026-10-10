@@ -286,3 +286,27 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
   Telt niet mee en telt nergens mee (maand, Overzicht, potjes, grafieken). Ook later te kiezen bij een kaartje in
   een potje of in Alle kaartjes; daar zet "Toch meetellen" het terug op de stapel. Niet voor kaartjes die aan iets
   anders vastzitten (verdeeld, contant, geld terug bijhouden).
+
+## Sparen, fase 1 (10 oktober 2026, Stein)
+
+- **"Sparen moet niet worden meegenomen in uitgaven"** (Stein). Een potje is bewust een spaarpotje (schakelaar
+  **Spaarpotje** in de potje-editor, naast Inkomend geld; de een aanzetten zet de ander uit, en de server weigert
+  allebei). Geld naar een spaarpotje telt als **gespaard**, nooit als uitgegeven of inkomen; geld eruit telt als
+  "uit je spaarpot", ook nooit als inkomen. Het icoon of een spaardoel bepaalt niets meer (`categories.is_savings`).
+- **Swipen:** bij een uitgave staan spaarpotjes gewoon tussen de tegels ("Gespaard in Sparen"). Bij inkomend geld
+  staan de inkomstenpotjes én de spaarpotjes, in de vaste volgorde van de gebruiker; een spaartegel heeft dan klein
+  "Uit je spaarpot" in plaats van het bedrag (in de compacte stand alleen de naam). Pil: "Uit je spaarpot: Sparen".
+  "Ik krijg een deel terug" geldt niet voor sparen; Geld terug, contant uitgeven en "Je let op" tonen geen spaarpotjes.
+- **Overzicht:** spaarpotjes staan niet in de balk en niet in de potjeslijst. Onder de balk één rustige regel
+  ("Gespaard deze maand: € 100" of "€ 200 uit je spaarpot gehaald"). Onder de potjes het blok **Sparen**: per
+  spaarpotje "Er zit € X in", wat er deze maand bij kwam of af ging, en een dunne balk naar het spaardoel.
+  De stand telt **sinds je de app gebruikt** (er is nog geen startsaldo); kwam er meer uit dan erin, dan staat er
+  "€ 50 meer eruit dan erin" in plaats van een negatieve stand.
+- **Inkomsten-weergave:** over = inkomsten − uitgegeven − gespaard ("Inkomsten − uitgaven − gespaard: € 130 over").
+- **Meer inzicht:** "uit" is zonder sparen; gespaard staat als eigen regel in de tooltip en als kolom in de tabel
+  (geen staaf, geen tweede as). Bij "Vaste lasten en de rest" tellen vaste spaaroverboekingen niet mee; bij
+  "Vrij tot je salaris" wel (wat je vast opzij zet, is niet vrij).
+- **Potje-detail van een spaarpotje:** de stand en deze maand erin en eruit, in plaats van "uitgegeven". Alleen een
+  spaardoel, geen maandbudget; geen weekgrafiekje.
+- **Meting:** `swipe` krijgt `savings: 'in' | 'out' | null`, `potje_created` krijgt `savings: boolean`; op `/admin`
+  het aandeel gebruikers met een spaarpotje. Nooit bedragen.

@@ -3,11 +3,11 @@ import { test } from "node:test";
 import { incomeOf, incomePerCategory, spendOf, totalIncome, type CatLite, type TxLite } from "../lib/insights/compute";
 
 const cats: CatLite[] = [
-  { id: "bood", name: "Boodschappen", icon: "shopping-cart", color: "groen", isIncome: false, systemKey: null, monthlyBudget: null, goalAmount: null },
-  { id: "ink", name: "Inkomen", icon: "banknote", color: "groen", isIncome: true, systemKey: null, monthlyBudget: null, goalAmount: null },
-  { id: "toe", name: "Toeslagen", icon: "landmark", color: "mint", isIncome: true, systemKey: null, monthlyBudget: null, goalAmount: null },
-  { id: "vg", name: "Voorgeschoten", icon: "hand-coins", color: "geel", isIncome: false, systemKey: "voorgeschoten", monthlyBudget: null, goalAmount: null },
-  { id: "terug", name: "Geld terug", icon: "receipt", color: "blauw", isIncome: false, systemKey: "terug", monthlyBudget: null, goalAmount: null },
+  { id: "bood", name: "Boodschappen", icon: "shopping-cart", color: "groen", isIncome: false, isSavings: false, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "ink", name: "Inkomen", icon: "banknote", color: "groen", isIncome: true, isSavings: false, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "toe", name: "Toeslagen", icon: "landmark", color: "mint", isIncome: true, isSavings: false, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "vg", name: "Voorgeschoten", icon: "hand-coins", color: "geel", isIncome: false, isSavings: false, systemKey: "voorgeschoten", monthlyBudget: null, goalAmount: null },
+  { id: "terug", name: "Geld terug", icon: "receipt", color: "blauw", isIncome: false, isSavings: false, systemKey: "terug", monthlyBudget: null, goalAmount: null },
 ];
 const catMap = new Map(cats.map((c) => [c.id, c]));
 

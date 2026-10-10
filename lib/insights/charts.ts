@@ -1,18 +1,20 @@
 /**
  * Pure rekenfuncties voor Meer inzicht en de Inkomsten-weergave op Overzicht.
  * Zelfde regels als compute.ts: wat uitgegeven is volgt `spendOf`, wat binnenkwam
- * `incomeOf`. Geen database, geen 'nu' zonder parameter: alles testbaar.
+ * `incomeOf`, wat opzij ging `savedOf`. Geen database, geen 'nu' zonder parameter: alles testbaar.
  */
 import { VERDEELD_CATEGORY } from "@/lib/categories/types";
 import { toISODate } from "@/lib/format";
 import { currentPeriod, type Period } from "@/lib/periods";
 import {
   incomeOf,
+  isExpenseCategory,
   previousPeriods,
   round2,
   spendOf,
   spentPerCategory,
   totalIncome,
+  totalSaved,
   totalSpent,
   type CatLite,
   type TxLite,
@@ -49,14 +51,16 @@ export interface PeriodFlow {
   endISO: string;
   income: number;
   spent: number;
-  /** Inkomsten min uitgaven: positief is over. */
+  /** Netto gespaard (erin min eruit); negatief als er meer uit je spaarpot kwam. */
+  saved: number;
+  /** Inkomsten min uitgaven min gespaard: positief is over. */
   net: number;
   /** De lopende periode (loopt nog). */
   current: boolean;
 }
 
 /**
- * Inkomsten en uitgaven per periode, oudste eerst. Periodes vóór de eerste met
+ * Inkomsten, uitgaven en gespaard per periode, oudste eerst. Periodes vóór de eerste met
  * gegevens vallen weg (vóór het koppelen van de bank is er niets te tonen); de
  * lopende periode blijft altijd staan.
  */
@@ -70,22 +74,25 @@ export function incomeAndSpendPerPeriod(
   const flows = periods.map((p) => {
     const income = totalIncome(txs, cats, p.startISO, p.endISO);
     const spent = totalSpent(txs, cats, p.startISO, p.endISO);
+    const saved = totalSaved(txs, cats, p.startISO, p.endISO);
     return {
       startISO: p.startISO,
       endISO: p.endISO,
       income,
       spent,
-      net: round2(income - spent),
+      saved,
+      net: round2(income - spent - saved),
       current: todayISO >= p.startISO && todayISO < p.endISO,
     };
   });
-  const first = flows.findIndex((f) => f.current || f.income > 0 || f.spent > 0);
+  const first = flows.findIndex((f) => f.current || f.income > 0 || f.spent > 0 || f.saved !== 0);
   return first < 0 ? [] : flows.slice(first);
 }
 
 export interface FlowAverage {
   income: number;
   spent: number;
+  saved: number;
   net: number;
   /** Zoveel volle periodes tellen mee. */
   periods: number;
@@ -93,10 +100,16 @@ export interface FlowAverage {
 
 /** Gemiddelde over de volle (afgelopen) periodes met gegevens, of null als die er niet zijn. */
 export function averageFlow(flows: PeriodFlow[]): FlowAverage | null {
-  const full = flows.filter((f) => !f.current && (f.income > 0 || f.spent > 0));
+  const full = flows.filter((f) => !f.current && (f.income > 0 || f.spent > 0 || f.saved !== 0));
   if (full.length === 0) return null;
   const avg = (pick: (f: PeriodFlow) => number) => round2(full.reduce((sum, f) => sum + pick(f), 0) / full.length);
-  return { income: avg((f) => f.income), spent: avg((f) => f.spent), net: avg((f) => f.net), periods: full.length };
+  return {
+    income: avg((f) => f.income),
+    spent: avg((f) => f.spent),
+    saved: avg((f) => f.saved),
+    net: avg((f) => f.net),
+    periods: full.length,
+  };
 }
 
 export interface IncomeComparison {
@@ -168,7 +181,7 @@ export function spendSeriesPerCategory(
   const perPeriod = periods.map((p) => spentPerCategory(txs, cats, p.startISO, p.endISO));
   const series: PotjeSeries[] = [];
   for (const cat of cats.values()) {
-    if (cat.isIncome || cat.systemKey) continue;
+    if (!isExpenseCategory(cat)) continue;
     const values = perPeriod.map((m) => Math.max(0, m.get(cat.id) ?? 0));
     const total = round2(values.reduce((a, b) => a + b, 0));
     if (total > 0) series.push({ id: cat.id, values, total });
@@ -337,9 +350,19 @@ export function niceTicks(max: number, steps = 2): number[] {
  * Invoer voor `detectRecurring` uit de geladen transacties. Een verdeelde afschrijving
  * telt mee (het is een echte betaling van je rekening), de delen niet; de andere
  * ingebouwde potjes (Voorgeschoten, Contant, Geld terug) blijven buiten de vaste lasten.
+ * Met `withoutSavings` blijven ook vaste spaaroverboekingen buiten (Meer inzicht zet vaste
+ * lasten tegenover je uitgaven, en sparen is geen uitgave). "Vrij tot je salaris" telt ze wel.
  */
-export function recurringInput(txs: TxLite[], cats: CatLite[]): { txs: RecurringTx[]; systemIds: Set<string> } {
-  const systemIds = new Set(cats.filter((c) => c.systemKey && c.systemKey !== VERDEELD_CATEGORY.systemKey).map((c) => c.id));
+export function recurringInput(
+  txs: TxLite[],
+  cats: CatLite[],
+  { withoutSavings = false }: { withoutSavings?: boolean } = {},
+): { txs: RecurringTx[]; systemIds: Set<string> } {
+  const systemIds = new Set(
+    cats
+      .filter((c) => (c.systemKey && c.systemKey !== VERDEELD_CATEGORY.systemKey) || (withoutSavings && c.isSavings))
+      .map((c) => c.id),
+  );
   const rows = txs
     .filter((tx) => !tx.isSplitPart)
     .map((tx) => ({

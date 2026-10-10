@@ -13,8 +13,16 @@ import { MonthClosingSheet } from "@/components/overview/month-closing";
 import { SpendBar, type SpendSlice } from "@/components/overview/spend-bar";
 import { MonthSeen } from "@/components/overview/month-seen";
 import { MonthViewed } from "@/components/overview/month-viewed";
-import { capitalize, compareLine, openCardsText, periodMonthName, periodSubtitle } from "@/components/overview/overview-copy";
+import {
+  capitalize,
+  compareLine,
+  openCardsText,
+  periodMonthName,
+  periodSubtitle,
+  savedTopLine,
+} from "@/components/overview/overview-copy";
 import { PotjeProgress } from "@/components/overview/potje-progress";
+import { SavingsSection, type SavingsItem } from "@/components/overview/savings-section";
 import { StillToReceive } from "@/components/overview/still-to-receive";
 import { StreakChip } from "@/components/overview/streak-chip";
 import { ViewSwitch, overviewHref, type OverviewView } from "@/components/overview/view-switch";
@@ -35,11 +43,14 @@ import {
   compareWithAverage,
   dailyStreak,
   incomePerCategory,
+  isExpenseCategory,
   pickStandout,
   previousPeriods,
+  savedPerCategory,
   spendOf,
   spentPerCategory,
   totalIncome,
+  totalSaved,
 } from "@/lib/insights/compute";
 import { loadFreeToSpendDetails } from "@/lib/insights/free-to-spend";
 import { monthClosing } from "@/lib/insights/month-closing";
@@ -124,8 +135,9 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const total = Math.max(0, Math.round((sortedTotal + unsorted - refundsLoose) * 100) / 100);
 
   // Lijst: potjes met uitgaven of met een budget, grootste bedrag eerst. Geen procenten.
+  // Spaarpotjes staan hier niet: sparen is geen uitgeven (die staan in het blok Sparen).
   const rows = insight.cats
-    .filter((c) => !c.isIncome && !c.systemKey)
+    .filter(isExpenseCategory)
     .map((cat) => {
       const amount = Math.max(0, perCategory.get(cat.id) ?? 0);
       const budget = cat.monthlyBudget !== null && cat.monthlyBudget > 0 ? budgetStatus(amount, cat.monthlyBudget) : null;
@@ -144,13 +156,13 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const reviewSeen = profile.month_review_seen_for === current.startISO;
   const closing = back <= 1 && !reviewSeen && !noBank ? monthClosing(insight.txs, insight.cats, profile.salary_day, today) : null;
   const focusChoices = insight.cats
-    .filter((c) => !c.isIncome && !c.systemKey)
+    .filter(isExpenseCategory)
     .map((c) => ({ id: c.id, name: c.name, icon: c.icon, color: c.color }));
   const focusCat =
     isCurrent && profile.focus_category_id && profile.focus_period_start === current.startISO
       ? catMap.get(profile.focus_category_id)
       : undefined;
-  const focus = focusCat && !focusCat.isIncome && !focusCat.systemKey ? focusCat : undefined;
+  const focus = focusCat && isExpenseCategory(focusCat) ? focusCat : undefined;
 
   const week = isCurrent ? weekReview(insight.txs, catMap, today) : null;
   const weekItems = (week?.rows ?? []).flatMap((row) => {
@@ -159,8 +171,20 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   });
   const recurringTotal = fixed ? recurringMonthlyTotal(fixed.recurring) : 0;
 
-  const canRefresh = connection !== null && ["active", "expiring"].includes(statusFor(connection));
   const monthName = periodMonthName(period);
+
+  // Sparen: netto deze maand (erin min eruit) en per spaarpotje de stand. Een vorige maand toont
+  // de stand aan het eind van die maand. Spaarpotjes laden met hun hele historie (loadInsightData).
+  const saved = totalSaved(insight.txs, catMap, period.startISO, period.endISO);
+  const savedWhen = isCurrent ? "deze maand" : `in ${monthName}`;
+  const savedLine = savedTopLine(saved, savedWhen);
+  const standPer = savedPerCategory(insight.txs, catMap, "", period.endISO);
+  const monthPer = savedPerCategory(insight.txs, catMap, period.startISO, period.endISO);
+  const savingsItems: SavingsItem[] = insight.cats
+    .filter((c) => c.isSavings && !c.systemKey)
+    .map((cat) => ({ cat, stand: standPer.get(cat.id) ?? 0, month: monthPer.get(cat.id) ?? 0 }));
+
+  const canRefresh = connection !== null && ["active", "expiring"].includes(statusFor(connection));
   const subtitle = periodSubtitle(period, today, isCurrent, Boolean(profile.salary_day));
   const showTopRow = streak.days > 0 || accounts.length > 0;
 
@@ -296,6 +320,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
                 isCurrent={isCurrent}
                 total={income.total}
                 spent={total}
+                saved={saved}
                 comparison={income.comparison}
                 groups={income.groups}
                 unsorted={income.unsorted}
@@ -315,10 +340,13 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
                         : "Deze maand nog niets uitgegeven."
                       : `In ${monthName} is niets in een potje gezet.`}
                   </p>
+                  {savedLine && <p className="mt-1 text-[13px] leading-[18px] text-text-muted tabular-nums">{savedLine}</p>}
                 </Card>
               ) : (
                 <section aria-label="Uitgaven deze maand" className="flex flex-col items-center gap-3">
                   <SpendBar slices={slices} unsorted={unsorted} total={total} label={monthName} />
+                  {/* Sparen staat niet in de balk; één rustige regel, alleen als er iets opzij ging of uit kwam. */}
+                  {savedLine && <p className="text-center text-[13px] leading-[18px] text-text-muted tabular-nums">{savedLine}</p>}
                   {refundsLoose > 0 && (
                     <p className="text-center text-[13px] leading-[18px] text-text-muted">
                       {formatEuro(refundsLoose)} geld terug zonder potje is er al vanaf
@@ -408,6 +436,8 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
                   </ul>
                 </Card>
               )}
+
+              <SavingsSection items={savingsItems} when={savedWhen} />
 
               {isCurrent && <StillToReceive shares={openShares} awaiting={awaitingRefunds} />}
 

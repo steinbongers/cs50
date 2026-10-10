@@ -25,6 +25,7 @@ export default async function OnboardingPotjesPage() {
           icon: c.icon,
           color: c.color,
           isIncome: c.is_income,
+          isSavings: c.is_savings,
           enabled: !c.archived,
         }))
       : DEFAULT_CATEGORIES.map((c) => ({
@@ -32,6 +33,7 @@ export default async function OnboardingPotjesPage() {
           icon: c.icon,
           color: c.color,
           isIncome: c.isIncome,
+          isSavings: c.isSavings ?? false,
           enabled: true,
         }));
 

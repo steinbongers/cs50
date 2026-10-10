@@ -33,7 +33,7 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
 
   const enabled = drafts.filter((d) => d.enabled);
   const enabledCount = enabled.length;
-  const hasExpense = enabled.some((d) => !d.isIncome);
+  const hasExpense = enabled.some((d) => !d.isIncome && !d.isSavings);
   const atMax = enabledCount >= MAX_CATEGORIES;
 
   const toggledOff = useMemo(() => new Set(drafts.filter((d) => !d.enabled).map((d) => d.key)), [drafts]);
@@ -67,6 +67,7 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
       icon: DEFAULT_CATEGORY_ICON,
       color,
       isIncome: false,
+      isSavings: false,
       enabled: true,
       isCustom: true,
       suggestion: null,
@@ -94,6 +95,7 @@ export function CategoryPicker({ initialDrafts }: { initialDrafts: CategoryDraft
         icon: d.icon,
         color: d.color,
         isIncome: d.isIncome,
+        isSavings: d.isSavings,
         enabled: d.enabled,
         isCustom: d.isCustom,
         suggestion: d.suggestion,

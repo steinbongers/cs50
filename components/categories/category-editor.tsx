@@ -43,7 +43,7 @@ export function suggestionForDraft(draft: Pick<CategoryDraft, "name">): QuickSug
   return QUICK_SUGGESTIONS.find((s) => s.name.toLocaleLowerCase("nl-NL") === name)?.key ?? null;
 }
 
-/** Naam, icoon, kleur en inkomend-geld van één potje. Gebruikt in onboarding en hoofdscherm. */
+/** Naam, icoon, kleur en soort (inkomend geld of spaarpotje) van één potje. Gebruikt in onboarding en hoofdscherm. */
 export function CategoryEditor({
   draft,
   onChange,
@@ -189,7 +189,24 @@ export function CategoryEditor({
           <span className="block text-[15px] leading-5 font-medium">Inkomend geld</span>
           <span className="block text-[13px] leading-[18px] text-text-muted">Bijvoorbeeld salaris of toeslagen</span>
         </span>
-        <Switch label="Inkomend geld" checked={draft.isIncome} onCheckedChange={(isIncome) => onChange({ isIncome })} />
+        {/* Inkomen en sparen sluiten elkaar uit: de een aanzetten zet de ander uit. */}
+        <Switch
+          label="Inkomend geld"
+          checked={draft.isIncome}
+          onCheckedChange={(isIncome) => onChange(isIncome ? { isIncome, isSavings: false } : { isIncome })}
+        />
+      </label>
+
+      <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3">
+        <span aria-hidden>
+          <span className="block text-[15px] leading-5 font-medium">Spaarpotje</span>
+          <span className="block text-[13px] leading-[18px] text-text-muted">Telt als gespaard, niet als uitgegeven</span>
+        </span>
+        <Switch
+          label="Spaarpotje"
+          checked={draft.isSavings ?? false}
+          onCheckedChange={(isSavings) => onChange(isSavings ? { isSavings, isIncome: false } : { isSavings })}
+        />
       </label>
 
       {error && (

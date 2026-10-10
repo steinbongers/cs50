@@ -32,6 +32,8 @@ export async function addCashSpend(amount: number, categoryId: string, note: str
     .eq("user_id", user.id)
     .eq("archived", false)
     .eq("is_income", false)
+    // Contant uitgeven is uitgeven: geen spaarpotjes.
+    .eq("is_savings", false)
     .is("system_key", null)
     .maybeSingle();
   if (!category) return { ok: false, error: "Dit potje bestaat niet (meer)." };

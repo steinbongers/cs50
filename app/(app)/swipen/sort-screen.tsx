@@ -106,6 +106,7 @@ const VOORGESCHOTEN_OPTION: CategoryOption = {
   icon: VOORGESCHOTEN_CATEGORY.icon,
   color: VOORGESCHOTEN_CATEGORY.color,
   isIncome: false,
+  isSavings: false,
   systemKey: VOORGESCHOTEN_CATEGORY.systemKey,
   spentThisPeriod: 0,
   monthlyBudget: null,
@@ -119,6 +120,7 @@ const NIET_MEETELLEN_OPTION: CategoryOption = {
   icon: NIET_MEETELLEN_CATEGORY.icon,
   color: NIET_MEETELLEN_CATEGORY.color,
   isIncome: false,
+  isSavings: false,
   systemKey: NIET_MEETELLEN_CATEGORY.systemKey,
   spentThisPeriod: 0,
   monthlyBudget: null,
@@ -132,6 +134,7 @@ const GELD_TERUG_OPTION: CategoryOption = {
   icon: GELD_TERUG_CATEGORY.icon,
   color: GELD_TERUG_CATEGORY.color,
   isIncome: false,
+  isSavings: false,
   systemKey: GELD_TERUG_CATEGORY.systemKey,
   spentThisPeriod: 0,
   monthlyBudget: null,
@@ -144,6 +147,7 @@ const CONTANT_OPTION: CategoryOption = {
   icon: CONTANT_CATEGORY.icon,
   color: CONTANT_CATEGORY.color,
   isIncome: false,
+  isSavings: false,
   systemKey: CONTANT_CATEGORY.systemKey,
   spentThisPeriod: 0,
   monthlyBudget: null,
@@ -157,6 +161,7 @@ const VERDEELD_OPTION: CategoryOption = {
   icon: VERDEELD_CATEGORY.icon,
   color: VERDEELD_CATEGORY.color,
   isIncome: false,
+  isSavings: false,
   systemKey: VERDEELD_CATEGORY.systemKey,
   spentThisPeriod: 0,
   monthlyBudget: null,
@@ -363,7 +368,8 @@ export function SortScreen({
       const transaction = current;
       const durationMs = performance.now() - shownAt.current;
       // Ik krijg een deel terug: de hele uitgave in het potje, de app houdt bij wat er terugkomt.
-      const track = split.enabled && transaction.amount < 0 && !category.isIncome;
+      // Sparen wacht nooit op geld terug: daar geldt de schakelaar niet.
+      const track = split.enabled && transaction.amount < 0 && !category.isIncome && !category.isSavings;
       const decision: Decision = { transaction, category, track: track || undefined };
 
       const delta = spentDelta(transaction, category);
@@ -849,6 +855,7 @@ export function SortScreen({
       color: CATEGORY_COLORS.find((c) => !used.has(c)) ?? "grijs",
       // Een nieuw potje bij inkomend geld is meteen een inkomstenpotje.
       isIncome,
+      isSavings: false,
       enabled: true,
     });
   }
@@ -859,7 +866,7 @@ export function SortScreen({
     const suggestion = editorSuggestion;
     startTransition(async () => {
       const result = await createCategory(
-        { name: draft.name, icon: draft.icon, color: draft.color, isIncome: draft.isIncome },
+        { name: draft.name, icon: draft.icon, color: draft.color, isIncome: draft.isIncome, isSavings: draft.isSavings ?? false },
         suggestion,
       );
       if (!result.ok) {
@@ -899,6 +906,7 @@ export function SortScreen({
     if (category.id === VERDEELD_OPTION.id) return partSplits.get(transaction.id)?.text ?? "Verdeeld over je potjes";
     if (category.id === GELD_TERUG_OPTION.id) return "Geld terug, van je totaal af";
     if (category.id === NIET_MEETELLEN_OPTION.id) return "Telt niet mee in je maand en potjes";
+    if (category.isSavings) return transaction.amount > 0 ? `Uit je spaarpot: ${category.name}` : `Gespaard in ${category.name}`;
     if (transaction.amount > 0 && !category.isIncome) return `Geld terug, van ${category.name} af`;
     return `In ${category.name}`;
   }
@@ -957,10 +965,12 @@ export function SortScreen({
           onOpen: () => setSettleOpen(true),
         }
       : null;
-  // Inkomend geld: alleen de inkomstenpotjes (besluit van Stein). Zonder inkomstenpotje
-  // toch alles, anders kun je het kaartje nergens kwijt.
-  const incomeCategories = categories.filter((c) => c.isIncome && c.systemKey === null);
-  const tileCategories = isIncoming && incomeCategories.length > 0 ? incomeCategories : categories;
+  // Inkomend geld: de inkomstenpotjes (besluit van Stein) plus de spaarpotjes, zodat geld uit je
+  // spaarpot nooit inkomen wordt. Gewoon gefilterd, dus in de vaste volgorde van de gebruiker.
+  // Zonder inkomstenpotje toch alles, anders kun je het kaartje nergens kwijt.
+  const incomeCategories = categories.filter((c) => (c.isIncome || c.isSavings) && c.systemKey === null);
+  const hasIncomePotje = incomeCategories.some((c) => c.isIncome);
+  const tileCategories = isIncoming && hasIncomePotje ? incomeCategories : categories;
   const sticky = tileCount(tileCategories, repayment !== null, isIncoming) >= STICKY_FROM_TILES;
   const isLast = queue.length < 2;
   const total = assignedCount + remaining;
@@ -1063,6 +1073,7 @@ export function SortScreen({
         </h2>
         <CategoryTiles
           categories={tileCategories}
+          incoming={isIncoming}
           onPick={pick}
           onHold={isCash ? undefined : hold}
           onAdd={() => {
@@ -1176,7 +1187,7 @@ export function SortScreen({
         open={refundOpen}
         onClose={() => setRefundOpen(false)}
         amount={current.amount}
-        categories={categories.filter((c) => c.systemKey === null && !c.isIncome)}
+        categories={categories.filter((c) => c.systemKey === null && !c.isIncome && !c.isSavings)}
         pending={isPending}
         onConfirm={refund}
       />

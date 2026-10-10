@@ -100,3 +100,36 @@ export function weekDiffText(spent: number, previous: number): string {
   if (diff === 0) return "Net als de week ervoor";
   return `${formatEuroWhole(Math.abs(diff))} ${diff > 0 ? "meer" : "minder"} dan de week ervoor`;
 }
+
+const MINUS = "−";
+const NBSP = " ";
+
+/** "+ € 150" of "− € 200"; null als het op € 0 afrondt. */
+export function signedWhole(amount: number): string | null {
+  const rounded = Math.round(amount);
+  if (rounded === 0) return null;
+  return `${rounded > 0 ? "+" : MINUS}${NBSP}${formatEuroWhole(Math.abs(rounded))}`;
+}
+
+/**
+ * Eén rustige regel onder de balk: "Gespaard deze maand: € 100" of, als er meer uit je
+ * spaarpotjes kwam dan erin ging, "€ 200 uit je spaarpot gehaald". Geen oordeel; null bij € 0.
+ */
+export function savedTopLine(amount: number, when = "deze maand"): string | null {
+  const rounded = Math.round(amount);
+  if (rounded === 0) return null;
+  return rounded > 0 ? `Gespaard ${when}: ${formatEuroWhole(rounded)}` : `${formatEuroWhole(-rounded)} uit je spaarpot gehaald`;
+}
+
+/**
+ * De stand van een spaarpotje: "Er zit € 1.240 in". Zonder startsaldo kan er sinds je de app
+ * gebruikt meer uit zijn gehaald dan erin ging; dan zeggen we dat, in plaats van een negatieve stand.
+ */
+export function savingsStandText(stand: number): string {
+  const rounded = Math.round(stand);
+  if (rounded < 0) return `${formatEuroWhole(-rounded)} meer eruit dan erin`;
+  return `Er zit ${formatEuroWhole(rounded)} in`;
+}
+
+/** Eerlijk over waar de stand begint: er is (nog) geen startsaldo. */
+export const SAVINGS_SINCE = "Sinds je de app gebruikt";

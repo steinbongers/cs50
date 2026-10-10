@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ensureProfile, requireUser } from "@/lib/auth";
-import { spendOf, spentPerCategory, weeklySeries, type CatLite } from "@/lib/insights/compute";
+import { savedPerCategory, spendOf, spentPerCategory, weeklySeries, type CatLite } from "@/lib/insights/compute";
 import { loadInsightData } from "@/lib/insights/queries";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { fetchAll } from "@/lib/supabase/fetch-all";
@@ -51,15 +51,36 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
       )
     : (spentPerCategory(insight.txs, catMap, period.startISO, period.endISO).get(category.id) ?? 0);
 
-  // Gespaard = alles wat ooit in dit potje is gestopt, net zoals spendOf eigen delen telt.
-  let saved: number | null = null;
-  if (goalAmount !== null && !category.is_income) {
+  // Spaarpotje: de stand over alle kaartjes (loadInsightData laadt van spaarpotjes de hele
+  // historie) en wat er deze maand in ging en uit kwam. Geen startsaldo: de stand begint bij
+  // het eerste kaartje in de app.
+  let savings: { stand: number; monthIn: number; monthOut: number } | null = null;
+  if (category.is_savings) {
+    let monthIn = 0;
+    let monthOut = 0;
+    for (const t of insight.txs) {
+      if (t.categoryId !== category.id || t.isInternal || t.bookingDate < period.startISO || t.bookingDate >= period.endISO) continue;
+      if (t.amount < 0) monthIn -= t.amount;
+      else monthOut += t.amount;
+    }
+    savings = {
+      stand: savedPerCategory(insight.txs, catMap).get(category.id) ?? 0,
+      monthIn: round2(monthIn),
+      monthOut: round2(monthOut),
+    };
+  }
+
+  // Gespaard = alles wat ooit in dit potje is gestopt. Bij een spaarpotje is dat de stand; bij een
+  // ander potje met een (oud) spaardoel tellen we zoals spendOf eigen delen telt.
+  let saved: number | null = savings ? savings.stand : null;
+  if (goalAmount !== null && !category.is_income && !category.is_savings) {
     const own: CatLite = {
       id: category.id,
       name: category.name,
       icon: category.icon,
       color: category.color,
       isIncome: false,
+      isSavings: false,
       systemKey: null,
       monthlyBudget: null,
       goalAmount,
@@ -173,11 +194,13 @@ export default async function PotjeDetailPage({ params }: PageProps<"/potjes/[id
           icon: category.icon,
           color: category.color,
           isIncome: category.is_income,
+          isSavings: category.is_savings,
           monthlyBudget,
           goalAmount,
         }}
         spent={spent}
         saved={saved}
+        savings={savings}
         periodLabel={period.label}
         series={series}
         transactions={transactions}

@@ -162,6 +162,7 @@ async function main() {
         icon: c.icon,
         color: c.color,
         is_income: c.isIncome,
+        is_savings: c.isSavings ?? false,
         sort_order: i,
         swipe_direction: directions[c.key] ?? null,
       })),

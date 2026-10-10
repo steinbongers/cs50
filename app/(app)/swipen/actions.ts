@@ -15,7 +15,7 @@ import {
 } from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON, isCategoryIcon } from "@/lib/categories/icons";
 import { isCategoryColor } from "@/lib/categories/palette";
-import type { CategoryDraft } from "@/lib/categories/types";
+import { categoryKind, KIND_ERROR, type CategoryDraft } from "@/lib/categories/types";
 import { logEvent } from "@/lib/events";
 import { formatEuro, toISODate } from "@/lib/format";
 import { amsterdamToday } from "@/lib/periods";
@@ -124,7 +124,7 @@ export async function assignCategory(
 
   const { data: category } = await supabase
     .from("categories")
-    .select("id, system_key")
+    .select("id, system_key, is_savings")
     .eq("id", categoryId)
     .eq("user_id", user.id)
     .eq("archived", false)
@@ -141,8 +141,9 @@ export async function assignCategory(
   if (!transaction) return { ok: false, error: GENERIC_ERROR };
 
   const amount = Number(transaction.amount);
-  const useTrack = isTrack(split) && amount < 0;
-  const useSplit = split !== undefined && !isTrack(split) && amount < 0;
+  // Sparen wacht nooit op geld terug en wordt niet verdeeld: het geld is van jou.
+  const useTrack = isTrack(split) && amount < 0 && !category.is_savings;
+  const useSplit = split !== undefined && !isTrack(split) && amount < 0 && !category.is_savings;
   const result = useSplit ? splitEqually(amount, split.persons) : null;
   const ownShare = result ? result.ownShare : null;
 
@@ -213,6 +214,8 @@ export async function assignCategory(
     split_method: useSplit ? split.method : useTrack ? "track" : null,
     coach: coachFlag(meta),
     flow: "normal",
+    // Erin gespaard of uit je spaarpot gehaald; alleen de richting, nooit het bedrag.
+    savings: category.is_savings ? (amount < 0 ? "in" : "out") : null,
   });
 
   return { ok: true, shares };
@@ -756,13 +759,13 @@ export async function assignRefund(
   if (categoryId) {
     const { data: category } = await supabase
       .from("categories")
-      .select("id, system_key, is_income")
+      .select("id, system_key, is_income, is_savings")
       .eq("id", categoryId)
       .eq("user_id", user.id)
       .eq("archived", false)
       .maybeSingle();
     if (!category) return { ok: false, error: "Dit potje bestaat niet (meer)." };
-    if (category.system_key || category.is_income) return { ok: false, error: "Kies een potje voor uitgaven." };
+    if (category.system_key || category.is_income || category.is_savings) return { ok: false, error: "Kies een potje voor uitgaven." };
     targetId = category.id;
   } else {
     try {
@@ -991,6 +994,8 @@ export async function createCategory(
 
   const name = typeof draft.name === "string" ? draft.name.trim().slice(0, MAX_CATEGORY_NAME_LENGTH) : "";
   if (!name) return { ok: false, error: "Geef het potje een naam." };
+  const kind = categoryKind(draft);
+  if (!kind) return { ok: false, error: KIND_ERROR };
 
   const supabase = await createClient();
   const { count } = await supabase
@@ -1016,10 +1021,10 @@ export async function createCategory(
       name,
       icon: isCategoryIcon(draft.icon) ? draft.icon : DEFAULT_CATEGORY_ICON,
       color: isCategoryColor(draft.color) ? draft.color : "grijs",
-      is_income: Boolean(draft.isIncome),
+      ...kind,
       sort_order: (last?.sort_order ?? -1) + 1,
     })
-    .select("id, name, icon, color, is_income, system_key")
+    .select("id, name, icon, color, is_income, is_savings, system_key")
     .single();
 
   if (error || !data) return { ok: false, error: GENERIC_ERROR };
@@ -1028,6 +1033,7 @@ export async function createCategory(
   await logEvent("potje_created", {
     source: "plus_tile",
     suggestion: isQuickSuggestionKey(suggestion) ? suggestion : null,
+    savings: data.is_savings,
   });
 
   return {
@@ -1038,6 +1044,7 @@ export async function createCategory(
       icon: data.icon,
       color: data.color,
       isIncome: data.is_income,
+      isSavings: data.is_savings,
       systemKey: data.system_key,
       spentThisPeriod: 0,
       monthlyBudget: null,

@@ -8,6 +8,8 @@ export interface DefaultCategory {
   icon: CategoryIconKey;
   color: CategoryColor;
   isIncome: boolean;
+  /** Spaarpotje: telt als gespaard, niet als uitgegeven. */
+  isSavings?: boolean;
 }
 
 /**
@@ -29,7 +31,7 @@ export const DEFAULT_CATEGORIES: readonly DefaultCategory[] = [
   { key: "uitgaan", name: "Uitgaan & vrije tijd", icon: "party-popper", color: "geel", isIncome: false },
   { key: "vakantie", name: "Vakantie", icon: "plane", color: "blauw", isIncome: false },
   { key: "cadeaus", name: "Cadeaus & goede doelen", icon: "gift", color: "paars", isIncome: false },
-  { key: "sparen", name: "Sparen & beleggen", icon: "piggy-bank", color: "mint", isIncome: false },
+  { key: "sparen", name: "Sparen & beleggen", icon: "piggy-bank", color: "mint", isIncome: false, isSavings: true },
   { key: "inkomen", name: "Inkomen", icon: "banknote", color: "groen", isIncome: true },
   { key: "overig", name: "Overig", icon: "package", color: "grijs", isIncome: false },
 ];

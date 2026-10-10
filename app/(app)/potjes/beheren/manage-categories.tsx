@@ -72,6 +72,7 @@ export function ManageCategories({ active, archived }: { active: Item[]; archive
       icon: DEFAULT_CATEGORY_ICON,
       color: CATEGORY_COLORS.find((c) => !used.has(c)) ?? "grijs",
       isIncome: false,
+      isSavings: false,
       enabled: true,
     });
     setSuggestion(null);
@@ -83,7 +84,7 @@ export function ManageCategories({ active, archived }: { active: Item[]; archive
     const current = draft;
     startCreate(async () => {
       const result = await createPotje(
-        { name: current.name, icon: current.icon, color: current.color, isIncome: current.isIncome },
+        { name: current.name, icon: current.icon, color: current.color, isIncome: current.isIncome, isSavings: current.isSavings ?? false },
         suggestion,
       );
       if (!result.ok) {

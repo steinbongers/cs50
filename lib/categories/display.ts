@@ -69,12 +69,3 @@ export function tileName(name: string): string {
   );
 }
 
-/**
- * Is dit een spaarpotje? Dan gaat er geld in in plaats van uit. Regel: het spaarvarken-icoon
- * (zoals 'Sparen & beleggen' uit de standaardset) of een spaardoel. Potjes hebben geen eigen
- * sleutel in de database, dus het icoon is het kenmerk van het standaard spaarpotje.
- */
-export function isSavingsPot(category: { icon: string; goalAmount: number | null; isIncome?: boolean }): boolean {
-  if (category.isIncome) return false;
-  return category.icon === "piggy-bank" || category.goalAmount !== null;
-}

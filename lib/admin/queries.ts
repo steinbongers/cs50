@@ -74,7 +74,7 @@ export async function loadAdminData(today: Date): Promise<AdminData> {
         .range(from, to),
     ),
     fetchAll((from, to) =>
-      admin.from("categories").select("id, user_id, name, is_income, system_key, archived, monthly_budget, goal_amount").order("id").range(from, to),
+      admin.from("categories").select("id, user_id, name, is_income, is_savings, system_key, archived, monthly_budget, goal_amount").order("id").range(from, to),
     ),
     fetchAll((from, to) => admin.from("transaction_shares").select("user_id, created_at, status, received_at").gte("created_at", since).order("id").range(from, to)),
     fetchAll((from, to) => admin.from("churn_log").select("cohort_week, days_since_signup, created_at").order("id").range(from, to)),
@@ -109,6 +109,7 @@ export async function loadAdminData(today: Date): Promise<AdminData> {
       userId: c.user_id,
       name: c.name,
       isIncome: c.is_income,
+      isSavings: c.is_savings,
       systemKey: c.system_key,
       archived: c.archived,
       monthlyBudget: num(c.monthly_budget),

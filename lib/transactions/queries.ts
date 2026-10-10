@@ -28,6 +28,8 @@ export interface CategoryOption {
   icon: string;
   color: string;
   isIncome: boolean;
+  /** Spaarpotje: op de tegel staat dan wat er netto in ging (erin min eruit). */
+  isSavings: boolean;
   systemKey: CategorySystemKey | null;
   /** Netto bedrag in deze periode (eigen deel van uitgaven, min terugbetalingen). */
   spentThisPeriod: number;
@@ -97,7 +99,8 @@ export async function countOpenTransactions(): Promise<number> {
 /**
  * Actieve potjes met het netto bedrag van deze periode.
  * Uitgaven tellen voor het eigen deel; terugbetalingen die in een potje zijn
- * gezet verlagen het bedrag. Inkomenpotjes tellen het inkomende geld.
+ * gezet verlagen het bedrag. Inkomenpotjes tellen het inkomende geld. Bij een spaarpotje is
+ * het wat er netto in ging: erin telt op, eruit gaat eraf.
  */
 export async function getActiveCategories(period: Period): Promise<CategoryOption[]> {
   const supabase = await createClient();
@@ -105,7 +108,7 @@ export async function getActiveCategories(period: Period): Promise<CategoryOptio
   const [{ data: categories, error }, { data: rows }] = await Promise.all([
     supabase
       .from("categories")
-      .select("id, name, icon, color, is_income, system_key, monthly_budget, goal_amount")
+      .select("id, name, icon, color, is_income, is_savings, system_key, monthly_budget, goal_amount")
       .eq("archived", false)
       .order("sort_order", { ascending: true }),
     supabase
@@ -139,6 +142,7 @@ export async function getActiveCategories(period: Period): Promise<CategoryOptio
     icon: c.icon,
     color: c.color,
     isIncome: c.is_income,
+    isSavings: c.is_savings,
     systemKey: c.system_key,
     spentThisPeriod: Math.round((totals.get(c.id) ?? 0) * 100) / 100,
     monthlyBudget: c.monthly_budget === null ? null : Number(c.monthly_budget),

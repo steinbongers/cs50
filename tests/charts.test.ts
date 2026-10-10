@@ -27,6 +27,7 @@ const cat = (id: string, extra: Partial<CatLite> = {}): CatLite => ({
   icon: "package",
   color: "grijs",
   isIncome: false,
+  isSavings: false,
   systemKey: null,
   monthlyBudget: null,
   goalAmount: null,
@@ -78,7 +79,7 @@ test("inkomsten en uitgaven per periode, lege periodes vooraan vallen weg", () =
     ],
   );
   // Gemiddelde alleen over volle periodes.
-  assert.deepEqual(averageFlow(flows), { income: 1800, spent: 1150, net: 650, periods: 2 });
+  assert.deepEqual(averageFlow(flows), { income: 1800, spent: 1150, saved: 0, net: 650, periods: 2 });
   assert.equal(averageFlow(flows.slice(-1)), null);
 });
 

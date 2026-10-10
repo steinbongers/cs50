@@ -45,11 +45,13 @@ interface GoalSheetProps {
   categoryId: string;
   monthlyBudget: number | null;
   goalAmount: number | null;
+  /** Spaarpotje: alleen een spaardoel, geen maandbudget (sparen is geen uitgeven). */
+  goalOnly?: boolean;
 }
 
 /** Sheet "Wat wil je bijhouden?": een maandbudget óf een spaardoel. Niets is vooraf gekozen. */
-export function GoalSheet({ open, onClose, categoryId, monthlyBudget, goalAmount }: GoalSheetProps) {
-  const initialMode: Mode | null = goalAmount !== null ? "goal" : monthlyBudget !== null ? "budget" : null;
+export function GoalSheet({ open, onClose, categoryId, monthlyBudget, goalAmount, goalOnly = false }: GoalSheetProps) {
+  const initialMode: Mode | null = goalOnly || goalAmount !== null ? "goal" : monthlyBudget !== null ? "budget" : null;
   const [mode, setMode] = useState<Mode | null>(initialMode);
   const [value, setValue] = useState(formatInput(goalAmount ?? monthlyBudget));
   const [error, setError] = useState<string | null>(null);
@@ -93,18 +95,20 @@ export function GoalSheet({ open, onClose, categoryId, monthlyBudget, goalAmount
   }
 
   return (
-    <Sheet open={open} onClose={close} title="Wat wil je bijhouden?">
+    <Sheet open={open} onClose={close} title={goalOnly ? "Spaardoel" : "Wat wil je bijhouden?"}>
       <div className="flex flex-col gap-4">
-        <Segmented
-          options={MODES}
-          value={mode}
-          onChange={(next) => {
-            setMode(next);
-            setError(null);
-          }}
-          ariaLabel="Wat wil je bijhouden?"
-        />
-        {mode && <p className="-mt-2 text-[13px] leading-[18px] text-text-muted">{MODE_HINTS[mode]}</p>}
+        {!goalOnly && (
+          <Segmented
+            options={MODES}
+            value={mode}
+            onChange={(next) => {
+              setMode(next);
+              setError(null);
+            }}
+            ariaLabel="Wat wil je bijhouden?"
+          />
+        )}
+        {mode && !goalOnly && <p className="-mt-2 text-[13px] leading-[18px] text-text-muted">{MODE_HINTS[mode]}</p>}
         {mode && (
           <div className="flex flex-col gap-1.5">
             <label htmlFor={inputId} className="text-[15px] font-medium">

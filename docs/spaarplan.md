@@ -1,6 +1,7 @@
 # Plan: sparen in [Appnaam]
 
-Status: voorstel voor Stein. Er is nog niets van gebouwd. Dit plan beschrijft hoe geld dat naar
+Status: **fase 1 is gebouwd** (10 oktober 2026, zie docs/beslissingen.md, "Sparen, fase 1"). Fase 2 tot en met 4
+zijn nog een voorstel voor Stein. Dit plan beschrijft hoe geld dat naar
 sparen of beleggen gaat, en weer terugkomt, goed in de app komt. Onderaan staan de keuzes die
 Stein moet maken.
 
@@ -139,7 +140,8 @@ gebouwd) ook `savedOf`. Een spaarpotje telt nooit mee in uitgegeven of inkomsten
 
 ## 8. Bouwvolgorde
 
-1. **Fase 1 (de basis, ±1 dag):** soort per potje plus de eenmalige omzetting. Sparen telt niet
+1. **Fase 1 (de basis, ±1 dag) — gebouwd.** Afwijkingen: de soort is de vlag `categories.is_savings` (naast
+   `is_income`), nog geen `kind`-kolom; de stand telt zonder startsaldo, "sinds je de app gebruikt". soort per potje plus de eenmalige omzetting. Sparen telt niet
    meer als uitgegeven. Spaarpotjes staan bij inkomend geld ("Uit je spaarpot"). Overzicht met de
    drie getallen en het blok Sparen met de stand.
 2. **Fase 2 (koppelen, ±1 dag):** spaarrekening herkennen aan het rekeningtype, rekening →

@@ -15,10 +15,10 @@ import {
 } from "../lib/insights/compute";
 
 const cats: CatLite[] = [
-  { id: "bood", name: "Boodschappen", icon: "shopping-cart", color: "groen", isIncome: false, systemKey: null, monthlyBudget: 200, goalAmount: null },
-  { id: "uit", name: "Uit eten", icon: "utensils", color: "oranje", isIncome: false, systemKey: null, monthlyBudget: null, goalAmount: null },
-  { id: "ink", name: "Inkomen", icon: "banknote", color: "groen", isIncome: true, systemKey: null, monthlyBudget: null, goalAmount: null },
-  { id: "vg", name: "Voorgeschoten", icon: "hand-coins", color: "geel", isIncome: false, systemKey: "voorgeschoten", monthlyBudget: null, goalAmount: null },
+  { id: "bood", name: "Boodschappen", icon: "shopping-cart", color: "groen", isIncome: false, isSavings: false, systemKey: null, monthlyBudget: 200, goalAmount: null },
+  { id: "uit", name: "Uit eten", icon: "utensils", color: "oranje", isIncome: false, isSavings: false, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "ink", name: "Inkomen", icon: "banknote", color: "groen", isIncome: true, isSavings: false, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "vg", name: "Voorgeschoten", icon: "hand-coins", color: "geel", isIncome: false, isSavings: false, systemKey: "voorgeschoten", monthlyBudget: null, goalAmount: null },
 ];
 const catMap = new Map(cats.map((c) => [c.id, c]));
 
@@ -161,7 +161,7 @@ test("jouw maand: alleen salaris in de afgelopen periode is geen maand om te ton
 
 test("uitgegeven wordt nooit negatief, ook met alleen terugbetalingen", async () => {
   const { totalSpent } = await import("../lib/insights/compute");
-  const cats = new Map([["c1", { id: "c1", name: "Overig", icon: "package", color: "grijs", isIncome: false, systemKey: null, monthlyBudget: null, goalAmount: null }]]);
+  const cats = new Map([["c1", { id: "c1", name: "Overig", icon: "package", color: "grijs", isIncome: false, isSavings: false, systemKey: null, monthlyBudget: null, goalAmount: null }]]);
   const refund = { id: "t1", bookingDate: "2026-10-02", amount: 40, ownShare: null, categoryId: "c1", createdAt: "2026-10-02T10:00:00Z", categorizedAt: "2026-10-02T11:00:00Z", isInternal: false };
   assert.equal(totalSpent([refund], cats, "2026-10-01", "2026-11-01"), 0);
 });
@@ -275,8 +275,8 @@ test("dagstreak is vergevingsgezind: één gemiste dag per week breekt de reeks 
 });
 
 test("geld terug: met potje van dat potje af, zonder potje alleen van het totaal, nooit inkomen", () => {
-  const terug: CatLite = { id: "terug", name: "Geld terug", icon: "receipt", color: "blauw", isIncome: false, systemKey: "terug", monthlyBudget: null, goalAmount: null };
-  const contant: CatLite = { id: "cash", name: "Contant", icon: "wallet", color: "groen", isIncome: false, systemKey: "contant", monthlyBudget: null, goalAmount: null };
+  const terug: CatLite = { id: "terug", name: "Geld terug", icon: "receipt", color: "blauw", isIncome: false, isSavings: false, systemKey: "terug", monthlyBudget: null, goalAmount: null };
+  const contant: CatLite = { id: "cash", name: "Contant", icon: "wallet", color: "groen", isIncome: false, isSavings: false, systemKey: "contant", monthlyBudget: null, goalAmount: null };
   const map = new Map([...cats, terug, contant].map((c) => [c.id, c]));
   const txs = [
     tx({ bookingDate: "2026-10-02", amount: -60, categoryId: "bood" }),

@@ -12,7 +12,7 @@ import {
 import { DEFAULT_CATEGORY_ICON, isCategoryIcon } from "@/lib/categories/icons";
 import { isCategoryColor } from "@/lib/categories/palette";
 import { ensureNietMeetellenCategory } from "@/lib/categories/system";
-import type { CategoryDraft } from "@/lib/categories/types";
+import { categoryKind, KIND_ERROR, type CategoryDraft } from "@/lib/categories/types";
 import { logEvent } from "@/lib/events";
 import { createClient } from "@/lib/supabase/server";
 import type { ShareStatus } from "@/lib/supabase/types";
@@ -179,12 +179,14 @@ export async function setGoal(categoryId: string, amount: number | null): Promis
   return writeGoal(categoryId, "goal_amount", amount);
 }
 
-/** Naam, icoon, kleur en inkomend-geld van een potje aanpassen. */
+/** Naam, icoon, kleur en soort (inkomend geld of spaarpotje) van een potje aanpassen. */
 export async function updateCategory(categoryId: string, draft: Omit<CategoryDraft, "id" | "enabled">): Promise<Result> {
   const user = await requireUser();
   if (!isUuid(categoryId)) return { ok: false, error: GENERIC };
   const name = typeof draft.name === "string" ? draft.name.trim().slice(0, MAX_CATEGORY_NAME_LENGTH) : "";
   if (!name) return { ok: false, error: "Geef het potje een naam." };
+  const kind = categoryKind(draft);
+  if (!kind) return { ok: false, error: KIND_ERROR };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -193,7 +195,7 @@ export async function updateCategory(categoryId: string, draft: Omit<CategoryDra
       name,
       icon: isCategoryIcon(draft.icon) ? draft.icon : DEFAULT_CATEGORY_ICON,
       color: isCategoryColor(draft.color) ? draft.color : "grijs",
-      is_income: Boolean(draft.isIncome),
+      ...kind,
     })
     .eq("id", categoryId)
     .eq("user_id", user.id)
@@ -227,6 +229,8 @@ export async function createPotje(
   const user = await requireUser();
   const name = typeof draft?.name === "string" ? draft.name.trim().slice(0, MAX_CATEGORY_NAME_LENGTH) : "";
   if (!name) return { ok: false, error: "Geef het potje een naam." };
+  const kind = categoryKind(draft);
+  if (!kind) return { ok: false, error: KIND_ERROR };
 
   const supabase = await createClient();
   const { count } = await supabase
@@ -253,7 +257,7 @@ export async function createPotje(
       name,
       icon: isCategoryIcon(draft.icon) ? draft.icon : DEFAULT_CATEGORY_ICON,
       color: isCategoryColor(draft.color) ? draft.color : "grijs",
-      is_income: Boolean(draft.isIncome),
+      ...kind,
       sort_order: (last?.sort_order ?? -1) + 1,
     })
     .select("id, name, icon, color")
@@ -263,6 +267,7 @@ export async function createPotje(
   await logEvent("potje_created", {
     source: "editor",
     suggestion: isQuickSuggestionKey(suggestion) ? suggestion : null,
+    savings: kind.is_savings === true,
   });
   refresh();
   return { ok: true, category: data };

@@ -42,7 +42,7 @@ test("inkomsten tegenover je gemiddelde", () => {
 });
 
 test("koppen zeggen de conclusie", () => {
-  assert.equal(flowTitle({ income: 1800, spent: 1600, net: 200, periods: 3 }, 0), `Gemiddeld hou je €${NBSP}200 per maand over`);
+  assert.equal(flowTitle({ income: 1800, spent: 1600, saved: 0, net: 200, periods: 3 }, 0), `Gemiddeld hou je €${NBSP}200 per maand over`);
   assert.equal(flowTitle(null, -50), `Deze maand gaf je tot nu toe €${NBSP}50 meer uit dan er binnenkwam`);
   assert.equal(cumulativeTitle(380, 500, "oktober"), `Je gaf in oktober €${NBSP}120 minder uit dan gemiddeld`);
   assert.equal(cumulativeTitle(505, 500, "oktober"), "Je zit precies rond je gemiddelde");

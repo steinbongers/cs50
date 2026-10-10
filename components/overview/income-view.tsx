@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CategoryBadge } from "@/components/categories/category-badge";
 import { incomeCompareText, netLine } from "@/components/insights/insight-copy";
+import { savedTopLine } from "@/components/overview/overview-copy";
 import { BudgetBar } from "@/components/ui/budget-bar";
 import { Card } from "@/components/ui/card";
 import { IconChevronRight } from "@/components/ui/icons";
@@ -21,6 +22,8 @@ interface IncomeViewProps {
   isCurrent: boolean;
   total: number;
   spent: number;
+  /** Netto gespaard deze maand (erin min eruit); gaat ook van wat er over is af. */
+  saved: number;
   comparison: IncomeComparison;
   groups: IncomeGroup[];
   /** Inkomend geld dat nog in geen potje zit. */
@@ -34,7 +37,17 @@ interface IncomeViewProps {
  * gemiddelde, per inkomstenpotje een balk en daaronder de kaartjes per potje.
  * Geld terug en Voorgeschoten tellen nooit als inkomen (zie `incomeOf`).
  */
-export function IncomeView({ monthName, isCurrent, total, spent, comparison, groups, unsorted, hasIncomePotje }: IncomeViewProps) {
+export function IncomeView({
+  monthName,
+  isCurrent,
+  total,
+  spent,
+  saved,
+  comparison,
+  groups,
+  unsorted,
+  hasIncomePotje,
+}: IncomeViewProps) {
   if (total <= 0 && groups.length === 0) {
     return (
       <>
@@ -58,6 +71,7 @@ export function IncomeView({ monthName, isCurrent, total, spent, comparison, gro
   }
 
   const compare = incomeCompareText(comparison, isCurrent);
+  const savedLine = savedTopLine(saved, isCurrent ? "deze maand" : `in ${monthName}`);
   const max = Math.max(...groups.map((g) => g.amount), 0);
 
   return (
@@ -77,7 +91,11 @@ export function IncomeView({ monthName, isCurrent, total, spent, comparison, gro
           )}
           {compare.basis && <p className="text-[13px] leading-[18px] text-text-muted">{compare.basis}</p>}
         </div>
-        <p className="text-[15px] tabular-nums">{netLine(total - spent)}</p>
+        {/* Over = inkomsten − uitgegeven − gespaard (docs/spaarplan.md). */}
+        <div className="flex flex-col items-center gap-0.5">
+          <p className="text-[15px] tabular-nums">{netLine(total - spent - saved, saved)}</p>
+          {savedLine && <p className="text-[13px] leading-[18px] text-text-muted tabular-nums">{savedLine}</p>}
+        </div>
         {unsorted > 0 && <UnsortedNote amount={unsorted} />}
       </section>
 

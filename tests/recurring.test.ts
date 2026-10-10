@@ -132,12 +132,12 @@ test("vrij tot je salaris: niets zonder salarisdag of zonder bekend saldo", () =
 });
 
 const cats: CatLite[] = [
-  { id: "bood", name: "Boodschappen", icon: "shopping-cart", color: "groen", isIncome: false, systemKey: null, monthlyBudget: null, goalAmount: null },
-  { id: "uit", name: "Uitgaan", icon: "beer", color: "oranje", isIncome: false, systemKey: null, monthlyBudget: null, goalAmount: null },
-  { id: "verv", name: "Vervoer", icon: "train", color: "blauw", isIncome: false, systemKey: null, monthlyBudget: null, goalAmount: null },
-  { id: "abo", name: "Abonnementen", icon: "repeat", color: "paars", isIncome: false, systemKey: null, monthlyBudget: null, goalAmount: null },
-  { id: "ink", name: "Inkomen", icon: "banknote", color: "groen", isIncome: true, systemKey: null, monthlyBudget: null, goalAmount: null },
-  { id: "vg", name: "Voorgeschoten", icon: "hand-coins", color: "geel", isIncome: false, systemKey: "voorgeschoten", monthlyBudget: null, goalAmount: null },
+  { id: "bood", name: "Boodschappen", icon: "shopping-cart", color: "groen", isIncome: false, isSavings: false, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "uit", name: "Uitgaan", icon: "beer", color: "oranje", isIncome: false, isSavings: false, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "verv", name: "Vervoer", icon: "train", color: "blauw", isIncome: false, isSavings: false, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "abo", name: "Abonnementen", icon: "repeat", color: "paars", isIncome: false, isSavings: false, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "ink", name: "Inkomen", icon: "banknote", color: "groen", isIncome: true, isSavings: false, systemKey: null, monthlyBudget: null, goalAmount: null },
+  { id: "vg", name: "Voorgeschoten", icon: "hand-coins", color: "geel", isIncome: false, isSavings: false, systemKey: "voorgeschoten", monthlyBudget: null, goalAmount: null },
 ];
 const catMap = new Map(cats.map((c) => [c.id, c]));
 const tx = (bookingDate: string, amount: number, categoryId: string | null, extra: Partial<TxLite> = {}): TxLite => ({

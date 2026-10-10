@@ -34,6 +34,7 @@ function isValidDraft(value: unknown): value is OnboardingCategoryDraft {
     typeof v.icon === "string" &&
     typeof v.color === "string" &&
     typeof v.isIncome === "boolean" &&
+    (v.isSavings === undefined || typeof v.isSavings === "boolean") &&
     typeof v.enabled === "boolean" &&
     (v.isCustom === undefined || typeof v.isCustom === "boolean") &&
     (v.suggestion === undefined || v.suggestion === null || isQuickSuggestionKey(v.suggestion))
@@ -61,10 +62,12 @@ export async function saveOnboardingCategories(
     name: d.name.trim().slice(0, MAX_CATEGORY_NAME_LENGTH),
     icon: isCategoryIcon(d.icon) ? d.icon : DEFAULT_CATEGORY_ICON,
     color: isCategoryColor(d.color) ? d.color : "grijs",
+    // Een potje is inkomen óf sparen, nooit allebei.
+    isSavings: d.isSavings === undefined ? undefined : d.isSavings && !d.isIncome,
   }));
 
   const enabled = cleaned.filter((d) => d.enabled);
-  if (!enabled.some((d) => !d.isIncome)) {
+  if (!enabled.some((d) => !d.isIncome && !d.isSavings)) {
     return { error: "Zet minstens één potje voor je uitgaven aan." };
   }
   if (enabled.length > MAX_CATEGORIES) return { error: `Kies maximaal ${MAX_CATEGORIES} potjes.` };
@@ -95,6 +98,7 @@ export async function saveOnboardingCategories(
           icon: draft.icon,
           color: draft.color,
           is_income: draft.isIncome,
+          ...(draft.isSavings === undefined ? {} : { is_savings: draft.isSavings }),
           archived: !draft.enabled,
           sort_order: draft.enabled ? sortOrder : 998,
         })
@@ -108,6 +112,7 @@ export async function saveOnboardingCategories(
         icon: draft.icon,
         color: draft.color,
         is_income: draft.isIncome,
+        is_savings: draft.isSavings ?? false,
         sort_order: sortOrder,
       });
       if (error) return { error: "Opslaan lukte niet. Probeer het opnieuw." };
@@ -127,7 +132,7 @@ export async function saveOnboardingCategories(
     defaults_kept: enabled.filter((d) => d.isCustom !== true && d.id === undefined).length,
   });
   for (const draft of custom) {
-    await logEvent("potje_created", { source: "onboarding", suggestion: draft.suggestion ?? null });
+    await logEvent("potje_created", { source: "onboarding", suggestion: draft.suggestion ?? null, savings: draft.isSavings === true });
   }
 
   redirect("/onboarding/salarisdag");

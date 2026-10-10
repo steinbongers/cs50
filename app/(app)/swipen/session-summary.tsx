@@ -56,7 +56,8 @@ export function SessionSummary({ decisions, skipped, remaining }: SessionSummary
 
   const totals = new Map<string, { category: CategoryOption; spent: number; count: number }>();
   for (const { transaction, category, ownShare } of decisions) {
-    if (category.systemKey) continue;
+    // Sparen is geen uitgave: het grootste potje van de ronde is een uitgavepotje.
+    if (category.systemKey || category.isSavings) continue;
     const entry = totals.get(category.id) ?? { category, spent: 0, count: 0 };
     if (transaction.amount < 0) entry.spent += ownShare ?? -transaction.amount;
     entry.count += 1;
