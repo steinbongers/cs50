@@ -141,11 +141,13 @@ export function CategoryTiles({
           <motion.li
             // Bij elke keuze opnieuw afspelen: de key wisselt met pulseKey.
             key={pulsing ? `${category.id}-${pulseKey}` : category.id}
-            animate={pulsing && !reduce ? { scale: [1, 1.06, 1] } : { scale: 1 }}
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            // Het potje "slikt" het kaartje: eerst even in, dan veert het op als het kaartje aankomt.
+            animate={pulsing && !reduce ? { scale: [1, 0.92, 1.1, 1] } : { scale: 1 }}
+            transition={{ duration: 0.5, times: [0, 0.5, 0.78, 1], ease: "easeOut" }}
           >
             <button
               type="button"
+              data-tile={category.id}
               onClick={() => {
                 if (held.current) {
                   held.current = false;
@@ -185,8 +187,9 @@ export function CategoryTiles({
                   aria-hidden
                   className={cn("pointer-events-none absolute inset-0 rounded-2xl", colors.bg)}
                   initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 1, 0] }}
-                  transition={{ duration: 0.32, times: [0, 0.375, 1], ease: "easeOut" }}
+                  // Kleurt op zodra het kaartje binnen is (na ±0,3 s vliegen).
+                  animate={{ opacity: [0, 0, 1, 0] }}
+                  transition={{ duration: 0.6, times: [0, 0.5, 0.65, 1], ease: "easeOut" }}
                 />
               )}
               <span

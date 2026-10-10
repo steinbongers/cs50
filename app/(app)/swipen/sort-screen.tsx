@@ -65,7 +65,7 @@ import { SessionSummary, type Decision } from "./session-summary";
 import { RefundSheet } from "./refund-sheet";
 import { SettleSheet } from "./settle-sheet";
 import { EMPTY_SPLIT, type SplitState } from "./split-panel";
-import { CASH_QUESTION, GhostCard, TransactionCard, type ExitKind } from "./transaction-card";
+import { CASH_QUESTION, GhostCard, TransactionCard, type CardExit } from "./transaction-card";
 import { UndoToast } from "./undo-toast";
 
 interface SortScreenProps {
@@ -209,7 +209,21 @@ export function SortScreen({
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [skipped, setSkipped] = useState(0);
   const [undone, setUndone] = useState(0);
-  const [exitKind, setExitKind] = useState<ExitKind>("assign");
+  const [cardExit, setCardExit] = useState<CardExit>({ kind: "assign", target: null });
+  const cardAreaRef = useRef<HTMLElement>(null);
+  // Elke keuze zet hoe de kaart weggaat; alleen een tik op een tegel richt hem op die tegel (aimAt).
+  const aimAt = useCallback((categoryId: string) => {
+    const card = cardAreaRef.current?.getBoundingClientRect();
+    const tile = document.querySelector<HTMLElement>(`[data-tile="${CSS.escape(categoryId)}"]`)?.getBoundingClientRect();
+    if (!card || !tile) return;
+    setCardExit({
+      kind: "assign",
+      target: {
+        x: Math.round(tile.left + tile.width / 2 - (card.left + card.width / 2)),
+        y: Math.round(tile.top + tile.height / 2 - (card.top + card.height / 2)),
+      },
+    });
+  }, []);
   const [undo, setUndo] = useState<Decision | null>(null);
   // Na "Ook de andere" of een vaste ontvanger: de groep die in één keer is ingedeeld (en in één keer terug kan).
   const [undoBulk, setUndoBulk] = useState<UndoGroup | null>(null);
@@ -376,7 +390,8 @@ export function SortScreen({
 
       setError(null);
       setHint(null);
-      setExitKind("assign");
+      setCardExit({ kind: "assign", target: null });
+      aimAt(category.id);
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, decision]);
       setUndo(decision);
@@ -418,7 +433,7 @@ export function SortScreen({
         }
       });
     },
-    [current, split, showCoach, startTransition],
+    [aimAt, current, split, showCoach, startTransition],
   );
 
   // Geld terug gekregen: van een uitgavepotje af, of zonder potje alleen van het totaal.
@@ -434,7 +449,7 @@ export function SortScreen({
       setRefundOpen(false);
       setError(null);
       setHint(null);
-      setExitKind("assign");
+      setCardExit({ kind: "assign", target: null });
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, decision]);
       setUndo(decision);
@@ -469,7 +484,7 @@ export function SortScreen({
     tap();
     setError(null);
     setHint(null);
-    setExitKind("assign");
+    setCardExit({ kind: "assign", target: null });
     setQueue((q) => q.slice(1));
     setDecisions((d) => [...d, decision]);
     setUndo(decision);
@@ -495,7 +510,7 @@ export function SortScreen({
 
       setSettleOpen(false);
       setError(null);
-      setExitKind("assign");
+      setCardExit({ kind: "assign", target: null });
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, decision]);
       setUndo(decision);
@@ -539,7 +554,7 @@ export function SortScreen({
       setSettleOpen(false);
       setError(null);
       setHint(null);
-      setExitKind("assign");
+      setCardExit({ kind: "assign", target: null });
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, decision]);
       setUndo(decision);
@@ -591,7 +606,7 @@ export function SortScreen({
       setCashOpen(false);
       setError(null);
       setHint(null);
-      setExitKind("assign");
+      setCardExit({ kind: "assign", target: null });
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, decision]);
       setUndo(decision);
@@ -638,7 +653,7 @@ export function SortScreen({
       setPartsOpen(false);
       setError(null);
       setHint(null);
-      setExitKind("assign");
+      setCardExit({ kind: "assign", target: null });
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, decision]);
       setUndo(decision);
@@ -671,7 +686,7 @@ export function SortScreen({
     const transaction = current;
     setError(null);
     setHint(null);
-    setExitKind("skip");
+    setCardExit({ kind: "skip", target: null });
     setQueue((q) => [...q.slice(1), { ...transaction, skippedCount: transaction.skippedCount + 1 }]);
     setSkipped((s) => s + 1);
     setAnnouncement(`${transaction.counterparty} op Later gezet`);
@@ -687,7 +702,7 @@ export function SortScreen({
     warning();
     setUndo(null);
     setError(null);
-    setExitKind("none");
+    setCardExit({ kind: "none", target: null });
     setQueue((q) => [transaction, ...q]);
     setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
     setUndone((u) => u + 1);
@@ -750,7 +765,7 @@ export function SortScreen({
     tap();
     setError(null);
     setHint(null);
-    setExitKind("assign");
+    setCardExit({ kind: "assign", target: null });
     setQueue((q) => q.filter((t) => !ids.has(t.id)));
     setDecisions((d) => [...d, ...decisionsSame]);
     setUndo(null);
@@ -785,7 +800,8 @@ export function SortScreen({
       success();
       setError(null);
       setHint(null);
-      setExitKind("assign");
+      setCardExit({ kind: "assign", target: null });
+      aimAt(category.id);
       setQueue((q) => q.slice(1));
       setDecisions((d) => [...d, { transaction, category }]);
       setUndo(null);
@@ -821,7 +837,7 @@ export function SortScreen({
         });
       });
     },
-    [current, split.enabled, showCoach, startTransition],
+    [aimAt, current, split.enabled, showCoach, startTransition],
   );
 
   const handleUndoBulk = useCallback(() => {
@@ -833,7 +849,7 @@ export function SortScreen({
     warning();
     setUndoBulk(null);
     setError(null);
-    setExitKind("none");
+    setCardExit({ kind: "none", target: null });
     setQueue((q) => [...group.map((d) => d.transaction), ...q]);
     setDecisions((d) => d.filter((x) => !ids.has(x.transaction.id)));
     setUndone((u) => u + group.length);
@@ -992,10 +1008,10 @@ export function SortScreen({
       </header>
 
       <div className={cn("px-4", sticky && "sticky top-0 z-10 bg-bg pb-1")}>
-        <section className="relative mt-3 grid h-[168px] compact:h-[136px]" aria-label="Kaartje">
+        <section ref={cardAreaRef} className="relative mt-3 grid h-[168px] compact:h-[136px]" aria-label="Kaartje">
           {queue.length > 2 && <GhostCard depth={2} />}
           {queue.length > 1 && <GhostCard depth={1} />}
-          <AnimatePresence custom={exitKind} initial={false}>
+          <AnimatePresence custom={cardExit} initial={false}>
             <TransactionCard
               key={current.id}
               transaction={current}

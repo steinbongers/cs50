@@ -8,15 +8,36 @@ import { cn } from "@/lib/utils";
 
 export type ExitKind = "assign" | "skip" | "none";
 
+/** Hoe de kaart weggaat; bij een tik op een tegel vliegt hij naar die tegel (verschuiving in px). */
+export interface CardExit {
+  kind: ExitKind;
+  target: { x: number; y: number } | null;
+}
+
 const spring = { type: "spring" as const, stiffness: 380, damping: 32, mass: 0.8 };
 
 const fullMotion: Variants = {
   enter: { y: 28, opacity: 0, scale: 0.96, rotate: 0 },
   center: { y: 0, opacity: 1, scale: 1, rotate: 0, transition: spring },
-  exit: (kind: ExitKind) =>
+  exit: ({ kind, target }: CardExit) =>
     kind === "skip"
       ? { x: 140, rotate: 6, opacity: 0, transition: { duration: 0.22, ease: [0.4, 0, 1, 1] } }
-      : { y: -90, rotate: -4, scale: 0.9, opacity: 0, transition: { duration: 0.24, ease: [0.4, 0, 1, 1] } },
+      : kind === "assign" && target
+        ? {
+            // Het kaartje verdwijnt in het potje: krimpt en versnelt naar de tegel, pas op het eind weg.
+            x: target.x,
+            y: target.y,
+            scale: 0.12,
+            rotate: target.x > 0 ? 8 : -8,
+            opacity: [1, 1, 0],
+            transition: {
+              duration: 0.38,
+              ease: [0.45, 0, 0.75, 0.35],
+              // Zichtbaar tot vlak bij de tegel; pas de laatste paar procent weg.
+              opacity: { duration: 0.38, times: [0, 0.94, 1], ease: "linear" },
+            },
+          }
+        : { y: -90, rotate: -4, scale: 0.9, opacity: 0, transition: { duration: 0.24, ease: [0.4, 0, 1, 1] } },
 };
 
 const reducedMotion: Variants = {
