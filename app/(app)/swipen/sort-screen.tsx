@@ -1008,7 +1008,7 @@ export function SortScreen({
       </header>
 
       <div className={cn("px-4", sticky && "sticky top-0 z-10 bg-bg pb-1")}>
-        <section ref={cardAreaRef} className="relative mt-3 grid h-[168px] compact:h-[136px]" aria-label="Kaartje">
+        <section ref={cardAreaRef} className="relative z-20 mt-3 grid h-[168px] compact:h-[136px]" aria-label="Kaartje">
           {queue.length > 2 && <GhostCard depth={2} />}
           {queue.length > 1 && <GhostCard depth={1} />}
           <AnimatePresence custom={cardExit} initial={false}>
