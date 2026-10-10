@@ -49,6 +49,8 @@ export type CategoryRow = {
   monthly_budget: number | null;
   goal_amount: number | null;
   is_income: boolean;
+  /** Spaarpotje: telt als gespaard, niet als uitgegeven of inkomen. */
+  is_savings: boolean;
   archived: boolean;
   system_key: CategorySystemKey | null;
   created_at: string;
@@ -221,6 +223,7 @@ export type Database = {
           | "monthly_budget"
           | "goal_amount"
           | "is_income"
+          | "is_savings"
           | "archived"
           | "system_key"
           | "created_at"
