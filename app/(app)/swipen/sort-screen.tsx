@@ -85,7 +85,7 @@ const COACH_DONE_MS = 2500;
 /** Hoe lang een foutmelding in de pil blijft staan. */
 const ERROR_MS = 5000;
 /** Na zoveel ms is het vliegende kaartje in het potje (zie TransactionCard): dan telt het bedrag op. */
-const GULP_DELAY_MS = 420;
+const GULP_DELAY_MS = 540;
 
 /** Een groep keuzes die in één keer terug kan; bij een vaste ontvanger gaat ook de regel weg. */
 interface UndoGroup {

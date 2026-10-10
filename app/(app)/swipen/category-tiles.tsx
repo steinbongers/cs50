@@ -141,14 +141,10 @@ export function CategoryTiles({
           <motion.li
             // Bij elke keuze opnieuw afspelen: de key wisselt met pulseKey.
             key={pulsing ? `${category.id}-${pulseKey}` : category.id}
-            // Het potje schrokt het kaartje op: het gaat open als het kaartje eraan komt, slikt het in
-            // (samenknijpen) en veert na. Getimed op de vlucht van de kaart (±0,48 s).
-            animate={
-              pulsing && !reduce
-                ? { scaleX: [1, 1, 1.09, 0.9, 1.04, 1], scaleY: [1, 1, 1.13, 0.84, 1.05, 1], y: [0, 0, -3, 2, 0, 0] }
-                : { scaleX: 1, scaleY: 1, y: 0 }
-            }
-            transition={{ duration: 0.82, times: [0, 0.36, 0.56, 0.68, 0.83, 1], ease: "easeInOut" }}
+            // Het potje schrokt het kaartje op: het zwelt zacht aan als het kaartje binnenkomt en zakt
+            // terug. Getimed op de vlucht van de kaart (±0,56 s).
+            animate={pulsing && !reduce ? { scale: [1, 1, 1.07, 0.95, 1] } : { scale: 1 }}
+            transition={{ duration: 0.95, times: [0, 0.4, 0.58, 0.76, 1], ease: [0.45, 0, 0.55, 1] }}
           >
             <button
               type="button"
@@ -193,8 +189,8 @@ export function CategoryTiles({
                   className={cn("pointer-events-none absolute inset-0 rounded-2xl", colors.bg)}
                   initial={{ opacity: 0 }}
                   // Kleurt op op het moment van slikken.
-                  animate={{ opacity: [0, 0, 0, 0.95, 0] }}
-                  transition={{ duration: 0.82, times: [0, 0.4, 0.56, 0.66, 1], ease: "easeOut" }}
+                  animate={{ opacity: [0, 0, 0.75, 0] }}
+                  transition={{ duration: 1.1, times: [0, 0.48, 0.6, 1], ease: [0.4, 0, 0.6, 1] }}
                 />
               )}
               <motion.span
@@ -203,10 +199,10 @@ export function CategoryTiles({
                 // Het icoontje "kauwt" mee: groter als de mond opengaat, wiebelt na het slikken.
                 animate={
                   pulsing && !reduce
-                    ? { scale: [1, 1, 1.32, 0.82, 1.1, 1], rotate: [0, 0, -14, 10, -4, 0] }
+                    ? { scale: [1, 1, 1.18, 1], rotate: [0, 0, -6, 0] }
                     : { scale: 1, rotate: 0 }
                 }
-                transition={{ duration: 0.82, times: [0, 0.36, 0.56, 0.68, 0.83, 1], ease: "easeInOut" }}
+                transition={{ duration: 0.95, times: [0, 0.45, 0.62, 1], ease: [0.45, 0, 0.55, 1] }}
               >
                 <CategoryIcon icon={category.icon} size={16} strokeWidth={1.75} />
               </motion.span>
@@ -225,8 +221,8 @@ export function CategoryTiles({
                   className={cn("relative text-text-muted", amountClasses)}
                   aria-hidden
                   // Het nieuwe bedrag springt op zodra het kaartje binnen is.
-                  animate={pulsing && !reduce ? { scale: [1, 1, 1.28, 1], y: [0, 0, -2, 0] } : { scale: 1, y: 0 }}
-                  transition={{ duration: 0.82, times: [0, 0.62, 0.76, 1], ease: "easeOut" }}
+                  animate={pulsing && !reduce ? { scale: [1, 1, 1.14, 1] } : { scale: 1 }}
+                  transition={{ duration: 0.95, times: [0, 0.6, 0.75, 1], ease: [0.45, 0, 0.55, 1] }}
                 >
                   {amount ?? ""}
                 </motion.span>

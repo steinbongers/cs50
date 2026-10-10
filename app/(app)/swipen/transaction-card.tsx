@@ -14,7 +14,7 @@ export interface CardExit {
   target: { x: number; y: number } | null;
 }
 
-const spring = { type: "spring" as const, stiffness: 380, damping: 32, mass: 0.8 };
+const spring = { type: "spring" as const, stiffness: 300, damping: 30, mass: 0.9 };
 
 const fullMotion: Variants = {
   enter: { y: 28, opacity: 0, scale: 0.96, rotate: 0 },
@@ -24,24 +24,22 @@ const fullMotion: Variants = {
     kind === "skip"
       ? { x: 140, rotate: 6, opacity: 0, transition: { duration: 0.22, ease: [0.4, 0, 1, 1] } }
       : kind === "assign" && target
-        ? (() => {
-            // Het kaartje vliegt in een boog het potje in: eerst een sprongetje omhoog, dan steeds
-            // kleiner en sneller naar de tegel, en op het laatst wordt het ingezogen.
-            const turn = target.x >= 0 ? 1 : -1;
-            return {
-              x: [0, target.x * 0.12, target.x * 0.72, target.x],
-              y: [0, -26, target.y * 0.6, target.y],
-              scale: [1, 0.94, 0.4, 0.04],
-              rotate: [0, -3 * turn, 9 * turn, 20 * turn],
-              opacity: [1, 1, 1, 0],
-              transition: {
-                duration: 0.48,
-                times: [0, 0.2, 0.68, 1],
-                ease: ["easeOut", "easeIn", [0.5, 0, 1, 0.6]],
-                opacity: { duration: 0.48, times: [0, 0.2, 0.9, 1], ease: "linear" },
-              },
-            };
-          })()
+        ? {
+            // Eén doorlopende beweging, zonder knikken: x en y elk met een eigen curve. De y-curve
+            // gaat eerst iets terug (omhoog) en duikt dan het potje in; zo ontstaat een zachte boog.
+            x: target.x,
+            y: target.y,
+            scale: 0.06,
+            rotate: target.x >= 0 ? 12 : -12,
+            opacity: [1, 1, 0],
+            transition: {
+              x: { duration: 0.56, ease: [0.33, 0, 0.45, 1] },
+              y: { duration: 0.56, ease: [0.42, -0.32, 0.62, 0.92] },
+              scale: { duration: 0.56, ease: [0.4, 0, 0.7, 0.6] },
+              rotate: { duration: 0.56, ease: [0.4, 0, 0.6, 1] },
+              opacity: { duration: 0.56, times: [0, 0.88, 1], ease: "linear" },
+            },
+          }
         : { y: -90, rotate: -4, scale: 0.9, opacity: 0, transition: { duration: 0.24, ease: [0.4, 0, 1, 1] } },
 };
 
