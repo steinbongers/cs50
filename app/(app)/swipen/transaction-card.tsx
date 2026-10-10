@@ -18,25 +18,30 @@ const spring = { type: "spring" as const, stiffness: 380, damping: 32, mass: 0.8
 
 const fullMotion: Variants = {
   enter: { y: 28, opacity: 0, scale: 0.96, rotate: 0 },
-  center: { y: 0, opacity: 1, scale: 1, rotate: 0, transition: spring },
+  // Het volgende kaartje wacht heel even, zodat het vliegende kaartje eerst vrij kan wegspringen.
+  center: { y: 0, opacity: 1, scale: 1, rotate: 0, transition: { ...spring, delay: 0.12 } },
   exit: ({ kind, target }: CardExit) =>
     kind === "skip"
       ? { x: 140, rotate: 6, opacity: 0, transition: { duration: 0.22, ease: [0.4, 0, 1, 1] } }
       : kind === "assign" && target
-        ? {
-            // Het kaartje verdwijnt in het potje: krimpt en versnelt naar de tegel, pas op het eind weg.
-            x: target.x,
-            y: target.y,
-            scale: 0.12,
-            rotate: target.x > 0 ? 8 : -8,
-            opacity: [1, 1, 0],
-            transition: {
-              duration: 0.38,
-              ease: [0.45, 0, 0.75, 0.35],
-              // Zichtbaar tot vlak bij de tegel; pas de laatste paar procent weg.
-              opacity: { duration: 0.38, times: [0, 0.94, 1], ease: "linear" },
-            },
-          }
+        ? (() => {
+            // Het kaartje vliegt in een boog het potje in: eerst een sprongetje omhoog, dan steeds
+            // kleiner en sneller naar de tegel, en op het laatst wordt het ingezogen.
+            const turn = target.x >= 0 ? 1 : -1;
+            return {
+              x: [0, target.x * 0.12, target.x * 0.72, target.x],
+              y: [0, -26, target.y * 0.6, target.y],
+              scale: [1, 0.94, 0.4, 0.04],
+              rotate: [0, -3 * turn, 9 * turn, 20 * turn],
+              opacity: [1, 1, 1, 0],
+              transition: {
+                duration: 0.48,
+                times: [0, 0.2, 0.68, 1],
+                ease: ["easeOut", "easeIn", [0.5, 0, 1, 0.6]],
+                opacity: { duration: 0.48, times: [0, 0.2, 0.9, 1], ease: "linear" },
+              },
+            };
+          })()
         : { y: -90, rotate: -4, scale: 0.9, opacity: 0, transition: { duration: 0.24, ease: [0.4, 0, 1, 1] } },
 };
 

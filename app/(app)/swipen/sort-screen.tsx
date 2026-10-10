@@ -84,6 +84,8 @@ const STICKY_FROM_TILES = 21;
 const COACH_DONE_MS = 2500;
 /** Hoe lang een foutmelding in de pil blijft staan. */
 const ERROR_MS = 5000;
+/** Na zoveel ms is het vliegende kaartje in het potje (zie TransactionCard): dan telt het bedrag op. */
+const GULP_DELAY_MS = 420;
 
 /** Een groep keuzes die in één keer terug kan; bij een vaste ontvanger gaat ook de regel weg. */
 interface UndoGroup {
@@ -397,7 +399,8 @@ export function SortScreen({
       setUndo(decision);
       setUndoBulk(null);
       setPulse((p) => ({ id: category.id, key: p.key + 1 }));
-      bumpCategoryTotal(category.id, delta);
+      // Het bedrag op de tegel telt op zodra het potje het kaartje "opschrokt" (na de vlucht).
+      setTimeout(() => bumpCategoryTotal(category.id, delta), GULP_DELAY_MS);
       if (track) {
         // Meteen beschikbaar voor de tegel Terugbetaling, zonder refresh.
         setAwaiting((prev) => [
