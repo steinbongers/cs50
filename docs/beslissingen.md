@@ -362,3 +362,7 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
     vandaag (voor Stein op 11 november: 20 oktober tot vandaag), niet uit de maand ervoor. Alleen als de lopende
     maand jonger is dan 14 dagen staat er te weinig in en neemt de app de hele vorige maand. Wat later in de maand
     nog komt, voeg je zelf toe.
+  - *Vaste post maken tijdens het indelen* (Stein). Onder het kaartje op Swipen staat een knopje met het
+    herhaal-icoon ("Vast"). Een tik maakt van die verkoper een vaste post met het bedrag van het kaartje als bedrag
+    per maand; nog een tik haalt hem weer weg. Het kaartje blijft liggen: een potje kies je daarna gewoon. Niet bij
+    een pinopname of een onbekende tegenpartij.

@@ -10,7 +10,7 @@
  */
 
 import { AnimatePresence } from "framer-motion";
-import { ArrowRight, Check, Split, Undo2 } from "lucide-react";
+import { ArrowRight, Check, Repeat, Split, Undo2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { CategoryEditor } from "@/components/categories/category-editor";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,8 @@ import {
   undoMany,
   type CashSpendInput,
 } from "./actions";
+import { toggleFixedItem } from "@/app/bank/actions";
+import { counterpartyKey } from "@/lib/transactions/same-counterparty";
 import { cardCoverage, settleCardWithWallet } from "./card-actions";
 import { setCounted } from "../potjes/actions";
 import { AmountsSheet } from "./amounts-sheet";
@@ -79,6 +81,8 @@ interface SortScreenProps {
   coachStep: number;
   /** "€ 412 over": wat er deze maand nog vrij is, als de vaste maand is ingesteld. */
   monthLeftText?: string | null;
+  /** Vaste posten die al zijn ingesteld, als "uit:sleutel" of "in:sleutel". */
+  fixedKeys?: string[];
 }
 
 /** Boven dit aantal tegels mag de pagina scrollen; kaart en actieregel blijven dan staan. */
@@ -203,7 +207,10 @@ export function SortScreen({
   awaitingRefunds: initialAwaiting = [],
   coachStep: initialCoachStep,
   monthLeftText = null,
+  fixedKeys = [],
 }: SortScreenProps) {
+  // Vaste posten (Je vaste maand): tijdens het indelen aan en uit te zetten per verkoper.
+  const [fixedSet, setFixedSet] = useState(() => new Set(fixedKeys));
   const [queue, setQueue] = useState<OpenTransaction[]>(transactions);
   const [categories, setCategories] = useState<CategoryOption[]>(initialCategories);
   // Openstaande delen (van vroeger verdelen) houden we lokaal bij, zodat afstrepen zonder
@@ -502,6 +509,38 @@ export function SortScreen({
     },
     [current, showCoach, startTransition],
   );
+
+  // Vaste post: deze verkoper komt elke maand terug (huur, abonnement, salaris). Het kaartje blijft
+  // liggen; een potje kiezen doe je daarna gewoon. Nog een tik haalt de vaste post weer weg.
+  const toggleFixed = useCallback(() => {
+    if (!current) return;
+    const transaction = current;
+    const key = `${transaction.amount < 0 ? "uit" : "in"}:${counterpartyKey(transaction.counterparty)}`;
+    const next = !fixedSet.has(key);
+    const apply = (on: boolean) =>
+      setFixedSet((prev) => {
+        const copy = new Set(prev);
+        if (on) copy.add(key);
+        else copy.delete(key);
+        return copy;
+      });
+    tap();
+    setError(null);
+    apply(next);
+    setHint(
+      next
+        ? `${transaction.counterparty} is nu een vaste post van ${formatEuro(Math.abs(transaction.amount))} per maand`
+        : `${transaction.counterparty} is geen vaste post meer`,
+    );
+    startTransition(async () => {
+      const result = await toggleFixedItem({ name: transaction.counterparty, amount: transaction.amount, fixed: next });
+      if (!result.ok) {
+        apply(!next);
+        setHint(null);
+        setError(result.error);
+      }
+    });
+  }, [current, fixedSet, startTransition]);
 
   // Niet meetellen: weg van de stapel, telt nergens mee. Ongedaan maken zet hem terug.
   const exclude = useCallback(() => {
@@ -1050,6 +1089,7 @@ export function SortScreen({
   const canSplit = !isIncoming && !isCash;
   const isCreditCard = canSplit && isCreditCardSettlement(current);
   const coveredHere = isCreditCard && covered?.id === current.id ? covered : null;
+  const isFixed = fixedSet.has(`${isIncoming ? "in" : "uit"}:${counterpartyKey(current.counterparty)}`);
   // Terugbetaling bij open delen (van vroeger verdelen) én bij uitgaven die op geld terug wachten.
   const repayment =
     isIncoming && (availableShares.length > 0 || availableAwaiting.length > 0)
@@ -1145,14 +1185,34 @@ export function SortScreen({
               Waar hoort dit geld bij?
             </p>
           ) : null}
-          {/* Telt niet mee: buiten je maand, Overzicht en potjes (een borg, iets zakelijks). */}
-          <button
-            type="button"
-            onClick={exclude}
-            className="ml-auto inline-flex h-8 shrink-0 items-center rounded-full px-2.5 text-[13px] font-medium text-text-muted transition-colors duration-150 active:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            Niet meetellen
-          </button>
+          <div className="ml-auto flex shrink-0 items-center">
+            {/* Vaste post: komt elke maand terug. Alleen het icoon op smalle schermen, zodat de regel niet breekt. */}
+            {!isCash && current.counterparty !== "Onbekende tegenpartij" && (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isFixed}
+                aria-label={isFixed ? "Vaste post, tik om weg te halen" : "Maak hier een vaste post van"}
+                onClick={toggleFixed}
+                className={cn(
+                  "inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-[13px] font-medium transition-colors duration-150",
+                  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                  isFixed ? "bg-primary-soft text-primary" : "text-text-muted active:bg-surface-muted",
+                )}
+              >
+                <Repeat size={14} strokeWidth={2.25} aria-hidden />
+                <span className="max-[429px]:hidden">Vast</span>
+              </button>
+            )}
+            {/* Telt niet mee: buiten je maand, Overzicht en potjes (een borg, iets zakelijks). */}
+            <button
+              type="button"
+              onClick={exclude}
+              className="inline-flex h-8 shrink-0 items-center rounded-full px-2.5 text-[13px] font-medium text-text-muted transition-colors duration-150 active:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              Niet meetellen
+            </button>
+          </div>
         </div>
 
         <div className="relative">
