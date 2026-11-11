@@ -7,17 +7,18 @@ import { IconChevronLeft } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
 /** Vaste stapnamen; deze gaan ook als `step` mee in de metingen. */
-export type OnboardingStepKey = "potjes" | "salarisdag" | "bank" | "klaar";
+export type OnboardingStepKey = "potjes" | "salarisdag" | "bank" | "vast" | "klaar";
 
 const ONBOARDING_STEPS: ReadonlyArray<{ key: OnboardingStepKey; path: string }> = [
   { key: "potjes", path: "/onboarding/potjes" },
   { key: "salarisdag", path: "/onboarding/salarisdag" },
   { key: "bank", path: "/onboarding/bron" },
+  { key: "vast", path: "/onboarding/vast" },
   { key: "klaar", path: "/onboarding/klaar" },
 ];
 
 /**
- * Bovenbalk van de onboarding: terugchevron en voortgang in vier segmenten.
+ * Bovenbalk van de onboarding: terugchevron en voortgang in vijf segmenten.
  * Logt elke getoonde stap één keer via `onView` (server action uit de layout).
  */
 export function OnboardingSteps({ onView }: { onView: (step: OnboardingStepKey) => Promise<void> }) {
@@ -51,7 +52,7 @@ export function OnboardingSteps({ onView }: { onView: (step: OnboardingStepKey) 
         )}
       </div>
       <div
-        className="grid grid-cols-4 gap-1.5"
+        className="grid grid-cols-5 gap-1.5"
         role="progressbar"
         aria-label={label}
         aria-valuemin={1}

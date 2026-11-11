@@ -5,7 +5,6 @@ import { cookies, headers } from "next/headers";
 import { refresh } from "next/cache";
 import { MANUAL_SYNC_COOLDOWN_MS } from "@/config/app";
 import { requireUser } from "@/lib/auth";
-import { ensureNietMeetellenCategory } from "@/lib/categories/system";
 import { toISODate } from "@/lib/format";
 import { amsterdamToday } from "@/lib/periods";
 import { getPrimaryConnection, statusFor } from "@/lib/bank/connections";
@@ -14,6 +13,10 @@ import { verifyCredentials } from "@/lib/enablebanking/client";
 import { deleteSession, startAuthorization } from "@/lib/enablebanking/client";
 import { isEnableBankingConfigured } from "@/lib/enablebanking/jwt";
 import { logEvent } from "@/lib/events";
+import { ignoreOpenBefore, loadFixedItems } from "@/lib/insights/fixed-month-server";
+import { cleanFixedItems } from "@/lib/insights/fixed-month";
+import { loadTrackingStart } from "@/lib/insights/overview-start";
+import { previousPeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import { BANK_AUTH_COOKIE, type BankAuthCookie } from "@/lib/bank/auth-cookie";
 import { DEFAULT_IMPORT_FROM, importFromDate, isImportFrom } from "@/lib/bank/import-from";
@@ -239,25 +242,68 @@ export type StartFreshResult = { ok: true; count: number } | { ok: false; error:
 export async function startFromToday(): Promise<StartFreshResult> {
   const user = await requireUser();
   const supabase = await createClient();
-  let categoryId: string;
+  let count: number;
   try {
-    categoryId = await ensureNietMeetellenCategory(supabase, user.id);
+    count = await ignoreOpenBefore(supabase, user.id, toISODate(amsterdamToday()));
   } catch {
     return { ok: false, error: "Dat lukte niet. Probeer het zo nog eens." };
   }
-  const today = toISODate(amsterdamToday());
-  const { data, error } = await supabase
-    .from("transactions")
-    .update({ category_id: categoryId, categorized_at: new Date().toISOString(), own_share: null, awaiting_refund: false })
-    .eq("user_id", user.id)
-    .is("category_id", null)
-    .eq("is_internal_transfer", false)
-    .lt("booking_date", today)
-    .select("id");
-  if (error) return { ok: false, error: "Dat lukte niet. Probeer het zo nog eens." };
-  const count = data?.length ?? 0;
   // Alleen een grove maat; nooit bedragen of winkels.
   await logEvent("start_from_today", { count_bucket: count === 0 ? "0" : count <= 50 ? "1-50" : "50+" });
   refresh();
   return { ok: true, count };
+}
+
+/**
+ * Haalt de vorige salarismaand op voor "Je vaste maand", voor wie al gekoppeld was. Wat daarbij
+ * nieuw binnenkomt en ouder is dan waar je stapel begon, komt niet op de stapel (Telt niet mee).
+ */
+export async function fetchPreviousMonth(): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const connection = await getPrimaryConnection(supabase, user.id);
+  if (!connection) return { ok: false, error: "Koppel eerst je bank." };
+  const status = statusFor(connection);
+  if (status !== "active" && status !== "expiring") return { ok: false, error: "Je bank is ontkoppeld. Koppel opnieuw." };
+  const { data: profile } = await supabase.from("profiles").select("salary_day").eq("id", user.id).maybeSingle();
+  const today = amsterdamToday();
+  const cutoff = (await loadTrackingStart(supabase, user.id).catch(() => null)) ?? toISODate(today);
+  const result = await syncConnection(supabase, connection, { dateFrom: previousPeriod(profile?.salary_day ?? null, today).startISO });
+  if (result.error) return { ok: false, error: "Ophalen lukte niet. Probeer het zo nog eens." };
+  await ignoreOpenBefore(supabase, user.id, cutoff, result.newIds).catch(() => 0);
+  refresh();
+  return { ok: true };
+}
+
+/**
+ * Slaat de vaste kosten en vaste inkomsten op die de gebruiker heeft aangetikt. Vervangt de hele
+ * lijst. De meting bevat alleen aantallen, nooit namen of bedragen.
+ */
+export async function saveFixedItems(input: unknown): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await requireUser();
+  const items = cleanFixedItems(input);
+  const supabase = await createClient();
+  const before = await loadFixedItems(supabase, user.id);
+  const { error: deleteError } = await supabase.from("fixed_items").delete().eq("user_id", user.id);
+  if (deleteError) return { ok: false, error: "Opslaan lukte niet. Probeer het nog eens." };
+  if (items.length > 0) {
+    const { error } = await supabase.from("fixed_items").insert(
+      items.map((i) => ({ user_id: user.id, direction: i.direction, counterparty_key: i.key, name: i.name, amount: i.amount })),
+    );
+    if (error) {
+      // Terugzetten wat er stond: liever de oude lijst dan een lege.
+      if (before.length > 0) {
+        await supabase.from("fixed_items").insert(
+          before.map((i) => ({ user_id: user.id, direction: i.direction, counterparty_key: i.key, name: i.name, amount: i.amount })),
+        );
+      }
+      return { ok: false, error: "Opslaan lukte niet. Probeer het nog eens." };
+    }
+  }
+  await logEvent("fixed_month_saved", {
+    costs: items.filter((i) => i.direction === "uit").length,
+    income: items.filter((i) => i.direction === "in").length,
+  });
+  refresh();
+  return { ok: true };
 }

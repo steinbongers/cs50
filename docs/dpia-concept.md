@@ -34,6 +34,12 @@ Het rapport adviseert een DPIA bij lancering als verplicht te behandelen. Voor d
 11. **Meldingen met knoppen.** Na een Apple Pay-betaling toont de iPhone zelf een lokale melding. Na een bankophaalronde (nu vier keer per dag) stuurt de server een melding via Apple (APNs). De zichtbare tekst van zo'n pushmelding bevat geen bedrag, winkel of potje. De tekst met details reist apart mee in hetzelfde bericht, en een extensie op de iPhone (`NotificationService`) zet die er alleen in als iOS de voorvertoning op dat moment verbergt tot het toestel ontgrendeld is, of de gebruiker details zelf heeft aangezet (zie risico 10). De avondmelding blijft zonder bedragen.
 12. **Grote widget.** Toont op het beginscherm de oudste open betaling (winkel, bedrag, datum) met potjes als knoppen. Haalt die op via `/api/widget` met een apparaatsleutel.
 
+### 2b. Nieuw per 11 november 2026: je vaste maand
+
+13. **Vorige maand ophalen.** Bij het koppelen haalt de app altijd ook de vorige salarismaand op, ook als de gebruiker "vanaf vandaag" kiest. Het keuzescherm zegt dat. Die betalingen komen niet op de stapel en tellen nergens mee; ze dienen alleen voor de lijst hieronder. Ze staan wel in de database en in de export, en verdwijnen met het account.
+14. **Vaste kosten en inkomsten aantikken.** De gebruiker ziet die maand als lijst per tegenpartij en tikt zelf aan wat elke maand terugkomt. De app kiest niets; hij zet alleen bovenaan wat er als vast uitziet. Opgeslagen in `fixed_items`.
+15. **Nog over deze maand.** Een berekening over de eigen gegevens (vaste inkomsten min vaste kosten plus de overige geldstromen van de lopende maand), getoond in de app en op de widget. Geen besluit over de gebruiker en niet gedeeld.
+
 Schaal van de pilot: 30-50 uitgenodigden, doel minstens 20 gekoppelde testers, minstens 4 weken.
 
 ## 3. Gegevenscategorieën
@@ -52,6 +58,7 @@ Afgeleid uit de migraties. Alle tabellen hebben `user_id` met `on delete cascade
 | `native_devices` | Per gekoppelde iPhone: een willekeurige installatie-id, **sha256-hash van de apparaatsleutel**, APNs-token, omgeving, de iOS-stand "Voorvertoning tonen", tijdstippen, vervaldatum | Alleen de service role leest deze tabel. Geen toestelnaam, model of locatie. De sleutel zelf staat alleen in de Keychain van de iPhone. Weg bij uitloggen, ontkoppelen of verwijderen van het account |
 | `transactions` (aanvulling) | Bron `applepay`, `wallet_merchant` (winkelnaam uit Apple Wallet), `wallet_card` (naam van de kaart in Wallet, geen nummer), `card_settlement_id` (met welke maandafrekening verrekend), `notified_at` (melding verstuurd) | Winkelnaam en bedrag komen van de iPhone van de gebruiker zelf, niet van Apple's servers |
 | `profiles` (aanvulling) | Meldingen per betaling aan of uit, details op het vergrendelscherm aan of uit, welke kaartnamen een creditcard zijn (`wallet_cards`) | Standaard: details verborgen |
+| `fixed_items` | Per aangetikte vaste post: richting (kosten of inkomsten), naam van de tegenpartij of een zelf getypte naam, bedrag per maand | Laat zien wat iemand aan huur, zorg of abonnementen betaalt en wat hij verdient: gevoelig. RLS op eigen rijen. De meting bevat alleen het aantal posten |
 | `push_subscriptions` | Push-endpoint, sleutels (`p256dh`, `auth_secret`), user agent, tijdstippen | Endpoint verwijst naar de pushdienst van Apple, Google of Mozilla |
 | `events` | Eventtype, payload, tijdstip | Alleen enums, aantallen, duren, buckets en id's van transacties en potjes. Nooit bedragen, tegenpartijen, omschrijvingen, notities of namen (`lib/events.ts`). Zoektermen worden niet gelogd, alleen een bucket van het aantal resultaten |
 | `invite_codes` | Code, notitie, aantal keer gebruikt, verloopdatum | Geen `user_id`. De notitie kan een naam van een uitgenodigde bevatten; alleen de service role leest deze tabel |

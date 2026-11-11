@@ -34,7 +34,7 @@ export default function OnboardingBronPage() {
       </ul>
 
       <StepFooter>
-        <ButtonLink href="/bank/koppelen?next=/onboarding/klaar" size="lg" fullWidth>
+        <ButtonLink href="/bank/koppelen?next=/onboarding/vast" size="lg" fullWidth>
           Bank koppelen
         </ButtonLink>
         <Link

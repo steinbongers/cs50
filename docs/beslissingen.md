@@ -342,3 +342,19 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
   die niets zegt. De start is de boekdatum van de oudste betaling die meetelt (dus niet wat via "Begin vanaf
   vandaag" op Telt niet mee staat). Wie bij het koppelen "sinds je laatste salaris" koos, heeft de maand compleet
   en ziet het overzicht meteen. De melding "Jouw maand staat klaar" komt ook pas na een hele maand.
+- **Je vaste maand en "Nog over deze maand"** (11 november 2026, Stein).
+  - *Nieuwe stap in de onboarding, na de bank.* De app haalt altijd ook de vorige salarismaand op en toont die als
+    lijst per verkoper, uitgaven en inkomsten apart. De gebruiker tikt aan wat elke maand terugkomt. Niets staat
+    vooraf aan; wat er het meest als vast uitziet (één of twee keer per maand, een woord als huur of salaris) staat
+    alleen bovenaan. Zelf een post toevoegen kan, voor wat per jaar of kwartaal komt.
+  - *De vorige maand komt niet op de stapel.* Wat ouder is dan de gekozen start gaat naar Telt niet mee. Het scherm
+    waar je de bank kiest zegt dat erbij.
+  - *Nog over deze maand = vaste inkomsten − vaste kosten + al het andere geld dat deze maand in en uit ging.* Een
+    betaling aan een vaste post telt niet dubbel. Sparen telt als uitgegeven. Eigen overboekingen, Telt niet mee,
+    een al verdeelde afschrijving en een pinopname tellen niet mee (de delen en contante uitgaven wel).
+  - *Vóór de eerste hele maand* toont de app "Vrij per maand" in plaats van "Nog over": de uitgaven van vóór de
+    start kent hij niet.
+  - *Waar het staat:* bovenaan Overzicht (ook als de rest nog verborgen is), klein in de kop van Swipen, en op de
+    widget in plaats van de schatting op het saldo. Aanpassen via Instellingen > Je vaste maand.
+  - Zonder ingestelde vaste maand blijft alles zoals het was: "Vrij tot je salaris" op basis van saldo en de
+    automatisch herkende vaste lasten.
