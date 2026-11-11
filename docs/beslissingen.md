@@ -336,3 +336,9 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
     Onder Instellingen > Apple Pay instellen > Je kaarten zet je per kaart goed of het een creditcard is.
   - *Vergrendelscherm beslist de iPhone* (na de beveiligingsreview). De server stuurt pushmeldingen zonder bedrag;
     een Notification Service Extension zet de details erin als iOS ze verbergt tot het toestel ontgrendeld is.
+- **Overzicht begint bij je eerste hele maand** (11 november 2026, Stein). Wie halverwege een maand begint, ziet
+  op Overzicht geen cijfers maar "Je overzicht begint op 20 november" (de eerstvolgende salarisdag), met een knop
+  naar de stapel en een kleine link "Toch nu al kijken". Een halve maand geeft lage bedragen en een vergelijking
+  die niets zegt. De start is de boekdatum van de oudste betaling die meetelt (dus niet wat via "Begin vanaf
+  vandaag" op Telt niet mee staat). Wie bij het koppelen "sinds je laatste salaris" koos, heeft de maand compleet
+  en ziet het overzicht meteen. De melding "Jouw maand staat klaar" komt ook pas na een hele maand.

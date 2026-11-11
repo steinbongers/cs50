@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { CONNECTION_EXPIRY_WARNING_DAYS } from "@/config/app";
 import { daysUntil } from "@/lib/bank/connections";
 import { toISODate } from "@/lib/format";
-import { amsterdamToday, currentPeriod } from "@/lib/periods";
+import { loadTrackingStart } from "@/lib/insights/overview-start";
+import { amsterdamToday, currentPeriod, previousPeriod } from "@/lib/periods";
 import { expiringMessage, monthReviewMessage, openCardsMessage, weekMessage } from "@/lib/push/copy";
 import { createPaymentSender, sendNativeAlert } from "@/lib/native/payments";
 import { isApnsConfigured } from "@/lib/push/apns";
@@ -79,7 +80,14 @@ export async function GET(request: NextRequest) {
     const period = currentPeriod(profile.salary_day, amsterdamToday());
     let message: { title: string; body: string; url: string; tag: string } | null = null;
 
-    if (period.startISO === dateISO && profile.month_review_seen_for !== period.startISO) {
+    // Jouw maand alleen als de app de afgelopen maand helemaal heeft gezien; anders valt er niets terug te kijken.
+    const isReviewDay = period.startISO === dateISO && profile.month_review_seen_for !== period.startISO;
+    const reviewable =
+      isReviewDay &&
+      (await loadTrackingStart(admin, profile.id)
+        .then((start) => start !== null && start <= previousPeriod(profile.salary_day, amsterdamToday()).startISO)
+        .catch(() => false));
+    if (reviewable) {
       message = { ...monthReviewMessage(), url: "/overzicht?maand=1&ref=push&tag=jouw-maand", tag: "jouw-maand" };
     } else {
       const { count } = await admin

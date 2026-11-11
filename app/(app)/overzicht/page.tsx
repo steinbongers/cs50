@@ -30,12 +30,13 @@ import { WeekReviewCard } from "@/components/overview/week-review-card";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { IconBank, IconChevronLeft, IconChevronRight } from "@/components/ui/icons";
 import { ACTION_LABEL } from "@/config/app";
 import { ensureProfile, requireUser } from "@/lib/auth";
 import { getPrimaryConnection, statusFor } from "@/lib/bank/connections";
 import { categoryColorClasses } from "@/lib/categories/palette";
-import { formatEuro, formatEuroWhole } from "@/lib/format";
+import { formatEuro, formatEuroWhole, formatLongDate } from "@/lib/format";
 import { budgetLabel, budgetStatus } from "@/lib/insights/budget";
 import { compareIncome, incomeTransactionsPerCategory, unsortedIncoming } from "@/lib/insights/charts";
 import {
@@ -54,6 +55,7 @@ import {
 } from "@/lib/insights/compute";
 import { loadFreeToSpendDetails } from "@/lib/insights/free-to-spend";
 import { monthClosing } from "@/lib/insights/month-closing";
+import { loadTrackingStart, overviewStartsOn } from "@/lib/insights/overview-start";
 import { loadAccountBalances, loadInsightData } from "@/lib/insights/queries";
 import { recurringMonthlyTotal } from "@/lib/insights/recurring";
 import { weekReview } from "@/lib/insights/week";
@@ -88,6 +90,30 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   const showIncome = view === "inkomsten";
   // Inkomsten vergelijken met de drie maanden vóór de getoonde: die moeten dan ook geladen zijn.
   const incomeSince = showIncome ? previousPeriods(profile.salary_day, today, back + 3).at(-1)?.startISO : undefined;
+
+  // Halverwege de maand begonnen? Dan zegt het overzicht nog niets: het begint op de eerstvolgende
+  // salarisdag. Wie toch wil kijken, kan dat (?toch=1); terugbladeren kan altijd.
+  if (isCurrent && params.toch !== "1") {
+    const startsOn = overviewStartsOn(await loadTrackingStart(supabase, user.id).catch(() => null), current);
+    if (startsOn) {
+      return (
+        <>
+          <PageHeader title="Overzicht" />
+          <EmptyState
+            icon={<ChartColumn />}
+            title={`Je overzicht begint op ${formatLongDate(startsOn)}`}
+            description="Dan start je eerste hele maand in de app, van salaris tot salaris. Een halve maand zegt nog weinig. Tot die tijd hoef je alleen je kaartjes in te delen."
+            action={<ButtonLink href="/swipen">Naar je stapel</ButtonLink>}
+            footnote={
+              <Link href="/overzicht?toch=1" className="underline underline-offset-2">
+                Toch nu al kijken
+              </Link>
+            }
+          />
+        </>
+      );
+    }
+  }
 
   // Oude verdelingen per persoon eerst omzetten naar bijhouden per uitgave.
   await convertOpenSharesToTracking().catch(() => 0);
