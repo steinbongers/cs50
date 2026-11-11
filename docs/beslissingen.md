@@ -328,3 +328,11 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
     een vergrendelde iPhone. Per iPhone een apparaatsleutel (30 dagen, bij elke keer openen vernieuwd), per melding
     een actiesleutel (48 uur, voor precies die betaling en dat potje).
   - *Webpush blijft* voor wie de app in Safari gebruikt: alleen de avondmelding, zonder knoppen.
+  - *Creditcard via Apple Pay* (11 november 2026, Stein betaalt zijn creditcard alleen via Apple Pay). De actie in
+    Opdrachten geeft ook de naam van de kaart door (geen nummer). Een creditcardbetaling zoekt geen bankregel om mee
+    samen te gaan. Op de maandafrekening van de kaart (herkend door `credit-card.ts`) staat een knop "€ X al
+    ingedeeld via Apple Pay": de oudste creditcardbetalingen tot het bedrag vol is. Na een tik gaat dat deel naar
+    Telt niet mee; een rest komt als eigen kaartje terug en mag verdeeld worden. De app doet dit nooit uit zichzelf.
+    Onder Instellingen > Apple Pay instellen > Je kaarten zet je per kaart goed of het een creditcard is.
+  - *Vergrendelscherm beslist de iPhone* (na de beveiligingsreview). De server stuurt pushmeldingen zonder bedrag;
+    een Notification Service Extension zet de details erin als iOS ze verbergt tot het toestel ontgrendeld is.

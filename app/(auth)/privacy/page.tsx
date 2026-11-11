@@ -22,8 +22,8 @@ export default function PrivacyPage() {
           <li>Je betalingen: datum, bedrag, naam van de winkel of persoon en de omschrijving, zoals je bank ze meestuurt. Je rekeningnummer bewaren we alleen half afgeschermd.</li>
           <li>De potjes die je maakt en in welk potje je elke betaling stopt.</li>
           <li>
-            Alleen als je dat zelf instelt in de iPhone-app: de winkel en het bedrag van een betaling met Apple Pay,
-            zodat je meteen een melding krijgt. Geen kaartnummer. Je stopt dit door de automatisering in Opdrachten te
+            Alleen als je dat zelf instelt in de iPhone-app: de winkel, het bedrag en de naam van de kaart (bijvoorbeeld
+            Betaalpas) van een betaling met Apple Pay, zodat je meteen een melding krijgt. Geen kaartnummer. Je stopt dit door de automatisering in Opdrachten te
             verwijderen.
           </li>
           <li>Wat je in de app doet (bijvoorbeeld hoe vaak je een stapel wegwerkt), zonder bedragen of winkelnamen. Daarmee meten we of de app werkt.</li>

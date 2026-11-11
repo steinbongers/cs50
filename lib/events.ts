@@ -19,7 +19,7 @@ export type EventType =
   /**
    * Transactie in een potje gezet.
    * `{ transaction_id, category_id, duration_ms, skipped_before?, split_persons?, split_method?,
-   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' | 'refund' | 'refund_for' | 'split_parts',
+   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' | 'refund' | 'refund_for' | 'split_parts' | 'card_settlement',
    *    with_category?, complete?, estimate?, parts?, savings? }`
    * `savings` (flow 'normal'): 'in' (geld naar een spaarpotje), 'out' (uit je spaarpot gehaald) of null.
    * `split_method`: 'bank' | 'other' (verdeeld) of 'track' (bijhouden: de hele uitgave wacht op geld terug).
@@ -28,6 +28,8 @@ export type EventType =
    * daarbij zelf schatte wat hij uitgaf (een deel kwam buiten de bank terug). Nooit het bedrag zelf.
    * `flow: 'split_parts'`: één afschrijving (vaak de creditcard) verdeeld over potjes; `parts` is het
    * aantal potjes, `credit_card` of de kaart hem als creditcard herkende. Nooit bedragen of notities.
+   * `flow: 'card_settlement'`: creditcard-afrekening waarvan een deel al via Apple Pay was ingedeeld;
+   * `parts` is het aantal betalingen, `complete` of dat de hele afrekening dekte. Nooit bedragen.
    */
   | "swipe"
   /** Transactie verplaatst via de detailpagina. `{ transaction_id, category_id }` */

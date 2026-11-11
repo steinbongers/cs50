@@ -160,6 +160,7 @@ nog niet gedaan, doe die stappen dan eerst.
 1. Open je Supabase-project, links **SQL Editor**, **New query**.
 2. Open in de repo het bestand `supabase/migrations/20261111000000_meldingen_widget.sql`, kopieer alles en plak het.
 3. Klik **Run**. Er hoort "Success. No rows returned" te staan. Nog een keer draaien kan geen kwaad.
+4. Doe daarna hetzelfde met `supabase/migrations/20261111000100_kaart_en_afrekening.sql` (in die volgorde).
 
 ### B. Apple Developer: een sleutel voor meldingen
 
@@ -225,7 +226,22 @@ Het bestand `ios/App/Widget/FinanceWidget.swift` is vernieuwd; Xcode verwijst er
 toe te voegen. Controleer alleen bij target **FinanceWidget**, tabblad **General**: **Minimum Deployments** is
 **iOS 17.0**, en bij **Signing & Capabilities** staat de App Group `group.nl.steinbongers.financeapp` aangevinkt.
 
-**D5. Bouwen**
+**D5. Een klein extra target voor het vergrendelscherm (Notification Service)**
+
+Dit target beslist op je iPhone zelf of het bedrag in een melding mag staan. Zonder dit target werken meldingen
+en knoppen ook, maar staat er na een bankronde altijd alleen "Nieuwe betaling" in plaats van bedrag en winkel.
+
+1. Menu **File**, **New**, **Target…**, kies **iOS**, **Notification Service Extension**, **Next**.
+2. **Product Name**: `NotificationService`. **Team**: hetzelfde als bij de app. Klik **Finish**.
+   Vraagt Xcode of hij het schema moet activeren: kies **Cancel**.
+3. In de navigator staat nu een map **NotificationService** met een bestand `NotificationService.swift` dat Xcode
+   zelf maakte. Verwijder dat bestand (rechts klikken, **Delete**, **Move to Trash**).
+4. Klik met rechts op de map **NotificationService**, **Add Files to "App"…**, kies
+   `ios/App/NotificationService/NotificationService.swift`. **Copy items if needed** uit. Bij **Targets** alleen
+   **NotificationService** aanvinken. Klik **Add**.
+5. Target **NotificationService**, tabblad **General**: **Minimum Deployments** op **iOS 15.0**.
+
+**D6. Bouwen**
 
 Kies bovenaan het schema **App** en je iPhone, klik op afspelen. Meldt Xcode een fout, kijk dan eerst onder
 "Als het niet werkt" hieronder.
@@ -237,6 +253,9 @@ Kies bovenaan het schema **App** en je iPhone, klik op afspelen. Meldt Xcode een
 3. **Verberg bedrag op vergrendelscherm** staat aan. Laat dat zo, tenzij je het bedrag ook op een vergrendeld
    scherm wilt zien.
 4. Tik op **Apple Pay instellen** en volg de zes stappen. Je maakt één keer een automatisering in de app Opdrachten.
+   Vink daar je bankpas aan én je creditcard (je betaalt die alleen via Apple Pay), en vul in de actie ook het veld
+   **Kaart** in. Na je eerste betaling met elke kaart staat hij op dat scherm onder **Je kaarten**; controleer daar
+   of de creditcard als creditcard staat.
 5. Widget: houd je beginscherm ingedrukt, **Wijzig**, **Voeg widget toe**, zoek de app en kies de **grote** variant.
 
 ### Testen
@@ -248,9 +267,13 @@ Kies bovenaan het schema **App** en je iPhone, klik op afspelen. Meldt Xcode een
 - **Vergrendelscherm**: vergrendel je iPhone en laat iemand je een betaling sturen of wacht op de volgende
   ophaalronde. Op het vergrendelde scherm hoort alleen "Nieuwe betaling" te staan, tot je naar je iPhone kijkt.
 - **Bank**: handmatig een ronde starten kan in GitHub, tabblad **Actions**, **Cron**, **Run workflow**. In het
-  antwoord staan alleen aantallen, bijvoorbeeld `"inserted":3,"merged":1,"notified":2`. Doe dit niet vaak: het telt
-  mee voor de 4 keer per dag die de bank toestaat.
+  log staat bij succes alleen `HTTP 200` (de repo is openbaar; aantallen zouden laten zien wanneer je betaalt).
+  Doe dit niet vaak: het telt mee voor de 4 keer per dag die de bank toestaat.
 - **Widget**: tik op een potje. De betaling verdwijnt en de volgende verschijnt binnen een paar seconden.
+- **Creditcard**: betaal iets met je creditcard via Apple Pay en deel het in. Zodra ING de maandafrekening van de
+  kaart afschrijft, staat onder dat kaartje op Swipen een knop als "€ 412,00 al ingedeeld via Apple Pay". Tik erop:
+  dat deel telt niet nog eens mee. Is de afrekening hoger (iets online gekocht zonder Apple Pay), dan ligt de rest
+  als nieuw kaartje bovenop. Ongedaan maken zet alles terug.
 
 ### Goed om te weten
 
@@ -261,8 +284,17 @@ Kies bovenaan het schema **App** en je iPhone, klik op afspelen. Meldt Xcode een
 - **Dubbel?** Komt een Apple Pay-betaling later via de bank, dan voegt de app ze samen. Lukt dat niet (de bank
   gebruikt een heel andere naam én er waren meer betalingen van hetzelfde bedrag), dan zie je hem twee keer. Eén
   van de twee kun je dan in het potje "Niet meetellen" zetten. Meld het, dan kan de herkenning beter.
-- **Betaald met een kaart die niet gekoppeld is** (bijvoorbeeld een creditcard in Apple Pay): die betaling komt
-  nooit via de bank en blijft als Apple Pay-regel staan.
+- **Creditcard**: een betaling met je creditcard komt nooit los via de bank en blijft als Apple Pay-regel staan.
+  De bank schrijft één keer per maand het totaal af; met de knop op dat kaartje haal je eraf wat je al indeelde.
+  De app telt daarvoor de oudste creditcardbetalingen op tot het bedrag van de afrekening vol is. Dat is een
+  schatting: bij een retour op de kaart of een afrekening over een andere periode kan het bedrag afwijken. Jij ziet
+  het bedrag en beslist.
+- **Welke kaart**: de app krijgt de naam van de kaart zoals hij in Wallet staat, geen kaartnummer. Zonder het veld
+  Kaart in de actie werkt alles ook, maar dan weet de app niet wat een creditcardbetaling is en werkt de knop op de
+  maandafrekening niet.
+- **Vergrendelscherm**: na een bankronde stuurt de server een melding zonder bedrag. Je iPhone zet het bedrag er
+  zelf in, en alleen als "Voorvertoning tonen" op "Indien ontgrendeld" staat (stap D5). Zo staat het bedrag nooit
+  leesbaar op een vergrendeld scherm, ook niet als je die instelling later verandert.
 - **Sleutels**: elke iPhone krijgt een eigen sleutel, in de Keychain. Hij wordt vervangen elke keer dat je de app
   opent en vervalt na 30 dagen niet openen; open dan de app één keer. Uitloggen haalt hem weg.
 - **Testbuild of TestFlight**: een build vanuit Xcode (afspeelknop) praat met de testomgeving van Apple, een
@@ -273,9 +305,12 @@ Kies bovenaan het schema **App** en je iPhone, klik op afspelen. Meldt Xcode een
 
 - **Xcode: "Cannot find 'NativeAPI' in scope" in de widget**: stap D2 is overgeslagen.
 - **Xcode: "Cannot find 'NativePushPlugin' in scope"**: stap D1 is overgeslagen.
+- **Na een bankronde staat er alleen "Nieuwe betaling", ook als je iPhone open is**: stap D5 ontbreekt, of
+  "Voorvertoning tonen" staat op Altijd of Nooit (iPhone-instellingen, Meldingen, de app). Zet "Verberg bedrag op
+  vergrendelscherm" uit als je het bedrag altijd wilt zien.
 - **De rij "Melding na elke betaling" staat er niet**: je kijkt in Safari, of de nieuwe build staat nog niet op je iPhone.
 - **Wel Apple Pay-meldingen, geen meldingen na de bank**: controleer de vijf waarden in Vercel (stap C) en of je
-  daarna opnieuw hebt gedeployed. In het antwoord van de cron staat dan `"notified":0`.
+  daarna opnieuw hebt gedeployed.
 - **De actie "Betaling indelen" staat niet in Opdrachten**: open de app één keer na het installeren en zoek opnieuw.
   Je iPhone heeft iOS 17 of nieuwer nodig.
 - **Melding "Open de app een keer, dan is hij weer gekoppeld"**: de sleutel is verlopen of je bent uitgelogd.

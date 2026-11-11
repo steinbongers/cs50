@@ -7,6 +7,7 @@ import { getUser, requireUser } from "@/lib/auth";
 import { getPrimaryConnection } from "@/lib/bank/connections";
 import { deleteSession } from "@/lib/enablebanking/client";
 import { logEvent } from "@/lib/events";
+import { MAX_CARDS, cleanWalletCard, parseCardChoices } from "@/lib/native/wallet-card";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { churnEntry } from "./churn";
@@ -191,6 +192,24 @@ export async function setLockScreenDetails(enabled: boolean): Promise<Result> {
   const user = await requireUser();
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update({ lock_screen_details: enabled === true }).eq("id", user.id);
+  if (error) return { ok: false, error: "Opslaan lukte niet. Probeer het nog eens." };
+  refresh();
+  return { ok: true };
+}
+
+/** Een kaart uit Apple Wallet aanmerken als creditcard of betaalpas (voor de maandafrekening). */
+export async function setWalletCardKind(name: string, kind: "credit" | "debit"): Promise<Result> {
+  const user = await requireUser();
+  const card = cleanWalletCard(name);
+  if (!card || (kind !== "credit" && kind !== "debit")) return { ok: false, error: "Opslaan lukte niet. Probeer het nog eens." };
+  const supabase = await createClient();
+  const { data: profile } = await supabase.from("profiles").select("wallet_cards").eq("id", user.id).maybeSingle();
+  const choices = parseCardChoices(profile?.wallet_cards);
+  if (!(card in choices) && Object.keys(choices).length >= MAX_CARDS) return { ok: false, error: "Je hebt al veel kaarten staan." };
+  const { error } = await supabase
+    .from("profiles")
+    .update({ wallet_cards: { ...choices, [card]: kind } })
+    .eq("id", user.id);
   if (error) return { ok: false, error: "Opslaan lukte niet. Probeer het nog eens." };
   refresh();
   return { ok: true };

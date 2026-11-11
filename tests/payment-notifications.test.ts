@@ -239,3 +239,70 @@ test("apns: ES256-token dat met de publieke sleutel klopt", async () => {
   assert.equal(body.aps.category, "PAYMENT_SUGGEST");
   assert.equal(body.tx, "1");
 });
+
+// --- Kaart en creditcard-afrekening ---
+
+test("wallet: een plusteken is geld terug, geen uitgave", () => {
+  assert.equal(parseWalletAmount("+ € 4,50"), null);
+  assert.equal(parseWalletAmount("€ +4,50"), null);
+  assert.equal(parseWalletAmount("+4,50"), null);
+  assert.equal(parseWalletAmount("-4,50"), 4.5);
+});
+
+test("kaart: naam opschonen en soort raden", async () => {
+  const { cleanWalletCard, guessCardKind, cardKind, parseCardChoices } = await import("../lib/native/wallet-card");
+  assert.equal(cleanWalletCard("  ING   Betaalpas\n"), "ING Betaalpas");
+  assert.equal(cleanWalletCard(""), null);
+  assert.equal(cleanWalletCard(12), null);
+  assert.ok((cleanWalletCard("x".repeat(200)) ?? "").length <= 60);
+
+  assert.equal(guessCardKind("ING Betaalpas"), "debit");
+  assert.equal(guessCardKind("Debit Mastercard"), "debit");
+  assert.equal(guessCardKind("Visa Card"), "credit");
+  assert.equal(guessCardKind("ICS Mastercard"), "credit");
+  assert.equal(guessCardKind("ING Creditcard"), "credit");
+  assert.equal(guessCardKind("American Express"), "credit");
+  assert.equal(guessCardKind("Mijn pas"), "debit");
+
+  // De eigen keuze gaat voor de gok; zonder naam weten we het niet.
+  assert.equal(cardKind("Visa Card", { "visa card": "debit" }), "debit");
+  assert.equal(cardKind("Mijn pas", { "Mijn pas": "credit" }), "credit");
+  assert.equal(cardKind(null, {}), null);
+
+  assert.deepEqual(parseCardChoices({ "Visa Card": "credit", Fout: "iets", "": "debit" }), { "Visa Card": "credit" });
+  assert.deepEqual(parseCardChoices("onzin"), {});
+  assert.deepEqual(parseCardChoices(null), {});
+});
+
+test("afrekening: de oudste creditcardbetalingen tot het bedrag vol is", async () => {
+  const { settlementCoverage } = await import("../lib/native/wallet-card");
+  const payments = [
+    { id: "c", booking_date: "2026-10-20", amount: -30 },
+    { id: "a", booking_date: "2026-10-02", amount: -12.5 },
+    { id: "b", booking_date: "2026-10-10", amount: -7.5 },
+    { id: "d", booking_date: "2026-11-03", amount: -40 },
+  ];
+  // Precies gedekt door de eerste drie; de vierde hoort bij de volgende afrekening.
+  assert.deepEqual(settlementCoverage(-50, payments), { ids: ["a", "b", "c"], coveredCents: 5000, restCents: 0, until: "2026-10-20" });
+  // Meer afgeschreven dan via Apple Pay: de rest blijft over.
+  const more = settlementCoverage(-120, payments);
+  assert.equal(more.coveredCents, 9000);
+  assert.equal(more.restCents, 3000);
+  // Een betaling die er niet meer in past stopt het tellen: geen latere betaling ertussen.
+  assert.deepEqual(settlementCoverage(-25, payments).ids, ["a", "b"]);
+  assert.equal(settlementCoverage(-25, payments).restCents, 500);
+  // Niets ingedeeld, of alleen geld terug: niets gedekt.
+  assert.equal(settlementCoverage(-50, []).coveredCents, 0);
+  assert.equal(settlementCoverage(-50, [{ id: "x", booking_date: "2026-10-01", amount: 20 }]).coveredCents, 0);
+  // Centen tellen precies op.
+  assert.equal(settlementCoverage(-0.3, [{ id: "p", booking_date: "2026-10-01", amount: -0.1 }, { id: "q", booking_date: "2026-10-02", amount: -0.2 }]).restCents, 0);
+});
+
+test("apns: de iPhone mag de tekst aanpassen als de details apart meegaan", async () => {
+  const { apnsPayload } = await import("../lib/push/apns-jwt");
+  const body = JSON.parse(apnsPayload({ title: "Nieuwe betaling", body: "x", mutableContent: true, data: { detailTitle: "€ 4,50 bij AH" } }));
+  assert.equal(body.aps["mutable-content"], 1);
+  assert.equal(body.aps.alert.title, "Nieuwe betaling");
+  assert.equal(body.detailTitle, "€ 4,50 bij AH");
+  assert.equal(JSON.parse(apnsPayload({ title: "a", body: "b" })).aps["mutable-content"], undefined);
+});
