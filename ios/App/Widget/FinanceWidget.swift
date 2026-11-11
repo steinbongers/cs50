@@ -1,18 +1,25 @@
 import WidgetKit
 import SwiftUI
+import AppIntents
 
-// Widget op het beginscherm: "Nog N kaartjes" en "Vrij tot de 25e: € 340".
-// Haalt elk half uur GET /api/widget op met de widgetsleutel uit de gedeelde App Group.
-// De app zet die sleutel via WidgetBridgePlugin (ios/App/App/WidgetBridgePlugin.swift);
-// de sleutels hieronder moeten daar gelijk aan blijven.
+// Widget op het beginscherm.
+// - Klein en middel: "Nog N kaartjes" en "Vrij tot de 25e: € 340" (alleen lezen).
+// - Groot (interactief, iOS 17): de oudste open betaling met je meestgebruikte potjes als knoppen
+//   en "Later". Een tik deelt in zonder de app te openen en toont meteen de volgende.
+//
+// Haalt elk half uur GET /api/widget op met de apparaatsleutel uit de Keychain (NativeShared.swift,
+// gezet door NativePushPlugin). Een oudere koppeling met een widgetsleutel in de App Group
+// (WidgetBridgePlugin) blijft werken voor klein en middel.
 
 private enum Shared {
-    static let appGroup = "group.nl.steinbongers.financeapp"
-    static let tokenKey = "widgetToken"
-    static let apiBaseKey = "widgetApiBase"
-    static let cacheKey = "widgetCache"
-    static let defaultApiBase = "https://financeapppilot.vercel.app"
     static let refreshInterval: TimeInterval = 30 * 60
+
+    /// Apparaatsleutel, of de oude widgetsleutel als terugval.
+    static var token: String? {
+        if let key = DeviceKeychain.deviceKey, !key.isEmpty { return key }
+        if let legacy = NativeShared.defaults?.string(forKey: NativeShared.legacyTokenKey), !legacy.isEmpty { return legacy }
+        return nil
+    }
 }
 
 // MARK: - Gegevens
@@ -25,8 +32,27 @@ struct WidgetPayload: Codable {
         let until: String
     }
 
+    /// Eén potje als knop op de grote widget.
+    struct Option: Codable, Identifiable {
+        let id: String
+        let name: String
+        /// Kleursleutel uit lib/categories/palette.ts ("blauw", "groen", ...).
+        let color: String
+    }
+
+    /// De oudste open betaling (alleen in nieuwere antwoorden).
+    struct Card: Codable {
+        let id: String
+        let merchant: String
+        let amount: Double
+        /// Boekdatum, "YYYY-MM-DD".
+        let date: String
+        let options: [Option]
+    }
+
     let open: Int
     let free: Free?
+    let card: Card?
 }
 
 enum WidgetContent {
@@ -43,19 +69,33 @@ struct FinanceEntry: TimelineEntry {
 
     static let sample = FinanceEntry(
         date: Date(),
-        content: .ready(WidgetPayload(open: 4, free: WidgetPayload.Free(amount: 340, until: "2026-10-25")))
+        content: .ready(WidgetPayload(
+            open: 4,
+            free: WidgetPayload.Free(amount: 340, until: "2026-10-25"),
+            card: WidgetPayload.Card(
+                id: "voorbeeld",
+                merchant: "Albert Heijn",
+                amount: -12.4,
+                date: "2026-10-20",
+                options: [
+                    WidgetPayload.Option(id: "1", name: "Boodschappen", color: "groen"),
+                    WidgetPayload.Option(id: "2", name: "Uit eten", color: "oranje"),
+                    WidgetPayload.Option(id: "3", name: "Vervoer", color: "blauw"),
+                    WidgetPayload.Option(id: "4", name: "Leuke dingen", color: "paars")
+                ]
+            )
+        ))
     )
 }
 
 enum WidgetLoader {
     static func load(completion: @escaping (WidgetContent) -> Void) {
-        let defaults = UserDefaults(suiteName: Shared.appGroup)
-        guard let token = defaults?.string(forKey: Shared.tokenKey), !token.isEmpty else {
+        let defaults = NativeShared.defaults
+        guard let token = Shared.token else {
             completion(.unlinked)
             return
         }
-        let base = defaults?.string(forKey: Shared.apiBaseKey) ?? Shared.defaultApiBase
-        guard base.hasPrefix("https://"), let url = URL(string: base + "/api/widget") else {
+        guard let url = URL(string: NativeShared.apiBase + "/api/widget") else {
             completion(.unlinked)
             return
         }
@@ -68,17 +108,17 @@ enum WidgetLoader {
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
             if status == 401 {
                 // Sleutel ingetrokken (nieuwe gekoppeld op een ander toestel, of account weg).
-                defaults?.removeObject(forKey: Shared.cacheKey)
+                defaults?.removeObject(forKey: NativeShared.widgetCacheKey)
                 completion(.unlinked)
                 return
             }
             if status == 200, let data = data, let payload = try? JSONDecoder().decode(WidgetPayload.self, from: data) {
-                defaults?.set(data, forKey: Shared.cacheKey)
+                defaults?.set(data, forKey: NativeShared.widgetCacheKey)
                 completion(.ready(payload))
                 return
             }
             // Geen netwerk of even een fout: laat de laatst bekende getallen staan.
-            if let cached = defaults?.data(forKey: Shared.cacheKey),
+            if let cached = defaults?.data(forKey: NativeShared.widgetCacheKey),
                let payload = try? JSONDecoder().decode(WidgetPayload.self, from: cached) {
                 completion(.ready(payload))
             } else {
@@ -129,6 +169,28 @@ enum WidgetText {
         return "Vrij te besteden"
     }
 
+    /// "€ 12,40": met centen, zonder teken (een uitgave is een uitgave).
+    static func exactAmount(_ value: Double) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = Locale(identifier: "nl_NL")
+        formatter.numberStyle = .currency
+        formatter.currencyCode = "EUR"
+        let text = formatter.string(from: NSNumber(value: abs(value))) ?? "€ \(abs(value))"
+        return value > 0 ? "+ " + text : text
+    }
+
+    /// "di 20 okt", uit "YYYY-MM-DD".
+    static func day(_ iso: String) -> String {
+        let parser = DateFormatter()
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.dateFormat = "yyyy-MM-dd"
+        guard let date = parser.date(from: String(iso.prefix(10))) else { return "" }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "nl_NL")
+        formatter.dateFormat = "EEE d MMM"
+        return formatter.string(from: date)
+    }
+
     /// "€ 340": hele euro's, Nederlandse notatie.
     static func amount(_ value: Double) -> String {
         let formatter = NumberFormatter()
@@ -141,7 +203,156 @@ enum WidgetText {
     }
 }
 
+// MARK: - Knoppen (App Intents)
+
+enum WidgetActions {
+    /// Stuurt de keuze naar de server en bewaart het antwoord, zodat de widget meteen de volgende toont.
+    static func send(_ body: [String: Any]) async {
+        var body = body
+        body["source"] = "widget"
+        body["widget"] = true
+        guard let response = try? await NativeAPI.post("/api/native/device/assign", body: body, timeout: 12),
+              let widget = response["widget"],
+              let data = try? JSONSerialization.data(withJSONObject: widget),
+              (try? JSONDecoder().decode(WidgetPayload.self, from: data)) != nil else { return }
+        NativeShared.defaults?.set(data, forKey: NativeShared.widgetCacheKey)
+    }
+}
+
+/// Zet de getoonde betaling in een potje.
+struct AssignCardIntent: AppIntent {
+    static var title: LocalizedStringResource = "In een potje zetten"
+    static var isDiscoverable = false
+
+    @Parameter(title: "Betaling") var transactionId: String
+    @Parameter(title: "Potje") var categoryId: String
+
+    init() {}
+    init(transactionId: String, categoryId: String) {
+        self.transactionId = transactionId
+        self.categoryId = categoryId
+    }
+
+    func perform() async throws -> some IntentResult {
+        await WidgetActions.send(["action": "pick", "transactionId": transactionId, "categoryId": categoryId])
+        return .result()
+    }
+}
+
+/// Legt de getoonde betaling achteraan de stapel.
+struct LaterCardIntent: AppIntent {
+    static var title: LocalizedStringResource = "Later"
+    static var isDiscoverable = false
+
+    @Parameter(title: "Betaling") var transactionId: String
+
+    init() {}
+    init(transactionId: String) {
+        self.transactionId = transactionId
+    }
+
+    func perform() async throws -> some IntentResult {
+        await WidgetActions.send(["action": "later", "transactionId": transactionId])
+        return .result()
+    }
+}
+
 // MARK: - Weergave
+
+enum WidgetColor {
+    /// Zelfde kleuren als de potjes in de app (app/globals.css, --cat-*, lichte modus).
+    static func of(_ key: String) -> Color {
+        switch key {
+        case "blauw": return Color(red: 0.039, green: 0.310, blue: 0.659)
+        case "indigo": return Color(red: 0.231, green: 0.263, blue: 0.627)
+        case "paars": return Color(red: 0.357, green: 0.247, blue: 0.651)
+        case "roze": return Color(red: 0.659, green: 0.137, blue: 0.353)
+        case "rood": return Color(red: 0.639, green: 0.165, blue: 0.231)
+        case "oranje": return Color(red: 0.639, green: 0.275, blue: 0.110)
+        case "geel": return Color(red: 0.541, green: 0.325, blue: 0.000)
+        case "groen": return Color(red: 0.000, green: 0.439, blue: 0.247)
+        case "mint": return Color(red: 0.051, green: 0.420, blue: 0.400)
+        default: return Color(red: 0.294, green: 0.318, blue: 0.384)
+        }
+    }
+}
+
+struct LargeCardView: View {
+    let payload: WidgetPayload
+
+    private let columns = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let card = payload.card {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(card.merchant)
+                            .font(.system(size: 17, weight: .semibold))
+                            .lineLimit(1)
+                        Spacer(minLength: 8)
+                        Text(WidgetText.exactAmount(card.amount))
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                    }
+                    Text(WidgetText.day(card.date))
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+                // In StandBy of op een vergrendeld scherm toont iOS hier een grijze balk.
+                .privacySensitive()
+
+                LazyVGrid(columns: columns, spacing: 8) {
+                    ForEach(card.options) { option in
+                        Button(intent: AssignCardIntent(transactionId: card.id, categoryId: option.id)) {
+                            Text(option.name)
+                                .font(.system(size: 14, weight: .semibold))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                                .frame(maxWidth: .infinity, minHeight: 30)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(WidgetColor.of(option.color))
+                    }
+                }
+
+                Button(intent: LaterCardIntent(transactionId: card.id)) {
+                    Text("Later")
+                        .font(.system(size: 14, weight: .medium))
+                        .frame(maxWidth: .infinity, minHeight: 26)
+                }
+                .buttonStyle(.bordered)
+            } else {
+                Spacer(minLength: 0)
+                Image(systemName: "checkmark.circle")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(.tint)
+                Text("Alles in een potje")
+                    .font(.system(size: 20, weight: .semibold))
+                Text("Je stapel is leeg.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 0)
+            Divider()
+            HStack(alignment: .firstTextBaseline) {
+                Text(WidgetText.cards(payload.open))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                if let free = payload.free {
+                    Text("\(WidgetText.freeLabel(free.until)): \(WidgetText.amount(free.amount))")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .privacySensitive()
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
 
 struct CardsView: View {
     let open: Int
@@ -223,7 +434,9 @@ struct FinanceWidgetView: View {
         case .unavailable:
             MessageView(text: "Even geen verbinding. Probeer het straks opnieuw.")
         case .ready(let payload):
-            if family == .systemMedium {
+            if family == .systemLarge {
+                LargeCardView(payload: payload)
+            } else if family == .systemMedium {
                 HStack(alignment: .top, spacing: 16) {
                     CardsView(open: payload.open)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -252,8 +465,8 @@ struct FinanceWidget: Widget {
             FinanceWidgetView(entry: entry)
         }
         .configurationDisplayName("Kaartjes en vrij geld")
-        .description("Hoeveel kaartjes er nog liggen en wat je vrij hebt tot je salaris.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .description("Hoeveel kaartjes er nog liggen en wat je vrij hebt tot je salaris. Groot: deel je oudste betaling in met één tik.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
