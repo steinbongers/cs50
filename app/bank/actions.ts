@@ -14,7 +14,7 @@ import { deleteSession, startAuthorization } from "@/lib/enablebanking/client";
 import { isEnableBankingConfigured } from "@/lib/enablebanking/jwt";
 import { logEvent } from "@/lib/events";
 import { ignoreOpenBefore, loadFixedItems } from "@/lib/insights/fixed-month-server";
-import { cleanFixedItems, fixedWindow } from "@/lib/insights/fixed-month";
+import { MAX_FIXED_ITEMS, cleanFixedItems, fixedWindow } from "@/lib/insights/fixed-month";
 import { loadTrackingStart } from "@/lib/insights/overview-start";
 import { createClient } from "@/lib/supabase/server";
 import { BANK_AUTH_COOKIE, type BankAuthCookie } from "@/lib/bank/auth-cookie";
@@ -305,4 +305,45 @@ export async function saveFixedItems(input: unknown): Promise<{ ok: true } | { o
   });
   refresh();
   return { ok: true };
+}
+
+export type ToggleFixedResult = { ok: true; fixed: boolean } | { ok: false; error: string };
+
+/**
+ * Tijdens het indelen: maak van de verkoper op dit kaartje een vaste post (of haal hem weer weg).
+ * Het bedrag van het kaartje wordt het bedrag per maand; bestaat de post al, dan wordt het bedrag
+ * bijgewerkt. Het kaartje zelf blijft op de stapel: een potje kiezen doe je daarna gewoon.
+ */
+export async function toggleFixedItem(input: { name: string; amount: number; fixed: boolean }): Promise<ToggleFixedResult> {
+  const user = await requireUser();
+  const direction = input?.amount < 0 ? "uit" : "in";
+  const [item] = cleanFixedItems([{ direction, name: input?.name, amount: Math.abs(Number(input?.amount)) }]);
+  if (!item) return { ok: false, error: "Hier kan geen vaste post van worden gemaakt." };
+  const supabase = await createClient();
+
+  if (!input.fixed) {
+    const { error } = await supabase
+      .from("fixed_items")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("direction", item.direction)
+      .eq("counterparty_key", item.key);
+    if (error) return { ok: false, error: "Dat lukte niet. Probeer het nog eens." };
+    refresh();
+    return { ok: true, fixed: false };
+  }
+
+  const { count } = await supabase.from("fixed_items").select("id", { count: "exact", head: true }).eq("user_id", user.id);
+  if ((count ?? 0) >= MAX_FIXED_ITEMS) return { ok: false, error: "Je hebt al veel vaste posten. Haal er eerst een weg in Instellingen." };
+  const { error } = await supabase
+    .from("fixed_items")
+    .upsert(
+      { user_id: user.id, direction: item.direction, counterparty_key: item.key, name: item.name, amount: item.amount },
+      { onConflict: "user_id,direction,counterparty_key" },
+    );
+  if (error) return { ok: false, error: "Dat lukte niet. Probeer het nog eens." };
+  // Alleen de richting; nooit de naam of het bedrag.
+  await logEvent("fixed_item_added", { direction: item.direction, source: "swipen" });
+  refresh();
+  return { ok: true, fixed: true };
 }
