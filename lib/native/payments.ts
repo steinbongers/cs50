@@ -17,6 +17,7 @@ import {
 import type { Database, Json, NativeDeviceRow, PreviewSetting } from "@/lib/supabase/types";
 import { applyRules } from "@/lib/transactions/apply-rules";
 import { actionSecretFromEnv, createActionToken } from "./action-token";
+import { cardKind, parseCardChoices, type CardChoices } from "./wallet-card";
 import { SUGGEST_HISTORY_DAYS, merchantKey, pickSuggestion, topCategories, type HistoryRow } from "./suggest";
 import { MATCH_DAYS_AFTER, MATCH_DAYS_BEFORE, matchWalletPayments, type BankSide, type WalletSide } from "./wallet-match";
 
@@ -86,11 +87,20 @@ export async function suggestCategory(admin: Admin, userId: string, merchant: st
 interface ProfileFlags {
   lock_screen_details: boolean;
   payment_notifications: boolean;
+  cards: CardChoices;
 }
 
 async function profileFlags(admin: Admin, userId: string): Promise<ProfileFlags> {
-  const { data } = await admin.from("profiles").select("lock_screen_details, payment_notifications").eq("id", userId).maybeSingle();
-  return { lock_screen_details: data?.lock_screen_details ?? false, payment_notifications: data?.payment_notifications ?? true };
+  const { data } = await admin
+    .from("profiles")
+    .select("lock_screen_details, payment_notifications, wallet_cards")
+    .eq("id", userId)
+    .maybeSingle();
+  return {
+    lock_screen_details: data?.lock_screen_details ?? false,
+    payment_notifications: data?.payment_notifications ?? true,
+    cards: parseCardChoices(data?.wallet_cards),
+  };
 }
 
 /** Wat de iPhone nodig heeft om een melding met knoppen te tonen (ook voor de lokale Apple Pay-melding). */
@@ -111,8 +121,8 @@ export function buildPrompt(input: {
   merchant: string | null;
   amount: number;
   suggestion: CategoryInfo | null;
-  lockScreenDetails: boolean;
-  previews: PreviewSetting;
+  /** Bedrag, winkel en potje in de tekst zetten? Zie `showDetails` in lib/push/payment-copy.ts. */
+  details: boolean;
 }): PaymentPrompt {
   const secret = actionSecretFromEnv();
   const suggestion = secret ? input.suggestion : null;
@@ -120,7 +130,7 @@ export function buildPrompt(input: {
     merchant: input.merchant,
     amount: input.amount,
     categoryName: suggestion?.name ?? null,
-    details: showDetails(input.lockScreenDetails, input.previews),
+    details: input.details,
   });
   return {
     transactionId: input.transactionId,
@@ -197,30 +207,28 @@ export async function notifyNewPayments(admin: Admin, userId: string, ids: strin
   for (const row of fresh.filter((r) => claimed.includes(r.id))) {
     const merchant = row.wallet_merchant ?? row.counterparty;
     const suggestion = await suggestCategory(admin, userId, merchant);
-    const sent = await sendToDevices(
-      admin,
-      sender,
-      devices,
-      (device) => {
-        const prompt = buildPrompt({
-          userId,
-          transactionId: row.id,
-          merchant,
-          amount: Number(row.amount),
-          suggestion,
-          lockScreenDetails: flags.lock_screen_details,
-          previews: device.previews,
-        });
-        return apnsPayload({
-          title: prompt.title,
-          body: prompt.body,
-          category: prompt.category,
-          threadId: "betalingen",
-          data: { tx: row.id, ...(prompt.action ? { action: prompt.action } : {}), url: `/swipen?tx=${row.id}&ref=push&tag=betaling` },
-        });
+    // De server weet niet zeker hoe "Voorvertoning tonen" nu op de iPhone staat (dat kan veranderd
+    // zijn sinds de app voor het laatst open was). Daarom: de zichtbare tekst is zonder details,
+    // tenzij de gebruiker ze zelf op het vergrendelscherm wil. De tekst mét details gaat apart mee
+    // (`detail`); de iPhone zet die er zelf in (NotificationService.swift), en alleen als iOS de
+    // voorvertoning op dat moment verbergt tot het toestel ontgrendeld is.
+    const base = { userId, transactionId: row.id, merchant, amount: Number(row.amount), suggestion };
+    const full = buildPrompt({ ...base, details: true });
+    const shown = flags.lock_screen_details ? full : buildPrompt({ ...base, details: false });
+    const body = apnsPayload({
+      title: shown.title,
+      body: shown.body,
+      category: full.category,
+      threadId: "betalingen",
+      mutableContent: !flags.lock_screen_details,
+      data: {
+        tx: row.id,
+        ...(full.action ? { action: full.action } : {}),
+        url: `/swipen?tx=${row.id}&ref=push&tag=betaling`,
+        ...(flags.lock_screen_details ? {} : { detailTitle: full.title, detailBody: full.body }),
       },
-      row.id,
-    );
+    });
+    const sent = await sendToDevices(admin, sender, devices, () => body, row.id);
     if (sent > 0) {
       notified++;
       await logEventFor(admin, userId, "push_sent", { tag: "betaling", transaction_id: row.id, suggested: Boolean(suggestion) });
@@ -255,14 +263,22 @@ export async function mergeWalletPayments(supabase: Admin, userId: string, bankI
   const dates = bank.map((b) => b.booking_date).sort();
   const from = toISODate(new Date(Date.parse(dates[0]) - MATCH_DAYS_AFTER * DAY_MS));
   const to = toISODate(new Date(Date.parse(dates[dates.length - 1]) + MATCH_DAYS_BEFORE * DAY_MS));
-  const { data: walletRows } = await supabase
-    .from("transactions")
-    .select("id, booking_date, amount, wallet_merchant, counterparty, category_id, categorized_at, note, awaiting_refund, own_share, notified_at")
-    .eq("user_id", userId)
-    .eq("source", "applepay")
-    .gte("booking_date", from)
-    .lte("booking_date", to);
-  const wallet = walletRows ?? [];
+  const WALLET_COLUMNS =
+    "id, booking_date, amount, wallet_merchant, wallet_card, counterparty, category_id, categorized_at, note, awaiting_refund, own_share, notified_at";
+  const [{ data: walletRows }, { data: profile }] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select(WALLET_COLUMNS)
+      .eq("user_id", userId)
+      .eq("source", "applepay")
+      .gte("booking_date", from)
+      .lte("booking_date", to),
+    supabase.from("profiles").select("wallet_cards").eq("id", userId).maybeSingle(),
+  ]);
+  const cards = parseCardChoices(profile?.wallet_cards);
+  // Een creditcardbetaling komt nooit als losse bankregel: die mag niet samengaan met een
+  // toevallig even grote betaling van de betaalrekening.
+  const wallet = (walletRows ?? []).filter((w) => cardKind(w.wallet_card, cards) !== "credit");
   if (wallet.length === 0) return [];
 
   const walletSides: WalletSide[] = wallet.map((w) => ({
@@ -274,8 +290,16 @@ export async function mergeWalletPayments(supabase: Admin, userId: string, bankI
   const matches = matchWalletPayments(bank, walletSides);
   const merged: string[] = [];
   for (const m of matches) {
-    const w = wallet.find((x) => x.id === m.walletId)!;
     const b = bank.find((x) => x.id === m.bankId)!;
+    // Vers lezen: tussen het zoeken en nu kan de gebruiker de Apple Pay-regel hebben ingedeeld.
+    const { data: w, error: readError } = await supabase
+      .from("transactions")
+      .select(WALLET_COLUMNS)
+      .eq("id", m.walletId)
+      .eq("user_id", userId)
+      .eq("source", "applepay")
+      .maybeSingle();
+    if (readError || !w) continue;
     // Een keuze van de gebruiker (op de Apple Pay-regel) gaat voor een vaste ontvanger op de bankregel.
     const carry = w.category_id
       ? { category_id: w.category_id, categorized_at: w.categorized_at, own_share: w.own_share, awaiting_refund: w.awaiting_refund }
@@ -284,18 +308,27 @@ export async function mergeWalletPayments(supabase: Admin, userId: string, bankI
       .from("transactions")
       .update({
         ...carry,
-        note: w.note,
+        ...(w.note ? { note: w.note } : {}),
         wallet_merchant: w.wallet_merchant,
+        wallet_card: w.wallet_card,
         notified_at: w.notified_at ?? new Date().toISOString(),
       })
       .eq("id", b.id)
       .eq("user_id", userId);
     if (error) continue;
-    // Verwijzingen naar de Apple Pay-regel overzetten vóór we hem weghalen.
-    await supabase.from("transaction_shares").update({ transaction_id: b.id }).eq("transaction_id", w.id).eq("user_id", userId);
-    await supabase.from("transactions").update({ refund_for_id: b.id }).eq("refund_for_id", w.id).eq("user_id", userId);
-    await supabase.from("transactions").update({ split_parent_id: b.id }).eq("split_parent_id", w.id).eq("user_id", userId);
-    await supabase.from("transactions").delete().eq("id", w.id).eq("user_id", userId).eq("source", "applepay");
+    // Verwijzingen naar de Apple Pay-regel overzetten vóór we hem weghalen. Lukt er één niet, dan
+    // blijft de Apple Pay-regel staan: delen van een verdeling hangen eraan met "on delete cascade".
+    const moves = await Promise.all([
+      supabase.from("transaction_shares").update({ transaction_id: b.id }).eq("transaction_id", w.id).eq("user_id", userId),
+      supabase.from("transactions").update({ refund_for_id: b.id }).eq("refund_for_id", w.id).eq("user_id", userId),
+      supabase.from("transactions").update({ split_parent_id: b.id }).eq("split_parent_id", w.id).eq("user_id", userId),
+    ]);
+    if (moves.some((r) => r.error)) continue;
+    // Alleen weghalen als het potje nog is wat we net overnamen; anders de volgende ronde opnieuw.
+    let remove = supabase.from("transactions").delete().eq("id", w.id).eq("user_id", userId).eq("source", "applepay");
+    remove = w.category_id ? remove.eq("category_id", w.category_id) : remove.is("category_id", null);
+    const { data: removed, error: removeError } = await remove.select("id");
+    if (removeError || !removed || removed.length === 0) continue;
     merged.push(b.id);
   }
   return merged;
@@ -317,22 +350,30 @@ export function walletDedupeHash(userId: string, merchant: string, amount: numbe
 
 export async function receiveWalletPayment(
   admin: Admin,
-  input: { userId: string; merchant: string; amount: number; previews: PreviewSetting; now?: Date },
+  input: { userId: string; merchant: string; amount: number; card?: string | null; previews: PreviewSetting; now?: Date },
 ): Promise<WalletIntakeResult> {
   const now = input.now ?? new Date();
   const today = toISODate(amsterdamToday(now));
   const amount = -Math.abs(input.amount);
+  const card = input.card ?? null;
+  const flags = await profileFlags(admin, input.userId);
+  const credit = cardKind(card, flags.cards) === "credit";
 
-  // Al door de bank geleverd (de automatisering liep achter, of een tweede iPhone)? Dan die regel gebruiken.
-  const { data: banked } = await admin
-    .from("transactions")
-    .select("id, booking_date, amount, counterparty, raw_counterparty, category_id, notified_at")
-    .eq("user_id", input.userId)
-    .eq("source", "bank")
-    .eq("amount", amount)
-    .is("wallet_merchant", null)
-    .gte("booking_date", toISODate(new Date(Date.parse(today) - MATCH_DAYS_BEFORE * DAY_MS)))
-    .lte("booking_date", toISODate(new Date(Date.parse(today) + MATCH_DAYS_AFTER * DAY_MS)));
+  // Al door de bank geleverd (de automatisering liep achter)? Dan die regel gebruiken. Alleen een
+  // bankregel die nog open is: een even grote betaling van gisteren die al in een potje zit, is een
+  // andere betaling. Een creditcardbetaling komt nooit los via de bank en zoekt dus niet.
+  const { data: banked } = credit
+    ? { data: [] }
+    : await admin
+        .from("transactions")
+        .select("id, booking_date, amount, counterparty, raw_counterparty, category_id, notified_at")
+        .eq("user_id", input.userId)
+        .eq("source", "bank")
+        .eq("amount", amount)
+        .is("wallet_merchant", null)
+        .is("category_id", null)
+        .gte("booking_date", toISODate(new Date(Date.parse(today) - MATCH_DAYS_BEFORE * DAY_MS)))
+        .lte("booking_date", toISODate(new Date(Date.parse(today) + MATCH_DAYS_AFTER * DAY_MS)));
   const match = matchWalletPayments(
     (banked ?? []).map((b) => ({ ...b, amount: Number(b.amount) })),
     [{ id: "nieuw", booking_date: today, amount, merchant: input.merchant }],
@@ -342,7 +383,11 @@ export async function receiveWalletPayment(
   let categorized: boolean;
   if (match) {
     const row = banked!.find((b) => b.id === match.bankId)!;
-    await admin.from("transactions").update({ wallet_merchant: input.merchant }).eq("id", row.id).eq("user_id", input.userId);
+    await admin
+      .from("transactions")
+      .update({ wallet_merchant: input.merchant, wallet_card: card })
+      .eq("id", row.id)
+      .eq("user_id", input.userId);
     transactionId = row.id;
     categorized = row.category_id !== null;
   } else {
@@ -361,6 +406,7 @@ export async function receiveWalletPayment(
           counterparty: input.merchant,
           raw_counterparty: input.merchant,
           wallet_merchant: input.merchant,
+          wallet_card: card,
         },
         { onConflict: "user_id,dedupe_hash", ignoreDuplicates: true },
       )
@@ -385,7 +431,6 @@ export async function receiveWalletPayment(
   await logEventFor(admin, input.userId, "applepay_received", { transaction_id: transactionId, merged: Boolean(match), categorized });
   if (categorized) return { status: "quiet", transactionId };
 
-  const flags = await profileFlags(admin, input.userId);
   if (!flags.payment_notifications) return { status: "quiet", transactionId };
   const claimed = await claimNotification(admin, input.userId, [transactionId]);
   if (claimed.length === 0) return { status: "quiet", transactionId };
@@ -399,8 +444,8 @@ export async function receiveWalletPayment(
       merchant: input.merchant,
       amount,
       suggestion,
-      lockScreenDetails: flags.lock_screen_details,
-      previews: input.previews,
+      // Lokale melding: de iPhone gaf net zelf door hoe "Voorvertoning tonen" nu staat.
+      details: showDetails(flags.lock_screen_details, input.previews),
     }),
   };
 }

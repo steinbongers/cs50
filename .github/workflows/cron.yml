@@ -18,8 +18,8 @@ name: Cron
 #   secret CRON_SECRET  (zelfde waarde als in Vercel)
 #   variable APP_URL    (alleen als de app niet op financeapppilot.vercel.app staat)
 #
-# Deze repo is openbaar, en de logs van Actions ook. Toon nooit iets anders dan het antwoord van
-# de app, en dat bevat alleen aantallen of een foutmelding.
+# Deze repo is openbaar, en de logs van Actions ook. Bij succes tonen we alleen de HTTP-status;
+# alleen bij een fout het antwoord van de app (een foutmelding, nooit persoonsgegevens).
 
 on:
   schedule:
@@ -41,9 +41,12 @@ jobs:
           code=$(curl --silent --show-error --max-time 300 -o body.json -w '%{http_code}' \
             -H "Authorization: Bearer $CRON_SECRET" \
             "$APP_URL/api/cron/sync")
-          # Het antwoord bevat alleen aantallen of een foutmelding, geen persoonsgegevens.
-          cat body.json; echo; echo "HTTP $code"
-          [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
+          echo "HTTP $code"
+          if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then exit 0; fi
+          # Alleen bij een fout het antwoord tonen: dat is dan een foutmelding zonder persoonsgegevens.
+          # Bij succes niet: aantallen per ronde zouden in dit openbare log laten zien wanneer iemand betaalt.
+          cat body.json; echo
+          exit 1
 
   notify:
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '37 18,19 * * *'
@@ -57,6 +60,9 @@ jobs:
           code=$(curl --silent --show-error --max-time 120 -o body.json -w '%{http_code}' \
             -H "Authorization: Bearer $CRON_SECRET" \
             "$APP_URL/api/cron/notify")
-          # Het antwoord bevat alleen aantallen of een foutmelding, geen persoonsgegevens.
-          cat body.json; echo; echo "HTTP $code"
-          [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
+          echo "HTTP $code"
+          if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then exit 0; fi
+          # Alleen bij een fout het antwoord tonen: dat is dan een foutmelding zonder persoonsgegevens.
+          # Bij succes niet: aantallen per ronde zouden in dit openbare log laten zien wanneer iemand betaalt.
+          cat body.json; echo
+          exit 1

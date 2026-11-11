@@ -88,8 +88,14 @@ public class NativePushPlugin: CAPPlugin, CAPBridgedPlugin {
                 if let token = token { result["apnsToken"] = token }
                 call.resolve(result)
             }
-            guard authorized else { return finish(nil) }
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
+                // Net als de sleutel zelf: alleen de eigen webapp krijgt het APNs-token, geen andere
+                // pagina die in de webview open staat (inlogdienst, bank).
+                guard let self = self, self.trustedOrigin() != nil else {
+                    call.reject("Niet toegestaan vanaf deze pagina", "forbidden")
+                    return
+                }
+                guard authorized else { return finish(nil) }
                 if let token = Self.apnsToken { return finish(token) }
                 var done = false
                 let once: (String?) -> Void = { token in

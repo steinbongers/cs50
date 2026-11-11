@@ -32,6 +32,8 @@ export type ProfileRow = {
   lock_screen_details: boolean;
   /** Melding met knoppen na elke betaling (iPhone-app). */
   payment_notifications: boolean;
+  /** Kaartnamen uit Wallet die de gebruiker als creditcard of betaalpas aanmerkte. */
+  wallet_cards: Json;
 };
 
 export type InviteCodeRow = {
@@ -137,6 +139,10 @@ export type TransactionRow = {
   wallet_merchant: string | null;
   /** Melding met knoppen verstuurd voor deze betaling. */
   notified_at: string | null;
+  /** Naam van de kaart in Apple Wallet waarmee is betaald (geen kaartnummer). */
+  wallet_card: string | null;
+  /** Creditcardbetaling via Apple Pay: de maandafrekening waarin hij al is verrekend. */
+  card_settlement_id: string | null;
   created_at: string;
 };
 
@@ -234,6 +240,7 @@ export type Database = {
           | "focus_period_start"
           | "lock_screen_details"
           | "payment_notifications"
+          | "wallet_cards"
         >
       >;
       categories: Table<
@@ -312,6 +319,8 @@ export type Database = {
           | "account_id"
           | "wallet_merchant"
           | "notified_at"
+          | "wallet_card"
+          | "card_settlement_id"
           | "created_at"
         >
       >;

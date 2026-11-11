@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { authenticateDevice, NO_STORE, readJson } from "@/lib/native/device-auth";
 import { receiveWalletPayment } from "@/lib/native/payments";
 import { cleanWalletMerchant, parseWalletAmount } from "@/lib/native/wallet";
+import { cleanWalletCard } from "@/lib/native/wallet-card";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { PreviewSetting } from "@/lib/supabase/types";
 
@@ -45,7 +46,8 @@ export async function POST(request: Request) {
 
   if (previews !== device.previews) await admin.from("native_devices").update({ previews }).eq("id", device.id);
 
-  const result = await receiveWalletPayment(admin, { userId: device.user_id, merchant, amount, previews });
+  const card = cleanWalletCard(body?.card);
+  const result = await receiveWalletPayment(admin, { userId: device.user_id, merchant, amount, card, previews });
   if (result.status === "error") return json({ error: "Opslaan lukte niet" }, 500);
   return json(result);
 }

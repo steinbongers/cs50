@@ -7,6 +7,7 @@ import { expiringMessage, monthReviewMessage, openCardsMessage, weekMessage } fr
 import { createPaymentSender, sendNativeAlert } from "@/lib/native/payments";
 import { isApnsConfigured } from "@/lib/push/apns";
 import { isPushConfigured, isPushUsable, sendPushToUser } from "@/lib/push/server";
+import { sameSecret } from "@/lib/native/device-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
@@ -36,7 +37,7 @@ function amsterdamNow(): { hour: number; dateISO: string; dayIndex: number } {
  */
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!secret || !sameSecret(request.headers.get("authorization"), `Bearer ${secret}`)) {
     return NextResponse.json({ error: "Geen toegang" }, { status: 401 });
   }
   // Webpush (Safari) en APNs (iPhone-app) staan los van elkaar: één van beide is genoeg.

@@ -20,8 +20,15 @@ struct RecordPaymentIntent: AppIntent {
     @Parameter(title: "Bedrag", description: "Kies 'Bedrag' uit de Transactie.")
     var amount: String
 
+    /// Naam van de kaart in Wallet ("ING Betaalpas", "Visa Card"). Geen kaartnummer. Hiermee weet de
+    /// app of het een creditcard is: die betaling komt niet los via de bank.
+    @Parameter(title: "Kaart", description: "Kies 'Kaart of pas' uit de Transactie.")
+    var card: String?
+
     static var parameterSummary: some ParameterSummary {
-        Summary("Deel \(\.$amount) bij \(\.$merchant) in")
+        Summary("Deel \(\.$amount) bij \(\.$merchant) in") {
+            \.$card
+        }
     }
 
     func perform() async throws -> some IntentResult {
@@ -29,7 +36,12 @@ struct RecordPaymentIntent: AppIntent {
         do {
             let response = try await NativeAPI.post(
                 "/api/native/device/applepay",
-                body: ["merchant": String(merchant.prefix(200)), "amount": String(amount.prefix(40)), "previews": previews],
+                body: [
+                    "merchant": String(merchant.prefix(200)),
+                    "amount": String(amount.prefix(40)),
+                    "card": String((card ?? "").prefix(80)),
+                    "previews": previews
+                ],
                 timeout: 15
             )
             if response["status"] as? String == "prompt", let prompt = response["prompt"] as? [String: Any] {

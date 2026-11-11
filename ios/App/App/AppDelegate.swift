@@ -10,6 +10,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Knoppen in meldingen ("Klopt") werken ook als de app op de achtergrond start zonder scherm:
         // de afhandelaar moet er dan al staan.
         PaymentNotifications.shared.install()
+        // De Keychain overleeft het verwijderen van de app. Na opnieuw installeren beginnen we schoon:
+        // een oude apparaatsleutel mag niet vanzelf weer werken.
+        let marker = "deviceKeychainInitialized"
+        if !UserDefaults.standard.bool(forKey: marker) {
+            DeviceKeychain.clearDeviceKey()
+            UserDefaults.standard.set(true, forKey: marker)
+        }
         return true
     }
 

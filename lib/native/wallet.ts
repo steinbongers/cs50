@@ -17,6 +17,8 @@ export function parseWalletAmount(input: unknown): number | null {
   if (!text || text.length > 40) return null;
   // Andere valuta dan euro: niet raden.
   if (/[$£¥]|\b(USD|GBP|CHF|JPY|SEK|DKK|NOK|PLN)\b/i.test(text)) return null;
+  // Een plusteken is geld terug (retour), geen uitgave.
+  if (/^(EUR|€|\s)*\+/i.test(text)) return null;
   text = text.replace(/EUR|€|\s| /gi, "").replace(/^[-−+]/, "");
   if (!/^\d{1,3}([.,]?\d{3})*([.,]\d{1,2})?$/.test(text) && !/^\d+([.,]\d{1,2})?$/.test(text)) return null;
 

@@ -15,6 +15,7 @@ export interface LinkInput {
   previews?: PreviewSetting | null;
 }
 
+const MAX_DEVICES = 5;
 const PREVIEWS = new Set<PreviewSetting>(["always", "when_unlocked", "never"]);
 
 /**
@@ -57,6 +58,18 @@ export async function linkDevice(input: LinkInput): Promise<LinkResult> {
     { onConflict: "user_id,installation_id" },
   );
   if (error) return { ok: false, error: "Koppelen lukte niet. Probeer het later opnieuw." };
+
+  // De oude widgetsleutel (verloopt nooit) is hiermee overbodig: weg ermee.
+  await admin.from("widget_tokens").delete().eq("user_id", user.id);
+  // Hoogstens MAX_DEVICES toestellen per account; de langst niet geziene valt af.
+  const { data: all } = await admin
+    .from("native_devices")
+    .select("id")
+    .eq("user_id", user.id)
+    .order("last_seen_at", { ascending: false });
+  const extra = (all ?? []).slice(MAX_DEVICES).map((d) => d.id);
+  if (extra.length > 0) await admin.from("native_devices").delete().eq("user_id", user.id).in("id", extra);
+
   if (!existing) await logEvent("device_linked", { push: Boolean(apnsToken), previews });
   return { ok: true, key, expiresAt };
 }
@@ -71,5 +84,6 @@ export async function unlinkDevice(installationId: string): Promise<{ ok: boolea
     .delete()
     .eq("user_id", user.id)
     .eq("installation_id", installationId.toLowerCase());
+  await admin.from("widget_tokens").delete().eq("user_id", user.id);
   return { ok: !error };
 }

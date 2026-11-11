@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { syncConnection } from "@/lib/bank/sync";
 import { verifyCredentials } from "@/lib/enablebanking/client";
 import { createPaymentSender, notifyNewPayments } from "@/lib/native/payments";
+import { sameSecret } from "@/lib/native/device-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 300;
@@ -13,8 +14,7 @@ export const maxDuration = 300;
  */
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  const auth = request.headers.get("authorization");
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!secret || !sameSecret(request.headers.get("authorization"), `Bearer ${secret}`)) {
     return NextResponse.json({ error: "Geen toegang" }, { status: 401 });
   }
 

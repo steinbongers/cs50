@@ -31,12 +31,16 @@ export async function countOpenTransactionsFor(supabase: SupabaseClient<Database
   return count ?? 0;
 }
 
-export async function loadWidgetPayload(supabase: SupabaseClient<Database>, userId: string): Promise<WidgetPayload> {
+export async function loadWidgetPayload(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  options: { card?: boolean } = {},
+): Promise<WidgetPayload> {
   const [open, free, card] = await Promise.all([
     countOpenTransactionsFor(supabase, userId),
     // Zonder salarisdag of saldo toont de widget alleen de kaartjes.
     loadFreeToSpend(supabase, userId, new Date()).catch(() => null),
-    oldestOpenCard(supabase, userId).catch(() => null),
+    options.card === false ? null : oldestOpenCard(supabase, userId).catch(() => null),
   ]);
   return { open, free, card };
 }

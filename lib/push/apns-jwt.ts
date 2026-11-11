@@ -22,12 +22,15 @@ export function apnsPayload(input: {
   body: string;
   category?: string;
   threadId?: string;
+  /** Laat de iPhone de tekst nog aanpassen (NotificationService.swift) voor hij getoond wordt. */
+  mutableContent?: boolean;
   data?: Record<string, string>;
 }): string {
   return JSON.stringify({
     aps: {
       alert: { title: input.title, body: input.body },
       sound: "default",
+      ...(input.mutableContent ? { "mutable-content": 1 } : {}),
       ...(input.category ? { category: input.category } : {}),
       ...(input.threadId ? { "thread-id": input.threadId } : {}),
     },

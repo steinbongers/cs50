@@ -11,16 +11,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 export async function GET(request: Request) {
   const supabase = createAdminClient();
-  let userId: string | null;
+  let who: { userId: string; legacy: boolean } | null;
   try {
-    userId = await authenticateWidget(supabase, request);
+    who = await authenticateWidget(supabase, request);
   } catch {
     return NextResponse.json({ error: "Even niet beschikbaar" }, { status: 503, headers: NO_STORE });
   }
-  if (!userId) return NextResponse.json({ error: "Widget niet gekoppeld" }, { status: 401, headers: NO_STORE });
+  if (!who) return NextResponse.json({ error: "Widget niet gekoppeld" }, { status: 401, headers: NO_STORE });
 
   try {
-    return NextResponse.json(await loadWidgetPayload(supabase, userId), { headers: NO_STORE });
+    const payload = await loadWidgetPayload(supabase, who.userId, { card: !who.legacy });
+    return NextResponse.json(payload, { headers: NO_STORE });
   } catch {
     return NextResponse.json({ error: "Even niet beschikbaar" }, { status: 503, headers: NO_STORE });
   }
