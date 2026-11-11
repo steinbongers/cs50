@@ -90,3 +90,25 @@ test("opslaan: alleen geldige posten, elk één keer", () => {
   ]);
   assert.deepEqual(cleanFixedItems("onzin"), []);
 });
+
+test("periode voor de lijst: de lopende maand tot en met vandaag", async () => {
+  const { fixedWindow } = await import("../lib/insights/fixed-month");
+  // Salarisdag 20, vandaag 11 november: 20 oktober tot en met 11 november.
+  assert.deepEqual(fixedWindow(20, new Date(2026, 10, 11)), { startISO: "2026-10-20", endISO: "2026-11-12", current: true });
+});
+
+test("periode voor de lijst: net begonnen maand, dan de hele vorige", async () => {
+  const { fixedWindow, FIXED_WINDOW_MIN_DAYS } = await import("../lib/insights/fixed-month");
+  // 25 november is dag 5 van de maand die op 20 november begon.
+  assert.deepEqual(fixedWindow(20, new Date(2026, 10, 25)), { startISO: "2026-10-20", endISO: "2026-11-20", current: false });
+  // Precies op de grens telt de lopende maand.
+  const edge = new Date(2026, 10, 20 + FIXED_WINDOW_MIN_DAYS);
+  assert.equal(fixedWindow(20, edge).current, true);
+  assert.equal(fixedWindow(20, new Date(2026, 10, 20 + FIXED_WINDOW_MIN_DAYS - 1)).current, false);
+});
+
+test("periode voor de lijst: zonder salarisdag de kalendermaand", async () => {
+  const { fixedWindow } = await import("../lib/insights/fixed-month");
+  assert.deepEqual(fixedWindow(null, new Date(2026, 10, 20)), { startISO: "2026-11-01", endISO: "2026-11-21", current: true });
+  assert.equal(fixedWindow(null, new Date(2026, 10, 3)).startISO, "2026-10-01");
+});

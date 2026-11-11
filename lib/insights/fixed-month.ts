@@ -1,13 +1,43 @@
+import { toISODate } from "@/lib/format";
+import { currentPeriod, previousPeriod } from "@/lib/periods";
 import { counterpartyKey } from "@/lib/transactions/same-counterparty";
 
 /**
- * Je vaste maand. De gebruiker ziet zijn vorige salarismaand als lijst per verkoper en tikt aan
+ * Je vaste maand. De gebruiker ziet zijn lopende salarismaand tot nu toe als lijst per verkoper en tikt aan
  * wat elke maand terugkomt: vaste kosten en vaste inkomsten. Daarmee rekent de app uit wat er
  * deze maand nog over is. De app vinkt zelf niets aan; hij zet alleen bovenaan wat er het meest
  * als vast uitziet. Pure functies, zonder database.
  */
 
 export type Direction = "uit" | "in";
+
+/** Zoveel dagen moet de lopende maand oud zijn om er vaste posten uit te kunnen kiezen. */
+export const FIXED_WINDOW_MIN_DAYS = 14;
+
+export interface FixedWindow {
+  /** Eerste dag (inclusief) en eerste dag erna (exclusief), "YYYY-MM-DD". */
+  startISO: string;
+  endISO: string;
+  /** true: de lopende maand tot en met vandaag; false: de hele vorige maand. */
+  current: boolean;
+}
+
+/**
+ * Uit welke periode kiest de gebruiker zijn vaste posten? De lopende salarismaand, van de
+ * salarisdag tot en met vandaag (besluit van Stein). Is die maand nog maar net begonnen, dan
+ * staat er te weinig in en nemen we de hele vorige maand.
+ */
+export function fixedWindow(salaryDay: number | null | undefined, today: Date): FixedWindow {
+  const period = currentPeriod(salaryDay, today);
+  const day = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const daysIn = Math.round((day.getTime() - period.start.getTime()) / 864e5);
+  if (daysIn >= FIXED_WINDOW_MIN_DAYS) {
+    const tomorrow = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+    return { startISO: period.startISO, endISO: toISODate(tomorrow), current: true };
+  }
+  const previous = previousPeriod(salaryDay, today);
+  return { startISO: previous.startISO, endISO: previous.endISO, current: false };
+}
 
 export interface MonthTx {
   bookingDate: string;

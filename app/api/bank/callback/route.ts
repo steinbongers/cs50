@@ -8,7 +8,8 @@ import { syncConnection } from "@/lib/bank/sync";
 import { authorizeSession } from "@/lib/enablebanking/client";
 import { logEvent } from "@/lib/events";
 import { ignoreOpenBefore } from "@/lib/insights/fixed-month-server";
-import { amsterdamToday, previousPeriod } from "@/lib/periods";
+import { fixedWindow } from "@/lib/insights/fixed-month";
+import { amsterdamToday } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -127,9 +128,10 @@ export async function GET(request: NextRequest) {
   if (connection) {
     const choice = isImportFrom(pending.importFrom) ? pending.importFrom : DEFAULT_IMPORT_FROM;
     const chosenFrom = importFromDate(choice, profile.salary_day);
-    // Altijd ook de vorige salarismaand: daaruit kiest de gebruiker zijn vaste kosten en inkomsten
-    // ("Je vaste maand"). Wat ouder is dan de gekozen start komt niet op de stapel: Telt niet mee.
-    const previousFrom = previousPeriod(profile.salary_day, amsterdamToday()).startISO;
+    // Altijd ook de lopende salarismaand tot nu toe (of de vorige, als de lopende net begon): daaruit
+    // kiest de gebruiker zijn vaste kosten en inkomsten ("Je vaste maand"). Wat ouder is dan de
+    // gekozen start komt niet op de stapel: Telt niet mee.
+    const previousFrom = fixedWindow(profile.salary_day, amsterdamToday()).startISO;
     const result = await syncConnection(supabase, connection, { dateFrom: previousFrom < chosenFrom ? previousFrom : chosenFrom });
     if (previousFrom < chosenFrom) await ignoreOpenBefore(supabase, user.id, chosenFrom, result.newIds).catch(() => 0);
   }

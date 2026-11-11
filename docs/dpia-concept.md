@@ -36,7 +36,7 @@ Het rapport adviseert een DPIA bij lancering als verplicht te behandelen. Voor d
 
 ### 2b. Nieuw per 11 november 2026: je vaste maand
 
-13. **Vorige maand ophalen.** Bij het koppelen haalt de app altijd ook de vorige salarismaand op, ook als de gebruiker "vanaf vandaag" kiest. Het keuzescherm zegt dat. Die betalingen komen niet op de stapel en tellen nergens mee; ze dienen alleen voor de lijst hieronder. Ze staan wel in de database en in de export, en verdwijnen met het account.
+13. **Lopende maand ophalen.** Bij het koppelen haalt de app altijd ook de lopende salarismaand tot nu toe op (of de hele vorige maand, als de lopende jonger is dan 14 dagen), ook als de gebruiker "vanaf vandaag" kiest. Het keuzescherm zegt dat. Die betalingen komen niet op de stapel en tellen nergens mee; ze dienen alleen voor de lijst hieronder. Ze staan wel in de database en in de export, en verdwijnen met het account.
 14. **Vaste kosten en inkomsten aantikken.** De gebruiker ziet die maand als lijst per tegenpartij en tikt zelf aan wat elke maand terugkomt. De app kiest niets; hij zet alleen bovenaan wat er als vast uitziet. Opgeslagen in `fixed_items`.
 15. **Nog over deze maand.** Een berekening over de eigen gegevens (vaste inkomsten min vaste kosten plus de overige geldstromen van de lopende maand), getoond in de app en op de widget. Geen besluit over de gebruiker en niet gedeeld.
 

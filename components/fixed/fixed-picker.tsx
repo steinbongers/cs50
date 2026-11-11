@@ -29,11 +29,11 @@ const idOf = (direction: Direction, key: string) => `${direction}:${key}`;
 const SHOWN = 12;
 
 export interface FixedPickerProps {
-  /** De vorige salarismaand, per verkoper. */
+  /** De lopende salarismaand tot nu toe (of de vorige, als de lopende net begon), per verkoper. */
   groups: MonthGroup[];
   /** Wat eerder is opgeslagen. */
   saved: FixedItem[];
-  /** "20 september tot 20 oktober" */
+  /** "20 oktober tot vandaag" */
   periodText: string;
   hasBank: boolean;
   /** Waar je na opslaan heen gaat. */
@@ -201,18 +201,18 @@ export function FixedPicker({ groups, saved, periodText, hasBank, next, saveLabe
             <p className="text-[15px] leading-[22px]">
               {hasBank
                 ? `Er staan nog geen betalingen van ${periodText} in de app. Haal ze op, dan kun je hieronder aantikken wat vast is.`
-                : "Koppel eerst je bank. Dan staat hier je vorige maand, per verkoper. Je kunt ook zelf posten toevoegen."}
+                : "Koppel eerst je bank. Dan staan hier je betalingen sinds je laatste salaris, per verkoper. Je kunt ook zelf posten toevoegen."}
             </p>
             {hasBank && (
               <Button variant="secondary" onClick={fetchMonth} disabled={fetching}>
-                {fetching ? "Bezig met ophalen" : "Vorige maand ophalen"}
+                {fetching ? "Bezig met ophalen" : "Betalingen ophalen"}
               </Button>
             )}
           </Card>
         )}
 
-        {section("uit", "Vaste kosten", noMonth ? "Nog niets om uit te kiezen." : "Geen uitgaven gevonden in die maand.")}
-        {section("in", "Vaste inkomsten", noMonth ? "Nog niets om uit te kiezen." : "Geen inkomsten gevonden in die maand.")}
+        {section("uit", "Vaste kosten", noMonth ? "Nog niets om uit te kiezen." : "Geen uitgaven gevonden in die periode.")}
+        {section("in", "Vaste inkomsten", noMonth ? "Nog niets om uit te kiezen." : "Geen inkomsten gevonden in die periode.")}
 
         {adding ? (
           <Card className="flex flex-col gap-3">
@@ -258,7 +258,8 @@ export function FixedPicker({ groups, saved, periodText, hasBank, next, saveLabe
         )}
 
         <p className="px-1 text-[13px] leading-[18px] text-text-muted">
-          Iets wat per jaar of per kwartaal komt, zit niet in één maand. Voeg het zelf toe met het bedrag per maand.
+          Wat later in de maand nog komt, of per jaar of kwartaal, staat er niet bij. Voeg het zelf toe met het bedrag
+          per maand.
           Aanpassen kan altijd via Instellingen.
         </p>
       </div>
