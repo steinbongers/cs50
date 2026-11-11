@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { CircleHelp, Download, Info, Landmark, LayoutGrid, Pin, ShieldCheck } from "lucide-react";
-import { signOut } from "@/app/auth/actions";
 import { AppLockToggle } from "@/components/native/app-lock-toggle";
+import { PaymentSettings } from "@/components/native/payment-settings";
+import { SignOutButton } from "@/components/native/sign-out-button";
 import { WidgetSetupRow } from "@/components/native/widget-setup-row";
 import { HapticsToggle } from "@/components/push/haptics-toggle";
 import { PushToggle } from "@/components/push/push-toggle";
@@ -75,6 +76,7 @@ export default async function InstellingenPage() {
 
       <ListGroup title="Meldingen en weergave">
         <PushToggle enabled={profile.notifications_enabled} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
+        <PaymentSettings enabled={profile.payment_notifications} lockScreenDetails={profile.lock_screen_details} />
         <ThemeToggle />
         <HapticsToggle />
         <AppLockToggle />
@@ -117,18 +119,13 @@ export default async function InstellingenPage() {
       </ListGroup>
 
       <ListGroup>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className={cn(
-              "flex min-h-[52px] w-full items-center justify-center px-4 text-[15px] leading-5 text-primary",
-              "transition-colors duration-150 active:bg-surface-muted",
-              ROW_FOCUS,
-            )}
-          >
-            Uitloggen
-          </button>
-        </form>
+        <SignOutButton
+          className={cn(
+            "flex min-h-[52px] w-full items-center justify-center px-4 text-[15px] leading-5 text-primary",
+            "transition-colors duration-150 active:bg-surface-muted",
+            ROW_FOCUS,
+          )}
+        />
       </ListGroup>
 
       <ListGroup>

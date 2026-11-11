@@ -56,6 +56,7 @@ import {
   undoMany,
   type CashSpendInput,
 } from "./actions";
+import { cardCoverage, settleCardWithWallet } from "./card-actions";
 import { setCounted } from "../potjes/actions";
 import { AmountsSheet } from "./amounts-sheet";
 import { CategoryTiles, tileCount } from "./category-tiles";
@@ -244,6 +245,11 @@ export function SortScreen({
   // Per verdeelde pinopname of afschrijving wat er in welk potje kwam, zodat ongedaan maken het lokaal terugzet.
   const [partSplits, setPartSplits] = useState<Map<string, PartsLocal>>(() => new Map());
   const [rawOpen, setRawOpen] = useState(false);
+  // Creditcard-afrekening: hoeveel al via Apple Pay is ingedeeld (van de server), voor het kaartje bovenop.
+  const [covered, setCovered] = useState<{ id: string; coveredCents: number; restCents: number } | null>(null);
+  const [settling, setSettling] = useState(false);
+  /** Afrekening → kaartje met de rest, om dat bij Ongedaan maken weer weg te halen. */
+  const cardRests = useRef(new Map<string, string>());
   const [editorDraft, setEditorDraft] = useState<CategoryDraft | null>(null);
   const [editorSuggestion, setEditorSuggestion] = useState<QuickSuggestionKey | null>(null);
   const [editorError, setEditorError] = useState<string | null>(null);
@@ -265,6 +271,21 @@ export function SortScreen({
   const [adoptedBatch, setAdoptedBatch] = useState(transactions);
 
   const current = queue[0] ?? null;
+  // Ligt er een creditcard-afrekening bovenop? Vraag de server hoeveel daarvan al via Apple Pay is ingedeeld.
+  const currentId = current?.id ?? null;
+  const currentIsCard = current !== null && current.amount < 0 && isCreditCardSettlement(current);
+  useEffect(() => {
+    if (!currentId || !currentIsCard) return;
+    let cancelled = false;
+    cardCoverage(currentId)
+      .then((r) => {
+        if (!cancelled && r.ok) setCovered({ id: currentId, coveredCents: r.coveredCents, restCents: r.restCents });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [currentId, currentIsCard]);
   // De rij onderin (Ik krijg een deel terug, Later): de pil Ongedaan maken komt erboven, niet eroverheen.
   const bottomRowRef = useRef<HTMLDivElement>(null);
   const [bottomRowHeight, setBottomRowHeight] = useState(0);
@@ -684,6 +705,54 @@ export function SortScreen({
     [current, categories, showCoach, startTransition],
   );
 
+  // Creditcard-afrekening: wat al via Apple Pay is ingedeeld, gaat eraf (naar Telt niet mee).
+  // Niet vooruitlopend op de server: het kaartje met de rest heeft een id van de server nodig.
+  const settleCard = useCallback(() => {
+    if (!current || !covered || covered.id !== current.id || settling) return;
+    const transaction = current;
+    const { coveredCents, restCents } = covered;
+    setSettling(true);
+    setError(null);
+    setHint(null);
+    startTransition(async () => {
+      const result = await settleCardWithWallet(transaction.id, coveredCents);
+      setSettling(false);
+      if (!result.ok) {
+        setError(result.error);
+        setCovered(null);
+        return;
+      }
+      const text =
+        restCents === 0
+          ? "Al ingedeeld via Apple Pay: telt niet dubbel"
+          : `${formatEuro(coveredCents / 100)} was al ingedeeld. De rest ligt klaar.`;
+      const decision: Decision = { transaction, category: VERDEELD_OPTION, ownShare: 0 };
+      const rest: OpenTransaction | null = result.restId
+        ? {
+            ...transaction,
+            id: result.restId,
+            amount: -restCents / 100,
+            description: "Rest van de afrekening",
+            note: null,
+            skippedCount: 0,
+            balanceAfter: null,
+          }
+        : null;
+      if (rest) cardRests.current.set(transaction.id, rest.id);
+      setCardExit({ kind: "assign", target: null });
+      setQueue((q) => {
+        const others = q.filter((t) => t.id !== transaction.id);
+        return rest ? [rest, ...others] : others;
+      });
+      setDecisions((d) => [...d, decision]);
+      setUndo(decision);
+      setUndoBulk(null);
+      setPartSplits((prev) => new Map(prev).set(transaction.id, { parts: [], text }));
+      setCovered(null);
+      setAnnouncement(`${transaction.counterparty}: ${text.toLowerCase()}`);
+    });
+  }, [current, covered, settling, startTransition]);
+
   const skip = useCallback(() => {
     if (!current || queue.length < 2) return;
     const transaction = current;
@@ -706,7 +775,10 @@ export function SortScreen({
     setUndo(null);
     setError(null);
     setCardExit({ kind: "none", target: null });
-    setQueue((q) => [transaction, ...q]);
+    // Bij een creditcard-afrekening verdwijnt ook het kaartje met de rest (de server haalt het weg).
+    const restId = cardRests.current.get(transaction.id);
+    cardRests.current.delete(transaction.id);
+    setQueue((q) => [transaction, ...q.filter((t) => t.id !== restId)]);
     setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
     setUndone((u) => u + 1);
     if (category.id === CONTANT_OPTION.id || category.id === VERDEELD_OPTION.id) {
@@ -974,6 +1046,7 @@ export function SortScreen({
   // Verdelen over potjes kan bij elke uitgave; bij een herkende creditcard staat er een hint op de kaart.
   const canSplit = !isIncoming && !isCash;
   const isCreditCard = canSplit && isCreditCardSettlement(current);
+  const coveredHere = isCreditCard && covered?.id === current.id ? covered : null;
   // Terugbetaling bij open delen (van vroeger verdelen) én bij uitgaven die op geld terug wachten.
   const repayment =
     isIncoming && (availableShares.length > 0 || availableAwaiting.length > 0)
@@ -1028,7 +1101,17 @@ export function SortScreen({
         {/* Direct onder de kaart, klein: Ik krijg een deel terug (besluit van Stein, niet meer onderin).
             De regel is er altijd, ook bij inkomend geld en pinopnames, zodat de tegels nooit verspringen. */}
         <div className="mt-2 flex h-8 items-center gap-2">
-          {!isIncoming && !isCash ? (
+          {coveredHere ? (
+            <button
+              type="button"
+              onClick={settleCard}
+              disabled={settling}
+              className="inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full bg-primary px-3 text-[13px] font-medium text-on-primary transition-opacity duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
+            >
+              <Check size={14} strokeWidth={2.5} aria-hidden className="shrink-0" />
+              <span className="truncate">{formatEuro(coveredHere.coveredCents / 100)} al ingedeeld via Apple Pay</span>
+            </button>
+          ) : !isIncoming && !isCash ? (
             <>
               <button
                 type="button"

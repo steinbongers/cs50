@@ -1,12 +1,19 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { loadFreeToSpend } from "@/lib/insights/free-to-spend";
 import type { Database } from "@/lib/supabase/types";
+import { oldestOpenCard, type WidgetCard } from "./payments";
 
 /** Antwoord van GET /api/widget; de Swift-kant (FinanceWidget.swift) leest precies deze velden. */
 export interface WidgetPayload {
   open: number;
   /** Vrij te besteden tot de volgende salarisdag ("YYYY-MM-DD"), of null als dat niet te zeggen is. */
   free: { amount: number; until: string } | null;
+  /**
+   * Voor de grote widget: de oudste open betaling met de meestgebruikte potjes als knoppen.
+   * Null als de stapel leeg is. Oudere builds van de widget negeren dit veld.
+   */
+  card: WidgetCard | null;
 }
 
 /**
@@ -22,4 +29,18 @@ export async function countOpenTransactionsFor(supabase: SupabaseClient<Database
     .eq("is_internal_transfer", false);
   if (error) throw new Error("Open kaartjes konden niet worden geteld.");
   return count ?? 0;
+}
+
+export async function loadWidgetPayload(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  options: { card?: boolean } = {},
+): Promise<WidgetPayload> {
+  const [open, free, card] = await Promise.all([
+    countOpenTransactionsFor(supabase, userId),
+    // Zonder salarisdag of saldo toont de widget alleen de kaartjes.
+    loadFreeToSpend(supabase, userId, new Date()).catch(() => null),
+    options.card === false ? null : oldestOpenCard(supabase, userId).catch(() => null),
+  ]);
+  return { open, free, card };
 }

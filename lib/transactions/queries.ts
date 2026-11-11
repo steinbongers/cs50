@@ -55,13 +55,13 @@ export const OPEN_BATCH_SIZE = 40;
  * achteraan, zodat "Later" ook echt later betekent. Eigen overboekingen
  * tussen gekoppelde rekeningen komen niet op de stapel.
  */
-export async function getOpenTransactions(limit = OPEN_BATCH_SIZE): Promise<OpenTransaction[]> {
+export async function getOpenTransactions(limit = OPEN_BATCH_SIZE, firstId?: string): Promise<OpenTransaction[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const columns =
+    "id, booking_date, booking_time, amount, counterparty, description, raw_counterparty, raw_description, balance_after, skipped_count, note";
+  const { data: rows, error } = await supabase
     .from("transactions")
-    .select(
-      "id, booking_date, booking_time, amount, counterparty, description, raw_counterparty, raw_description, balance_after, skipped_count, note",
-    )
+    .select(columns)
     .is("category_id", null)
     .eq("is_internal_transfer", false)
     .order("skipped_count", { ascending: true })
@@ -71,7 +71,25 @@ export async function getOpenTransactions(limit = OPEN_BATCH_SIZE): Promise<Open
 
   if (error) throw new Error("Transacties konden niet worden geladen.");
 
-  return (data ?? []).map((t) => ({
+  // Vanuit een melding ("Ander potje"): dat kaartje bovenop, als het nog open is.
+  let data = rows ?? [];
+  if (firstId && /^[0-9a-f-]{36}$/i.test(firstId)) {
+    const inBatch = data.find((t) => t.id === firstId);
+    const first =
+      inBatch ??
+      (
+        await supabase
+          .from("transactions")
+          .select(columns)
+          .eq("id", firstId)
+          .is("category_id", null)
+          .eq("is_internal_transfer", false)
+          .maybeSingle()
+      ).data;
+    if (first) data = [first, ...data.filter((t) => t.id !== firstId)];
+  }
+
+  return data.map((t) => ({
     id: t.id,
     bookingDate: t.booking_date,
     bookingTime: t.booking_time ? t.booking_time.slice(0, 5) : null,

@@ -41,12 +41,16 @@ Zonder `SUPABASE_SECRET_KEY` staat de uitnodigingscode-controle uit, zodat je lo
    - `ADMIN_EMAILS` (wie `/admin` mag zien), `CRON_SECRET` (willekeurige lange string)
    - `ENABLE_BANKING_APP_ID`, `ENABLE_BANKING_PRIVATE_KEY`
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (maak ze met `npx web-push generate-vapid-keys`)
+   - Voor meldingen met knoppen in de iPhone-app: `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY`, `APNS_BUNDLE_ID`
+     en `NATIVE_ACTION_SECRET` (zie `docs/native-app.md`)
 3. Registreer bij Enable Banking de redirect-URL `https://<domein>/api/bank/callback`.
 4. De planning draait in GitHub Actions (`.github/workflows/cron.yml`), omdat Vercel Hobby maar één cron per dag
    toestaat. Zet in GitHub onder Settings → Secrets and variables → Actions het secret `CRON_SECRET` (zelfde waarde
    als in Vercel) en, als de app niet op `financeapppilot.vercel.app` staat, de variable `APP_URL`. De workflow roept
-   om 06:07, 18:07 en 19:07 UTC `/api/cron/sync` en `/api/cron/notify` aan met `Authorization: Bearer $CRON_SECRET`;
-   de meldingsroute stuurt alleen om 20:00 Nederlandse tijd (zomer- en wintertijd). Let op: GitHub zet geplande
+   vier keer per dag `/api/cron/sync` aan (05:07, 10:07, 14:07 en 18:07 UTC; meer mag niet onder PSD2 zonder de
+   gebruiker erbij) en om 18:37 en 19:37 UTC `/api/cron/notify`, met `Authorization: Bearer $CRON_SECRET`.
+   Na elke ophaalronde gaat er per nieuwe uitgave een melding met knoppen naar de iPhone-app;
+   de avondmelding stuurt alleen om 20:00 Nederlandse tijd (zomer- en wintertijd). Let op: GitHub zet geplande
    workflows uit na 60 dagen zonder commits; een commit zet ze weer aan.
    Zet in Vercel onder Project Settings → Functions de regio op Frankfurt (`fra1`), dicht bij Supabase.
 5. Registreer jezelf met een adres uit `ADMIN_EMAILS`; die adressen hebben geen uitnodigingscode nodig.
@@ -69,7 +73,9 @@ Zonder `SUPABASE_SECRET_KEY` staat de uitnodigingscode-controle uit, zodat je lo
 ## Database
 
 Migraties staan in `supabase/migrations/` en zijn additief, met RLS op `(select auth.uid())`. De laatste is
-`20261014000000_afwerkronde.sql` (notitie per kaartje, spaardoel per potje, `churn_log` zonder user_id).
+`20261111000100_kaart_en_afrekening.sql` (kaartnaam bij Apple Pay en de maandafrekening van de creditcard), na
+`20261111000000_meldingen_widget.sql` (Apple Pay als bron, gekoppelde iPhones in `native_devices`, instellingen
+voor meldingen per betaling en het vergrendelscherm).
 `supabase/pilot-setup.sql` bevat alle migraties in één bestand voor een nieuw project.
 
 ## Bankkoppeling (Enable Banking)

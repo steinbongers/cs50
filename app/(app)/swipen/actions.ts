@@ -585,8 +585,9 @@ export async function splitTransaction(
     .maybeSingle();
   if (!parent) return { ok: false, error: GENERIC_ERROR };
   if (parent.category_id !== null) return { ok: false, error: "Dit kaartje zit al in een potje." };
-  // Een pinopname verdeel je via Contant; contante uitgaven en delen verdeel je niet nog eens.
-  if (parent.source === "cash" || parent.source === "split" || isCashWithdrawal(cashCandidate(parent))) {
+  // Een pinopname verdeel je via Contant; contante uitgaven verdeel je niet nog eens. Een deel (source
+  // 'split') is alleen open als het de rest van een creditcard-afrekening is (card-actions.ts): die mag wel.
+  if (parent.source === "cash" || isCashWithdrawal(cashCandidate(parent))) {
     return { ok: false, error: "Dit kaartje kun je zo niet verdelen." };
   }
 
@@ -703,6 +704,8 @@ export async function undoAssign(transactionId: string): Promise<ActionResult> {
     .eq("source", "split")
     .eq("user_id", user.id);
   if (splitError) return { ok: false, error: "Ongedaan maken lukte niet." };
+  // Creditcard-afrekening: de Apple Pay-betalingen die ermee verrekend waren, tellen weer mee voor een volgende.
+  await supabase.from("transactions").update({ card_settlement_id: null }).eq("card_settlement_id", transactionId).eq("user_id", user.id);
   await supabase
     .from("transaction_shares")
     .update({ status: "open", received_transaction_id: null, received_at: null })

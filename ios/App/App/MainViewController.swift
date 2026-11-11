@@ -7,5 +7,9 @@ class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(BiometricLockPlugin())
         bridge?.registerPluginInstance(WidgetBridgePlugin())
+        bridge?.registerPluginInstance(NativePushPlugin())
+        // Capacitor zet zijn eigen afhandelaar voor meldingen; wij gebruiken geen Capacitor-meldingsplugins,
+        // dus zetten we de onze terug (knoppen "Klopt", "Ander potje", "Later").
+        PaymentNotifications.shared.install()
     }
 }

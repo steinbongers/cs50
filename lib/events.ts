@@ -19,7 +19,7 @@ export type EventType =
   /**
    * Transactie in een potje gezet.
    * `{ transaction_id, category_id, duration_ms, skipped_before?, split_persons?, split_method?,
-   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' | 'refund' | 'refund_for' | 'split_parts',
+   *    repayment_shares?, coach: boolean, flow: 'normal' | 'repayment' | 'rule' | 'cash' | 'refund' | 'refund_for' | 'split_parts' | 'card_settlement',
    *    with_category?, complete?, estimate?, parts?, savings? }`
    * `savings` (flow 'normal'): 'in' (geld naar een spaarpotje), 'out' (uit je spaarpot gehaald) of null.
    * `split_method`: 'bank' | 'other' (verdeeld) of 'track' (bijhouden: de hele uitgave wacht op geld terug).
@@ -28,6 +28,8 @@ export type EventType =
    * daarbij zelf schatte wat hij uitgaf (een deel kwam buiten de bank terug). Nooit het bedrag zelf.
    * `flow: 'split_parts'`: één afschrijving (vaak de creditcard) verdeeld over potjes; `parts` is het
    * aantal potjes, `credit_card` of de kaart hem als creditcard herkende. Nooit bedragen of notities.
+   * `flow: 'card_settlement'`: creditcard-afrekening waarvan een deel al via Apple Pay was ingedeeld;
+   * `parts` is het aantal betalingen, `complete` of dat de hele afrekening dekte. Nooit bedragen.
    */
   | "swipe"
   /** Transactie verplaatst via de detailpagina. `{ transaction_id, category_id }` */
@@ -60,7 +62,8 @@ export type EventType =
   | "month_review_viewed"
   /**
    * Pushmelding verstuurd (server). `{ open_cards_bucket?, tag? }`
-   * `tag` is een vaste waarde: 'kaartjes' | 'jouw-maand' | 'week' | 'bank-verloopt' (ook in `app_open` en `push_opened`).
+   * `tag` is een vaste waarde: 'kaartjes' | 'jouw-maand' | 'week' | 'bank-verloopt' | 'betaling' | 'betalingen' (ook in `app_open` en `push_opened`).
+   * Bij 'betaling' ook `transaction_id` en `suggested`; bij 'betalingen' `count`. Nooit bedrag of winkel.
    */
   | "push_sent"
   /** Bank gekoppeld. `{ connection_id, accounts }` */
@@ -127,7 +130,19 @@ export type EventType =
   /** Eerdere kaartjes opgehaald. `{ choice: 'periode' | '30' | '90', inserted_bucket: '0' | '1-50' | '50+' }` */
   | "import_earlier"
   /** Kaartje wel of niet meetellen. `{ counted: boolean, from: 'stapel' | 'potje' }` */
-  | "counted_changed";
+  | "counted_changed"
+  /** iPhone gekoppeld voor widget en meldingen. `{ push: boolean, previews }` (geen toestelgegevens) */
+  | "device_linked"
+  /**
+   * Apple Pay-betaling binnen via Opdrachten. `{ transaction_id, merged, categorized }`
+   * (merged: de bank had hem al; categorized: vaste ontvanger). Nooit winkel of bedrag.
+   */
+  | "applepay_received"
+  /**
+   * Ingedeeld of op Later gezet zonder de app te openen.
+   * `{ transaction_id, category_id?, source: 'notification' | 'widget', action: 'confirm' | 'pick' | 'later' }`
+   */
+  | "native_assign";
 
 export type OpenCardsBucket = "0" | "1-5" | "6-20" | "20+";
 

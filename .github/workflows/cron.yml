@@ -1,42 +1,68 @@
 name: Cron
 
 # Vercel Hobby staat maar één cron per dag toe, daarom draait de planning hier.
-# Elke run roept beide routes aan (06:07, 18:07 en 19:07 UTC). De sync-route
-# haalt nieuwe transacties op (dubbelen worden genegeerd); de meldingsroute
-# stuurt alleen als het 20:00 (of bij vertraging 21:00) is in Amsterdam:
-# zomertijd 18 UTC, wintertijd 19 UTC. Hoogstens één melding per gebruiker per dag.
+#
+# Bank ophalen: 4 keer per dag. PSD2 staat zonder de gebruiker erbij hoogstens 4 keer per dag
+# per rekening toe; zelf verversen in de app telt daar niet bij. Tijden in UTC: 05:07, 10:07,
+# 14:07 en 18:07 (winter 6, 11, 15 en 19 uur; zomer een uur later). Na elke ronde stuurt de app
+# per nieuwe betaling een melding met knoppen naar de iPhone (niet tussen 22:00 en 07:00).
+# tests/payment-notifications.test.ts controleert dat het er nooit meer dan 4 worden.
+#
+# Avondmelding om 20:00 Amsterdam: aparte runs om 18:37 en 19:37 UTC (zomer- en wintertijd),
+# zonder bank op te halen. De route stuurt alleen als het 20:00 of 21:00 is in Amsterdam.
+# Hoogstens één avondmelding per gebruiker per dag.
+#
+# Handmatig starten (workflow_dispatch) doet allebei; dat telt ook als ophaalronde.
 #
 # Nodig in GitHub: Settings → Secrets and variables → Actions:
 #   secret CRON_SECRET  (zelfde waarde als in Vercel)
 #   variable APP_URL    (alleen als de app niet op financeapppilot.vercel.app staat)
+#
+# Deze repo is openbaar, en de logs van Actions ook. Bij succes tonen we alleen de HTTP-status;
+# alleen bij een fout het antwoord van de app (een foutmelding, nooit persoonsgegevens).
 
 on:
   schedule:
     # Niet op het hele uur: dan loopt GitHub het vaakst achter.
-    - cron: "7 6,18,19 * * *"
+    - cron: "7 5,10,14,18 * * *"
+    - cron: "37 18,19 * * *"
   workflow_dispatch:
 
 jobs:
-  run:
+  sync:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '7 5,10,14,18 * * *'
     runs-on: ubuntu-latest
     env:
       APP_URL: ${{ vars.APP_URL || 'https://financeapppilot.vercel.app' }}
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
     steps:
-      - name: Bankkoppelingen verversen
+      - name: Bankkoppelingen verversen en meldingen per betaling
         run: |
           code=$(curl --silent --show-error --max-time 300 -o body.json -w '%{http_code}' \
             -H "Authorization: Bearer $CRON_SECRET" \
             "$APP_URL/api/cron/sync")
-          # Het antwoord bevat alleen aantallen of een foutmelding, geen persoonsgegevens.
-          cat body.json; echo; echo "HTTP $code"
-          [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
-      - name: Meldingen (alleen om 20:00 Amsterdam)
-        if: always()
+          echo "HTTP $code"
+          if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then exit 0; fi
+          # Alleen bij een fout het antwoord tonen: dat is dan een foutmelding zonder persoonsgegevens.
+          # Bij succes niet: aantallen per ronde zouden in dit openbare log laten zien wanneer iemand betaalt.
+          cat body.json; echo
+          exit 1
+
+  notify:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '37 18,19 * * *'
+    runs-on: ubuntu-latest
+    env:
+      APP_URL: ${{ vars.APP_URL || 'https://financeapppilot.vercel.app' }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Avondmelding (alleen om 20:00 Amsterdam)
         run: |
           code=$(curl --silent --show-error --max-time 120 -o body.json -w '%{http_code}' \
             -H "Authorization: Bearer $CRON_SECRET" \
             "$APP_URL/api/cron/notify")
-          # Het antwoord bevat alleen aantallen of een foutmelding, geen persoonsgegevens.
-          cat body.json; echo; echo "HTTP $code"
-          [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
+          echo "HTTP $code"
+          if [ "$code" -ge 200 ] && [ "$code" -lt 300 ]; then exit 0; fi
+          # Alleen bij een fout het antwoord tonen: dat is dan een foutmelding zonder persoonsgegevens.
+          # Bij succes niet: aantallen per ronde zouden in dit openbare log laten zien wanneer iemand betaalt.
+          cat body.json; echo
+          exit 1

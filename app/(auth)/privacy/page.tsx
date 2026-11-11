@@ -21,6 +21,11 @@ export default function PrivacyPage() {
           <li>Je e-mailadres en de naam die je zelf invult.</li>
           <li>Je betalingen: datum, bedrag, naam van de winkel of persoon en de omschrijving, zoals je bank ze meestuurt. Je rekeningnummer bewaren we alleen half afgeschermd.</li>
           <li>De potjes die je maakt en in welk potje je elke betaling stopt.</li>
+          <li>
+            Alleen als je dat zelf instelt in de iPhone-app: de winkel, het bedrag en de naam van de kaart (bijvoorbeeld
+            Betaalpas) van een betaling met Apple Pay, zodat je meteen een melding krijgt. Geen kaartnummer. Je stopt dit door de automatisering in Opdrachten te
+            verwijderen.
+          </li>
           <li>Wat je in de app doet (bijvoorbeeld hoe vaak je een stapel wegwerkt), zonder bedragen of winkelnamen. Daarmee meten we of de app werkt.</li>
         </ul>
       </section>
@@ -48,7 +53,8 @@ export default function PrivacyPage() {
           <li>Je gegevens verkopen of delen met adverteerders.</li>
           <li>
             Je betalingen op eigen houtje in potjes stoppen of voorspellen wat je gaat doen. Alleen een ontvanger die jij
-            zelf vast zet (potje ingedrukt houden), gaat er voortaan vanzelf in.
+            zelf vast zet (potje ingedrukt houden), gaat er voortaan vanzelf in. In een melding of op de widget stellen we
+            soms een potje voor: het potje dat jij eerder koos bij dezelfde winkel. Pas als jij tikt, staat hij erin.
           </li>
           <li>Je gegevens bewaren nadat je je account hebt verwijderd.</li>
         </ul>
@@ -66,7 +72,8 @@ export default function PrivacyPage() {
         <h2 className="font-semibold">Waar het staat</h2>
         <p className="text-text-muted">
           Je gegevens staan in een database in de Europese Unie (Supabase, regio Frankfurt). De app draait op Vercel. Beide
-          verwerken je gegevens alleen in onze opdracht.
+          verwerken je gegevens alleen in onze opdracht. Meldingen naar de iPhone-app lopen via Apple. Het bedrag en de
+          winkel staan daar alleen in als je iPhone ze verbergt tot hij ontgrendeld is, of als je dat zelf aanzet.
         </p>
       </section>
 

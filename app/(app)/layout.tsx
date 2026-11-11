@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { AppOpenLogger } from "@/components/layout/app-open-logger";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { AppLockGate } from "@/components/native/app-lock-gate";
+import { DeviceRefresher } from "@/components/native/device-refresher";
 import { ensureProfile, requireUser } from "@/lib/auth";
 import { countOpenTransactions } from "@/lib/transactions/queries";
 
@@ -22,6 +23,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col pb-[calc(5rem+env(safe-area-inset-bottom))]">{children}</div>
       <BottomNav openCount={openCount} />
       <AppOpenLogger />
+      <DeviceRefresher />
     </>
   );
 }

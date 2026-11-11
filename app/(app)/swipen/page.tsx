@@ -23,8 +23,11 @@ import { SortScreen } from "./sort-screen";
 
 export const metadata: Metadata = { title: ACTION_LABEL };
 
-export default async function SwipenPage() {
+export default async function SwipenPage({ searchParams }: PageProps<"/swipen">) {
   const user = await requireUser();
+  // ?tx=<id>: geopend vanuit een melding over die betaling.
+  const { tx } = await searchParams;
+  const firstId = typeof tx === "string" ? tx : undefined;
   const profile = await ensureProfile(user);
   const period = currentPeriod(profile.salary_day, amsterdamToday());
 
@@ -32,7 +35,7 @@ export default async function SwipenPage() {
   await convertOpenSharesToTracking().catch(() => 0);
   const [categories, transactions, totalOpen, openShares, awaitingRefunds] = await Promise.all([
     getActiveCategories(period),
-    getOpenTransactions(),
+    getOpenTransactions(undefined, firstId),
     countOpenTransactions(),
     getOpenShares(),
     getAwaitingRefunds(),

@@ -4,17 +4,19 @@ import { LayoutDashboard } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { RowLabel, ROW_FOCUS } from "@/app/(app)/instellingen/rows";
 import { ListRow } from "@/components/ui/list-group";
+import { linkThisDevice, nativePushAvailable } from "@/lib/native/device-link";
 import { createWidgetToken } from "@/lib/native/widget-actions";
 import { hasNativePlugin, subscribeNever } from "@/lib/native/platform";
-import { loadWidgetBridge, WIDGET_BRIDGE } from "@/lib/native/plugins";
+import { loadNativePush, loadWidgetBridge, WIDGET_BRIDGE } from "@/lib/native/plugins";
 
 function isAvailable() {
-  return hasNativePlugin(WIDGET_BRIDGE);
+  return hasNativePlugin(WIDGET_BRIDGE) || nativePushAvailable();
 }
 
 /**
- * Koppelt de widget op het beginscherm: maakt een widgetsleutel aan en geeft die aan de
- * iPhone-app, die hem in de gedeelde App Group zet. Opnieuw tikken maakt een nieuwe sleutel.
+ * Koppelt de widget op het beginscherm. Nieuwe builds koppelen het toestel met een apparaatsleutel
+ * in de Keychain (ook nodig voor de knoppen op de grote widget); oudere builds krijgen een
+ * widgetsleutel in de gedeelde App Group. Opnieuw tikken maakt een nieuwe sleutel.
  * Alleen in de iPhone-app; daarbuiten rendert dit niets.
  */
 export function WidgetSetupRow() {
@@ -26,7 +28,8 @@ export function WidgetSetupRow() {
   useEffect(() => {
     if (!available) return;
     let cancelled = false;
-    loadWidgetBridge()
+    // Nieuwe builds koppelen het hele toestel (apparaatsleutel in de Keychain); oudere alleen de widget.
+    (nativePushAvailable() ? loadNativePush() : loadWidgetBridge())
       .then(({ plugin }) => plugin.status())
       .then((status) => {
         if (!cancelled) setLinked(status.linked);
@@ -44,6 +47,12 @@ export function WidgetSetupRow() {
     setBusy(true);
     setFailed(false);
     try {
+      if (nativePushAvailable()) {
+        const linkedNow = await linkThisDevice();
+        if (linkedNow.ok) setLinked(true);
+        else setFailed(true);
+        return;
+      }
       const result = await createWidgetToken();
       if (!result.ok) {
         setFailed(true);
