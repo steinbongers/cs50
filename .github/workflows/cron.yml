@@ -25,12 +25,18 @@ jobs:
     steps:
       - name: Bankkoppelingen verversen
         run: |
-          curl --fail --silent --show-error --max-time 300 -w '\nHTTP %{http_code}\n' \
+          code=$(curl --silent --show-error --max-time 300 -o body.json -w '%{http_code}' \
             -H "Authorization: Bearer $CRON_SECRET" \
-            "$APP_URL/api/cron/sync"
+            "$APP_URL/api/cron/sync")
+          # Het antwoord bevat alleen aantallen of een foutmelding, geen persoonsgegevens.
+          cat body.json; echo; echo "HTTP $code"
+          [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
       - name: Meldingen (alleen om 20:00 Amsterdam)
         if: always()
         run: |
-          curl --fail --silent --show-error --max-time 120 -w '\nHTTP %{http_code}\n' \
+          code=$(curl --silent --show-error --max-time 120 -o body.json -w '%{http_code}' \
             -H "Authorization: Bearer $CRON_SECRET" \
-            "$APP_URL/api/cron/notify"
+            "$APP_URL/api/cron/notify")
+          # Het antwoord bevat alleen aantallen of een foutmelding, geen persoonsgegevens.
+          cat body.json; echo; echo "HTTP $code"
+          [ "$code" -ge 200 ] && [ "$code" -lt 300 ]
