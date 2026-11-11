@@ -7,19 +7,68 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05E299DCF682E449B923851D /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F5AF152B1FDF0FB1005FA1C /* NotificationService.swift */; };
+		15BD074650B6F07AC81CAC41 /* NativeShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACD2DEF0DD037E4297CA7082 /* NativeShared.swift */; };
+		1730670C1F7E41E9FEC434BD /* FinanceWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 86E27890DA918E35323DED0D /* FinanceWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		1D1E46124C5E052F8B763A5A /* NativePushPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90A39C1653CB18ACC244AE0C /* NativePushPlugin.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
+		317C6547F093080B2C80C6AD /* BiometricLockPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D938DD122F1156D365D2BB /* BiometricLockPlugin.swift */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
+		505D13DC0C8D89D2FB4BFE1B /* PaymentNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = C514F2B971197CDC00B49825 /* PaymentNotifications.swift */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		72C27AB8BFB693EF6B2B08DD /* PaymentIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 412D86ADF795AADFECFE01D2 /* PaymentIntent.swift */; };
+		7CF209031601376C46BC8999 /* NotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 844668FA9D428C9BCD5AC66A /* NotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
+		96111820389B0DF358AF7D2C /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 526C17FBB116F0365AC11DA1 /* MainViewController.swift */; };
+		BE33EE59F6120EDF2461A1BB /* NativeShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACD2DEF0DD037E4297CA7082 /* NativeShared.swift */; };
+		D7C22BDCA17CB0D4BD639782 /* FinanceWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1C13323F3DE8D8F7BAA2899 /* FinanceWidget.swift */; };
+		DB3A84A9F8FFCBD29F16B310 /* WidgetBridgePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 369518101E6ED0D32BD10FF4 /* WidgetBridgePlugin.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		3A312D2C034D9A920D4AE0F0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DF5172B955AB4B44E7AA556A;
+			remoteInfo = NotificationService;
+		};
+		D8C92375EDB1544796A737CB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6597E57509EA661ABEDB23F7;
+			remoteInfo = FinanceWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		29E82698D373CA86020F7CF0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				1730670C1F7E41E9FEC434BD /* FinanceWidget.appex in Embed Foundation Extensions */,
+				7CF209031601376C46BC8999 /* NotificationService.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		18D938DD122F1156D365D2BB /* BiometricLockPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BiometricLockPlugin.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
+		369518101E6ED0D32BD10FF4 /* WidgetBridgePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetBridgePlugin.swift; sourceTree = "<group>"; };
+		412D86ADF795AADFECFE01D2 /* PaymentIntent.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PaymentIntent.swift; sourceTree = "<group>"; };
+		49AD4F8002A926EC7296CFE1 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		4F5AF152B1FDF0FB1005FA1C /* NotificationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -28,11 +77,28 @@
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
+		526C17FBB116F0365AC11DA1 /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
+		5D466183D28250495EBD320E /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		844668FA9D428C9BCD5AC66A /* NotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		86E27890DA918E35323DED0D /* FinanceWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FinanceWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8FBC0D6B73A7D5728E12B905 /* FinanceWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = FinanceWidget.entitlements; sourceTree = "<group>"; };
+		90A39C1653CB18ACC244AE0C /* NativePushPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativePushPlugin.swift; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		ACD2DEF0DD037E4297CA7082 /* NativeShared.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NativeShared.swift; sourceTree = "<group>"; };
+		C514F2B971197CDC00B49825 /* PaymentNotifications.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PaymentNotifications.swift; sourceTree = "<group>"; };
+		D1C13323F3DE8D8F7BAA2899 /* FinanceWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FinanceWidget.swift; sourceTree = "<group>"; };
+		F552AAC915FC38F380E151AC /* App.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2D6F0B83B66CB21842F6F1D0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3011FED79650016851F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -41,15 +107,32 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CFA7D572EB302E39DB9D8D73 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		3EDE19B4750D86AEC283EFAF /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
+				756A0E6E9EB77E4E2C4A70C4 /* Frameworks */,
+				5631AD6D2D0CEB40F662795B /* FinanceWidget */,
+				AF7CAB5483BCE9B390536CB6 /* NotificationService */,
 			);
 			sourceTree = "<group>";
 		};
@@ -57,6 +140,8 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				86E27890DA918E35323DED0D /* FinanceWidget.appex */,
+				844668FA9D428C9BCD5AC66A /* NotificationService.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -73,8 +158,45 @@
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				526C17FBB116F0365AC11DA1 /* MainViewController.swift */,
+				18D938DD122F1156D365D2BB /* BiometricLockPlugin.swift */,
+				369518101E6ED0D32BD10FF4 /* WidgetBridgePlugin.swift */,
+				ACD2DEF0DD037E4297CA7082 /* NativeShared.swift */,
+				90A39C1653CB18ACC244AE0C /* NativePushPlugin.swift */,
+				C514F2B971197CDC00B49825 /* PaymentNotifications.swift */,
+				412D86ADF795AADFECFE01D2 /* PaymentIntent.swift */,
+				F552AAC915FC38F380E151AC /* App.entitlements */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		5631AD6D2D0CEB40F662795B /* FinanceWidget */ = {
+			isa = PBXGroup;
+			children = (
+				D1C13323F3DE8D8F7BAA2899 /* FinanceWidget.swift */,
+				5D466183D28250495EBD320E /* Info.plist */,
+				8FBC0D6B73A7D5728E12B905 /* FinanceWidget.entitlements */,
+			);
+			name = FinanceWidget;
+			path = Widget;
+			sourceTree = "<group>";
+		};
+		756A0E6E9EB77E4E2C4A70C4 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				3EDE19B4750D86AEC283EFAF /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		AF7CAB5483BCE9B390536CB6 /* NotificationService */ = {
+			isa = PBXGroup;
+			children = (
+				4F5AF152B1FDF0FB1005FA1C /* NotificationService.swift */,
+				49AD4F8002A926EC7296CFE1 /* Info.plist */,
+			);
+			name = NotificationService;
+			path = NotificationService;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -87,10 +209,13 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				29E82698D373CA86020F7CF0 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				CE0BF20060F036578C1C1378 /* PBXTargetDependency */,
+				940BF23D9D941CDFAAFB8742 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -99,6 +224,40 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		6597E57509EA661ABEDB23F7 /* FinanceWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 844EE343029D41F6E5CA3837 /* Build configuration list for PBXNativeTarget "FinanceWidget" */;
+			buildPhases = (
+				C9E49C23CDD4FDFA47A8B4A8 /* Sources */,
+				CFA7D572EB302E39DB9D8D73 /* Frameworks */,
+				0C4D875536A54D9C256CC9BD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FinanceWidget;
+			productName = FinanceWidget;
+			productReference = 86E27890DA918E35323DED0D /* FinanceWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		DF5172B955AB4B44E7AA556A /* NotificationService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C6AB9FA5F34F6F4F1F0E325D /* Build configuration list for PBXNativeTarget "NotificationService" */;
+			buildPhases = (
+				BE7F363EECD7B735DF4EED24 /* Sources */,
+				2D6F0B83B66CB21842F6F1D0 /* Frameworks */,
+				A6E5C38966CFCF2F0CFD8A69 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NotificationService;
+			productName = NotificationService;
+			productReference = 844668FA9D428C9BCD5AC66A /* NotificationService.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -133,11 +292,20 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				6597E57509EA661ABEDB23F7 /* FinanceWidget */,
+				DF5172B955AB4B44E7AA556A /* NotificationService */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		0C4D875536A54D9C256CC9BD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3021FED79650016851F /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -151,6 +319,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A6E5C38966CFCF2F0CFD8A69 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -160,10 +335,49 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				96111820389B0DF358AF7D2C /* MainViewController.swift in Sources */,
+				317C6547F093080B2C80C6AD /* BiometricLockPlugin.swift in Sources */,
+				DB3A84A9F8FFCBD29F16B310 /* WidgetBridgePlugin.swift in Sources */,
+				BE33EE59F6120EDF2461A1BB /* NativeShared.swift in Sources */,
+				1D1E46124C5E052F8B763A5A /* NativePushPlugin.swift in Sources */,
+				505D13DC0C8D89D2FB4BFE1B /* PaymentNotifications.swift in Sources */,
+				72C27AB8BFB693EF6B2B08DD /* PaymentIntent.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BE7F363EECD7B735DF4EED24 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				05E299DCF682E449B923851D /* NotificationService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C9E49C23CDD4FDFA47A8B4A8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D7C22BDCA17CB0D4BD639782 /* FinanceWidget.swift in Sources */,
+				15BD074650B6F07AC81CAC41 /* NativeShared.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		940BF23D9D941CDFAAFB8742 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = NotificationService;
+			target = DF5172B955AB4B44E7AA556A /* NotificationService */;
+			targetProxy = 3A312D2C034D9A920D4AE0F0 /* PBXContainerItemProxy */;
+		};
+		CE0BF20060F036578C1C1378 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = FinanceWidget;
+			target = 6597E57509EA661ABEDB23F7 /* FinanceWidget */;
+			targetProxy = D8C92375EDB1544796A737CB /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -185,6 +399,59 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		2F3BE26FD7834193F851E1D7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NotificationService/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.steinbongers.financeapp.NotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		46C48EFFAB745862879FE0D7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = Widget/FinanceWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.steinbongers.financeapp.FinanceWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		504EC3141FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
@@ -299,6 +566,7 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
@@ -321,6 +589,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
@@ -337,6 +606,59 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
+		};
+		C5771EB24CA4F8941601AAC8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NotificationService/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.steinbongers.financeapp.NotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E41157D69014C8DFF18A34F4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = Widget/FinanceWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nl.steinbongers.financeapp.FinanceWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
@@ -355,6 +677,24 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		844EE343029D41F6E5CA3837 /* Build configuration list for PBXNativeTarget "FinanceWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46C48EFFAB745862879FE0D7 /* Release */,
+				E41157D69014C8DFF18A34F4 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C6AB9FA5F34F6F4F1F0E325D /* Build configuration list for PBXNativeTarget "NotificationService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C5771EB24CA4F8941601AAC8 /* Release */,
+				2F3BE26FD7834193F851E1D7 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

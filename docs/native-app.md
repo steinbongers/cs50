@@ -45,6 +45,9 @@ Na een wijziging aan `capacitor.config.ts` of het icoon: `git pull`, `npx cap sy
 
 ## Face ID-slot en widget (eenmalig in Xcode)
 
+> **Sinds 11 november 2026 staat dit al in het Xcode-project** (zie hoofdstuk "Melding na elke betaling", stap D).
+> De stappen 2 tot en met 6 hieronder zijn alleen nog naslag voor wie het project opnieuw moet opbouwen.
+
 Twee native functies zitten in de schil zelf, dus hiervoor is één keer een nieuwe build nodig:
 
 - **Face ID-slot**: in Instellingen, groep Meldingen en weergave. Staat het aan, dan vraagt de app Face ID
@@ -197,51 +200,28 @@ npx cap sync ios
 npx cap open ios
 ```
 
-**D1. Vier nieuwe bestanden aan de app toevoegen**
+Het Xcode-project in de repo bevat alles al: de Swift-bestanden bij de app, de App Group, Push Notifications,
+het widget-target **FinanceWidget** en het target **NotificationService** (dat op je iPhone beslist of het bedrag
+in een melding mag staan). Dat is gedaan met `scripts/setup-ios-targets.rb`; de stappen 2 tot en met 6 uit het
+hoofdstuk "Face ID-slot en widget" hierboven hoef je daardoor niet meer met de hand te doen.
 
-1. Klik met rechts op de gele map **App**, **Add Files to "App"…**.
-2. Selecteer in `ios/App/App` (Cmd ingedrukt houden):
-   - `NativeShared.swift`
-   - `NativePushPlugin.swift`
-   - `PaymentNotifications.swift`
-   - `PaymentIntent.swift`
-3. **Copy items if needed** uit (Reference files in place). Bij **Targets**: **App** aan. Klik **Add**.
+**D1. Je team kiezen (eenmalig per Mac)**
 
-**D2. `NativeShared.swift` ook bij de widget aanvinken**
+Je ontwikkelteam staat bewust niet in de openbare repo. Kies het op een van deze twee manieren:
 
-1. Klik in de navigator op `NativeShared.swift`.
-2. Open rechts het paneel **File Inspector** (het eerste tabje, een blaadje; menu View, Inspectors, File).
-3. Onder **Target Membership**: vink naast **App** ook **FinanceWidget** aan.
-   (Alleen dit ene bestand. De andere drie blijven alleen bij App.)
+- In Xcode: klik op het blauwe project **App**, en kies bij elk van de drie targets (**App**, **FinanceWidget**,
+  **NotificationService**) onder **Signing & Capabilities** je **Team**.
+- Of in Terminal, met je eigen Team ID in plaats van de X'en:
 
-**D3. Meldingen aanzetten op de app**
+  ```sh
+  TEAM=XXXXXXXXXX GEM_HOME="$(ls -d /opt/homebrew/Cellar/cocoapods/*/libexec | tail -1)" /opt/homebrew/opt/ruby/bin/ruby scripts/setup-ios-targets.rb
+  ```
 
-1. Blauwe project **App**, target **App**, tabblad **Signing & Capabilities**.
-2. **+ Capability**, kies **Push Notifications**. Er komt een regel "Push Notifications" bij.
-   (Xcode zet dit in `App.entitlements` en regelt het bij Apple.)
+  Commit die wijziging aan `project.pbxproj` niet.
 
-**D4. De widget bijwerken**
+Xcode registreert daarna zelf de App Group en Push Notifications bij Apple zodra je bouwt.
 
-Het bestand `ios/App/Widget/FinanceWidget.swift` is vernieuwd; Xcode verwijst er al naar, dus hier hoef je niets
-toe te voegen. Controleer alleen bij target **FinanceWidget**, tabblad **General**: **Minimum Deployments** is
-**iOS 17.0**, en bij **Signing & Capabilities** staat de App Group `group.nl.steinbongers.financeapp` aangevinkt.
-
-**D5. Een klein extra target voor het vergrendelscherm (Notification Service)**
-
-Dit target beslist op je iPhone zelf of het bedrag in een melding mag staan. Zonder dit target werken meldingen
-en knoppen ook, maar staat er na een bankronde altijd alleen "Nieuwe betaling" in plaats van bedrag en winkel.
-
-1. Menu **File**, **New**, **Target…**, kies **iOS**, **Notification Service Extension**, **Next**.
-2. **Product Name**: `NotificationService`. **Team**: hetzelfde als bij de app. Klik **Finish**.
-   Vraagt Xcode of hij het schema moet activeren: kies **Cancel**.
-3. In de navigator staat nu een map **NotificationService** met een bestand `NotificationService.swift` dat Xcode
-   zelf maakte. Verwijder dat bestand (rechts klikken, **Delete**, **Move to Trash**).
-4. Klik met rechts op de map **NotificationService**, **Add Files to "App"…**, kies
-   `ios/App/NotificationService/NotificationService.swift`. **Copy items if needed** uit. Bij **Targets** alleen
-   **NotificationService** aanvinken. Klik **Add**.
-5. Target **NotificationService**, tabblad **General**: **Minimum Deployments** op **iOS 15.0**.
-
-**D6. Bouwen**
+**D2. Bouwen**
 
 Kies bovenaan het schema **App** en je iPhone, klik op afspelen. Meldt Xcode een fout, kijk dan eerst onder
 "Als het niet werkt" hieronder.
@@ -293,7 +273,7 @@ Kies bovenaan het schema **App** en je iPhone, klik op afspelen. Meldt Xcode een
   Kaart in de actie werkt alles ook, maar dan weet de app niet wat een creditcardbetaling is en werkt de knop op de
   maandafrekening niet.
 - **Vergrendelscherm**: na een bankronde stuurt de server een melding zonder bedrag. Je iPhone zet het bedrag er
-  zelf in, en alleen als "Voorvertoning tonen" op "Indien ontgrendeld" staat (stap D5). Zo staat het bedrag nooit
+  zelf in, en alleen als "Voorvertoning tonen" op "Indien ontgrendeld" staat. Zo staat het bedrag nooit
   leesbaar op een vergrendeld scherm, ook niet als je die instelling later verandert.
 - **Sleutels**: elke iPhone krijgt een eigen sleutel, in de Keychain. Hij wordt vervangen elke keer dat je de app
   opent en vervalt na 30 dagen niet openen; open dan de app één keer. Uitloggen haalt hem weg.
@@ -303,10 +283,8 @@ Kies bovenaan het schema **App** en je iPhone, klik op afspelen. Meldt Xcode een
 
 ### Als het niet werkt
 
-- **Xcode: "Cannot find 'NativeAPI' in scope" in de widget**: stap D2 is overgeslagen.
-- **Xcode: "Cannot find 'NativePushPlugin' in scope"**: stap D1 is overgeslagen.
-- **Na een bankronde staat er alleen "Nieuwe betaling", ook als je iPhone open is**: stap D5 ontbreekt, of
-  "Voorvertoning tonen" staat op Altijd of Nooit (iPhone-instellingen, Meldingen, de app). Zet "Verberg bedrag op
+- **Xcode: "Signing for ... requires a development team"**: stap D1, bij alle drie de targets.
+- **Na een bankronde staat er alleen "Nieuwe betaling", ook als je iPhone open is**: "Voorvertoning tonen" staat op Altijd of Nooit (iPhone-instellingen, Meldingen, de app). Zet "Verberg bedrag op
   vergrendelscherm" uit als je het bedrag altijd wilt zien.
 - **De rij "Melding na elke betaling" staat er niet**: je kijkt in Safari, of de nieuwe build staat nog niet op je iPhone.
 - **Wel Apple Pay-meldingen, geen meldingen na de bank**: controleer de vijf waarden in Vercel (stap C) en of je
