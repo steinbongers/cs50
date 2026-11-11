@@ -5,6 +5,9 @@ import { cookies, headers } from "next/headers";
 import { refresh } from "next/cache";
 import { MANUAL_SYNC_COOLDOWN_MS } from "@/config/app";
 import { requireUser } from "@/lib/auth";
+import { ensureNietMeetellenCategory } from "@/lib/categories/system";
+import { toISODate } from "@/lib/format";
+import { amsterdamToday } from "@/lib/periods";
 import { getPrimaryConnection, statusFor } from "@/lib/bank/connections";
 import { syncConnection } from "@/lib/bank/sync";
 import { verifyCredentials } from "@/lib/enablebanking/client";
@@ -223,4 +226,38 @@ export async function disconnectBank(): Promise<{ ok: true } | { ok: false; erro
   await logEvent("bank_reconnect", { connection_id: connection.id, action: "disconnect" });
   refresh();
   return { ok: true };
+}
+
+export type StartFreshResult = { ok: true; count: number } | { ok: false; error: string };
+
+/**
+ * "Begin vanaf vandaag": alle open kaartjes van vóór vandaag gaan naar Telt niet mee.
+ * Niet verwijderen: de bank levert de laatste dagen bij elke ophaalronde opnieuw aan, en een
+ * verwijderd kaartje zou dan gewoon terugkomen. Wat al in een potje zit, blijft staan.
+ * Per kaartje terug te zetten via Alle kaartjes.
+ */
+export async function startFromToday(): Promise<StartFreshResult> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  let categoryId: string;
+  try {
+    categoryId = await ensureNietMeetellenCategory(supabase, user.id);
+  } catch {
+    return { ok: false, error: "Dat lukte niet. Probeer het zo nog eens." };
+  }
+  const today = toISODate(amsterdamToday());
+  const { data, error } = await supabase
+    .from("transactions")
+    .update({ category_id: categoryId, categorized_at: new Date().toISOString(), own_share: null, awaiting_refund: false })
+    .eq("user_id", user.id)
+    .is("category_id", null)
+    .eq("is_internal_transfer", false)
+    .lt("booking_date", today)
+    .select("id");
+  if (error) return { ok: false, error: "Dat lukte niet. Probeer het zo nog eens." };
+  const count = data?.length ?? 0;
+  // Alleen een grove maat; nooit bedragen of winkels.
+  await logEvent("start_from_today", { count_bucket: count === 0 ? "0" : count <= 50 ? "1-50" : "50+" });
+  refresh();
+  return { ok: true, count };
 }

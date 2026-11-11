@@ -142,7 +142,9 @@ export type EventType =
    * Ingedeeld of op Later gezet zonder de app te openen.
    * `{ transaction_id, category_id?, source: 'notification' | 'widget', action: 'confirm' | 'pick' | 'later' }`
    */
-  | "native_assign";
+  | "native_assign"
+  /** "Begin vanaf vandaag": oudere open kaartjes naar Telt niet mee. `{ count_bucket: '0' | '1-50' | '50+' }` */
+  | "start_from_today";
 
 export type OpenCardsBucket = "0" | "1-5" | "6-20" | "20+";
 
