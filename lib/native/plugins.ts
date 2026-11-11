@@ -23,7 +23,31 @@ export interface WidgetBridgePlugin {
   status(): Promise<{ linked: boolean }>;
 }
 
+export type NativePermission = "granted" | "denied" | "prompt";
+export type NativePreviews = "always" | "when_unlocked" | "never";
+
+export interface NativePushPlugin {
+  /** Mag de app meldingen sturen, is dit toestel gekoppeld, en kan Opdrachten de Wallet-automatisering (iOS 17)? */
+  status(): Promise<{ permission: NativePermission; linked: boolean; shortcutsAvailable: boolean }>;
+  /** Toont de iOS-vraag om meldingen (één keer; daarna beslist iOS zelf). */
+  requestPermission(): Promise<{ granted: boolean }>;
+  /** Wat de server nodig heeft om dit toestel te koppelen. Zonder toestemming geen apnsToken. */
+  registration(): Promise<{
+    installationId: string;
+    previews: NativePreviews;
+    apnsEnv: "production" | "sandbox";
+    apnsToken?: string;
+  }>;
+  /** Bewaart de apparaatsleutel in de Keychain (gedeeld met de widget) en ververst de widgets. */
+  setDeviceKey(options: { key: string }): Promise<void>;
+  /** Haalt de sleutel weg (uitloggen, ontkoppelen). */
+  clear(): Promise<{ installationId: string }>;
+  /** Opent de iOS-instellingen van deze app. */
+  openSettings(): Promise<void>;
+}
+
 export const BIOMETRIC_LOCK = "BiometricLock";
+export const NATIVE_PUSH = "NativePush";
 export const WIDGET_BRIDGE = "WidgetBridge";
 
 const registered = new Map<string, unknown>();
@@ -45,6 +69,10 @@ async function load<T>(name: string): Promise<{ plugin: T }> {
 
 export function loadBiometricLock(): Promise<{ plugin: BiometricLockPlugin }> {
   return load<BiometricLockPlugin>(BIOMETRIC_LOCK);
+}
+
+export function loadNativePush(): Promise<{ plugin: NativePushPlugin }> {
+  return load<NativePushPlugin>(NATIVE_PUSH);
 }
 
 export function loadWidgetBridge(): Promise<{ plugin: WidgetBridgePlugin }> {

@@ -172,3 +172,26 @@ export async function disableNotifications(): Promise<Result> {
   refresh();
   return { ok: true };
 }
+
+/** Melding met knoppen na elke betaling (iPhone-app) aan of uit. */
+export async function setPaymentNotifications(enabled: boolean): Promise<Result> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ payment_notifications: enabled === true }).eq("id", user.id);
+  if (error) return { ok: false, error: "Opslaan lukte niet. Probeer het nog eens." };
+  refresh();
+  return { ok: true };
+}
+
+/**
+ * Bedrag, winkel en potje op het vergrendelscherm tonen. Standaard uit (privacy by default):
+ * dan staan ze alleen in een melding als iOS de tekst zelf verbergt tot de iPhone ontgrendeld is.
+ */
+export async function setLockScreenDetails(enabled: boolean): Promise<Result> {
+  const user = await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ lock_screen_details: enabled === true }).eq("id", user.id);
+  if (error) return { ok: false, error: "Opslaan lukte niet. Probeer het nog eens." };
+  refresh();
+  return { ok: true };
+}
