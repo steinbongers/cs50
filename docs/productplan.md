@@ -5,6 +5,10 @@ Stand: 8 oktober 2026, voor de pilot van volgende week. Bij een conflict wint `d
 ## 1. Visie
 1. [Appnaam] is de rustigste manier voor 18-30-jarigen om te weten waar hun geld heen gaat: elk kaartje stop je zelf in een potje, met één tik.
 2. We delen niets automatisch in en voorspellen niets. Die ene seconde aandacht per betaling ís het product.
+   **Bewuste afwijking (11 november 2026, Stein):** de melding na een betaling en de grote widget mogen een potje
+   *voorstellen*: het potje dat je zelf het vaakst koos bij dezelfde winkel. Het blijft een voorstel. Niets gaat in
+   een potje zonder een tik van jou ("Klopt"), en zonder eerdere keuze bij die winkel is er geen voorstel. In de app
+   zelf (Swipen) blijft alles zoals het was: geen voorselectie. Zie `docs/beslissingen.md`.
 3. We winnen van Copilot, Emma en de bank-apps door minder te tonen: alleen getallen die helpen bij een beslissing, in een strak Voorgeschoten-jasje.
 
 ## 2. Tone of voice
@@ -185,7 +189,8 @@ Stand: 8 oktober 2026, voor de pilot van volgende week. Bij een conflict wint `d
 ## 8. Definition of done
 1. Alle pakketten zijn af. Een functie zit er volledig in of niet, nooit half.
 2. Swipen op 390×844 scrolt niet met 14 en met 15 tegels, en op 375×667 ook niet. Getest in licht en donker en met reduced motion.
-3. Nergens automatisch indelen, voorselecteren of voorspellen. De enige uitzondering blijft het overslaan van eigen overboekingen.
+3. Nergens automatisch indelen, voorselecteren of voorspellen. Uitzonderingen: het overslaan van eigen overboekingen,
+   vaste ontvangers (door de gebruiker ingesteld) en het voorstel in de melding en op de widget (11 november 2026).
 4. Elk getal op het scherm hoort bij een beslissing. Geen procenten als decoratie.
 5. Tikvlakken ≥ 44 px. VoiceOver-labels op de tegels ("Boodschappen, € 312 deze maand"), de kaart en de badge. De focusring is zichtbaar.
 6. Migraties zijn additief en hebben RLS met `(select auth.uid())`. Ze staan ook in `pilot-setup.sql`, en `lib/supabase/types.ts` is bijgewerkt.
@@ -195,6 +200,8 @@ Stand: 8 oktober 2026, voor de pilot van volgende week. Bij een conflict wint `d
 
 ## 9. Bewust NIET
 - Automatisch categoriseren, voorselecties, AI-suggesties, regels ("altijd AH → Boodschappen") of bulk-indelen.
+  (Sinds 11 november 2026 wel: een voorstel in de melding en op de widget, op basis van je eigen eerdere keuzes en
+  alleen na jouw tik. Geen AI, geen indeling zonder tik.)
 - Voorspellingen: saldoprognose, "je komt tekort", "nog N maanden tot je doel".
 - Betaalverzoeken, Tikkie-links, deelknoppen of herinneringen sturen naar anderen.
 - Budget op de tegels, grafiekenmuren, percentages in lijsten.

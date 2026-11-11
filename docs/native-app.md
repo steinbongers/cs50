@@ -146,10 +146,146 @@ Kies onder Targets **FinanceWidget**:
 - **Face ID-slot per toestel**: de stand staat op de iPhone zelf. Uitloggen of een nieuwe build zet hem niet uit.
 - `npx cap sync` laat deze bestanden en instellingen met rust.
 
+## Melding na elke betaling, Apple Pay en de grote widget (eenmalig)
+
+Sinds november 2026 kan de app na elke betaling een melding sturen met de knoppen **✓ Klopt** en **Ander potje**,
+en is er een grote widget waarmee je de oudste open betaling met één tik indeelt. Achtergrond en keuzes staan in
+`docs/plan-meldingen-en-widget.md` en `docs/beslissingen.md`.
+
+Hiervoor moet je op vijf plekken iets doen. Doe ze in deze volgorde. Heb je het Face ID-slot en de widget hierboven
+nog niet gedaan, doe die stappen dan eerst.
+
+### A. Supabase: de nieuwe tabellen
+
+1. Open je Supabase-project, links **SQL Editor**, **New query**.
+2. Open in de repo het bestand `supabase/migrations/20261111000000_meldingen_widget.sql`, kopieer alles en plak het.
+3. Klik **Run**. Er hoort "Success. No rows returned" te staan. Nog een keer draaien kan geen kwaad.
+
+### B. Apple Developer: een sleutel voor meldingen
+
+1. Ga naar https://developer.apple.com/account, **Certificates, IDs & Profiles**, links **Keys**, klik op het plusje.
+2. Naam: bijvoorbeeld `Meldingen`. Vink **Apple Push Notifications service (APNs)** aan. Klik **Continue**, **Register**.
+3. Klik **Download**. Je krijgt een bestand `AuthKey_XXXXXXXXXX.p8`. **Dit kan maar één keer.** Bewaar het op een
+   veilige plek (niet in de repo, niet in een chat).
+4. Noteer de **Key ID** (10 tekens, staat op die pagina en in de bestandsnaam).
+5. Noteer je **Team ID**: rechtsboven onder je naam, of onder **Membership details** (10 tekens).
+
+### C. Vercel: vijf waarden
+
+Ga in Vercel naar het project, **Settings**, **Environment Variables**. Voeg toe (voor Production én Preview):
+
+| Naam | Waarde |
+|---|---|
+| `APNS_KEY_ID` | de Key ID uit stap B4 |
+| `APNS_TEAM_ID` | je Team ID uit stap B5 |
+| `APNS_PRIVATE_KEY` | de hele inhoud van het `.p8`-bestand (open het met Teksteditor; inclusief de regels met BEGIN en END) |
+| `APNS_BUNDLE_ID` | `nl.steinbongers.financeapp` (of je eigen bundel-id als je die hebt veranderd) |
+| `NATIVE_ACTION_SECRET` | een lange willekeurige tekst. Maak hem in Terminal met `openssl rand -base64 48` |
+
+Zet bij `APNS_PRIVATE_KEY` en `NATIVE_ACTION_SECRET` het vinkje **Sensitive** aan. Klik daarna bovenaan op
+**Deployments**, de drie puntjes bij de laatste, **Redeploy**, zodat de app de nieuwe waarden leest.
+
+Deze waarden horen nergens anders: niet in de code, niet in GitHub. De repo is openbaar.
+
+### D. Xcode: bestanden, capability en widget
+
+```sh
+git pull
+npm install
+npx cap sync ios
+npx cap open ios
+```
+
+**D1. Vier nieuwe bestanden aan de app toevoegen**
+
+1. Klik met rechts op de gele map **App**, **Add Files to "App"…**.
+2. Selecteer in `ios/App/App` (Cmd ingedrukt houden):
+   - `NativeShared.swift`
+   - `NativePushPlugin.swift`
+   - `PaymentNotifications.swift`
+   - `PaymentIntent.swift`
+3. **Copy items if needed** uit (Reference files in place). Bij **Targets**: **App** aan. Klik **Add**.
+
+**D2. `NativeShared.swift` ook bij de widget aanvinken**
+
+1. Klik in de navigator op `NativeShared.swift`.
+2. Open rechts het paneel **File Inspector** (het eerste tabje, een blaadje; menu View, Inspectors, File).
+3. Onder **Target Membership**: vink naast **App** ook **FinanceWidget** aan.
+   (Alleen dit ene bestand. De andere drie blijven alleen bij App.)
+
+**D3. Meldingen aanzetten op de app**
+
+1. Blauwe project **App**, target **App**, tabblad **Signing & Capabilities**.
+2. **+ Capability**, kies **Push Notifications**. Er komt een regel "Push Notifications" bij.
+   (Xcode zet dit in `App.entitlements` en regelt het bij Apple.)
+
+**D4. De widget bijwerken**
+
+Het bestand `ios/App/Widget/FinanceWidget.swift` is vernieuwd; Xcode verwijst er al naar, dus hier hoef je niets
+toe te voegen. Controleer alleen bij target **FinanceWidget**, tabblad **General**: **Minimum Deployments** is
+**iOS 17.0**, en bij **Signing & Capabilities** staat de App Group `group.nl.steinbongers.financeapp` aangevinkt.
+
+**D5. Bouwen**
+
+Kies bovenaan het schema **App** en je iPhone, klik op afspelen. Meldt Xcode een fout, kijk dan eerst onder
+"Als het niet werkt" hieronder.
+
+### E. Op je iPhone
+
+1. Open de app, ga naar **Instellingen**, groep **Meldingen en weergave**.
+2. Zet **Melding na elke betaling** aan en kies **Sta toe** bij de vraag van iOS.
+3. **Verberg bedrag op vergrendelscherm** staat aan. Laat dat zo, tenzij je het bedrag ook op een vergrendeld
+   scherm wilt zien.
+4. Tik op **Apple Pay instellen** en volg de zes stappen. Je maakt één keer een automatisering in de app Opdrachten.
+5. Widget: houd je beginscherm ingedrukt, **Wijzig**, **Voeg widget toe**, zoek de app en kies de **grote** variant.
+
+### Testen
+
+- **Apple Pay**: betaal iets kleins met Apple Pay. Binnen een paar seconden komt er een melding. Tik je de eerste
+  keer op "Ander potje" en kies je een potje, dan stelt de app bij de volgende betaling bij die winkel dat potje voor.
+- **Klopt**: houd de melding ingedrukt (of veeg naar links, **Opties**) en tik **✓ Klopt**. De app opent niet. Open
+  daarna de app: de betaling staat in het potje.
+- **Vergrendelscherm**: vergrendel je iPhone en laat iemand je een betaling sturen of wacht op de volgende
+  ophaalronde. Op het vergrendelde scherm hoort alleen "Nieuwe betaling" te staan, tot je naar je iPhone kijkt.
+- **Bank**: handmatig een ronde starten kan in GitHub, tabblad **Actions**, **Cron**, **Run workflow**. In het
+  antwoord staan alleen aantallen, bijvoorbeeld `"inserted":3,"merged":1,"notified":2`. Doe dit niet vaak: het telt
+  mee voor de 4 keer per dag die de bank toestaat.
+- **Widget**: tik op een potje. De betaling verdwijnt en de volgende verschijnt binnen een paar seconden.
+
+### Goed om te weten
+
+- **Wat Apple Pay doorgeeft**: alleen winkel en bedrag. Geen kaartnummer. Het werkt alleen voor Apple Pay; pinnen
+  met een pasje en iDEAL komen via de bank.
+- **Bank is niet direct**: de app haalt 4 keer per dag op (rond 6, 11, 15 en 19 uur; in de zomer een uur later).
+  ING toont een pinbetaling soms pas na uren. Tussen 22:00 en 07:00 komen er geen meldingen per betaling.
+- **Dubbel?** Komt een Apple Pay-betaling later via de bank, dan voegt de app ze samen. Lukt dat niet (de bank
+  gebruikt een heel andere naam én er waren meer betalingen van hetzelfde bedrag), dan zie je hem twee keer. Eén
+  van de twee kun je dan in het potje "Niet meetellen" zetten. Meld het, dan kan de herkenning beter.
+- **Betaald met een kaart die niet gekoppeld is** (bijvoorbeeld een creditcard in Apple Pay): die betaling komt
+  nooit via de bank en blijft als Apple Pay-regel staan.
+- **Sleutels**: elke iPhone krijgt een eigen sleutel, in de Keychain. Hij wordt vervangen elke keer dat je de app
+  opent en vervalt na 30 dagen niet openen; open dan de app één keer. Uitloggen haalt hem weg.
+- **Testbuild of TestFlight**: een build vanuit Xcode (afspeelknop) praat met de testomgeving van Apple, een
+  TestFlight-build met de echte. De app geeft dat zelf door; je hoeft niets te kiezen.
+- **Bundel-id veranderd?** Pas dan ook `appGroup` aan in `ios/App/App/NativeShared.swift`, en `APNS_BUNDLE_ID` in Vercel.
+
+### Als het niet werkt
+
+- **Xcode: "Cannot find 'NativeAPI' in scope" in de widget**: stap D2 is overgeslagen.
+- **Xcode: "Cannot find 'NativePushPlugin' in scope"**: stap D1 is overgeslagen.
+- **De rij "Melding na elke betaling" staat er niet**: je kijkt in Safari, of de nieuwe build staat nog niet op je iPhone.
+- **Wel Apple Pay-meldingen, geen meldingen na de bank**: controleer de vijf waarden in Vercel (stap C) en of je
+  daarna opnieuw hebt gedeployed. In het antwoord van de cron staat dan `"notified":0`.
+- **De actie "Betaling indelen" staat niet in Opdrachten**: open de app één keer na het installeren en zoek opnieuw.
+  Je iPhone heeft iOS 17 of nieuwer nodig.
+- **Melding "Open de app een keer, dan is hij weer gekoppeld"**: de sleutel is verlopen of je bent uitgelogd.
+  Open de app en log zo nodig in.
+- **Widget blijft "Open de app om de widget te koppelen" tonen**: Instellingen, **Widget instellen**.
+
 ## Nog niet in de schil (volgende fase)
 
-- **Pushmeldingen**: webpush werkt niet in een app-schil. Hiervoor komt native push via Apple (APNs).
 - **Bevestigingsmail**: de link opent in Safari. Na bevestigen log je in de app gewoon in.
 - **Bankkoppeling**: ING kan de ING-app openen en daarna in Safari terugkomen in plaats van in de app.
   Dat testen we zodra de bankkoppeling werkt; de oplossing is een universal link naar de app.
 - **Naam en icoon** zijn tijdelijk ("Finance", blauw potje) tot de echte naam er is.
+- **Meestgebruikte potjes als knoppen in de melding zelf** (nu: "Ander potje" opent de app op dat kaartje).

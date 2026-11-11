@@ -310,3 +310,21 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
   spaardoel, geen maandbudget; geen weekgrafiekje.
 - **Meting:** `swipe` krijgt `savings: 'in' | 'out' | null`, `potje_created` krijgt `savings: boolean`; op `/admin`
   het aandeel gebruikers met een spaarpotje. Nooit bedragen.
+- **Melding na elke betaling en grote widget** (11 november 2026, Stein). Doel: indelen zonder de app te openen.
+  - *Twee bronnen.* Apple Pay meldt zich direct via de Opdrachten-automatisering "Transactie" (eenmalig instellen,
+    stappen in Instellingen > Apple Pay instellen). De bank is het vangnet: 4 ophaalrondes per dag (de PSD2-grens
+    zonder gebruiker), en na elke ronde een melding per nieuwe uitgave. Meer dan 3 tegelijk: één samenvatting.
+    Niet tussen 22:00 en 07:00.
+  - *Eén betaling, één regel.* Komt een Apple Pay-betaling later ook via de bank (zelfde bedrag, bank op dezelfde
+    dag of tot 3 dagen later, winkel lijkt of het is de enige kandidaat), dan blijft de bankregel en neemt die het
+    potje over. Geen tweede melding.
+  - *Voorstel, geen indeling.* Bewuste afwijking van "we voorspellen niets": de melding stelt het potje voor dat je
+    zelf het vaakst koos bij die winkel (laatste 90 dagen). Pas na "Klopt" staat hij erin. Geen eerdere keuze: geen
+    voorstel, de melding vraagt "In welk potje?". Een vaste ontvanger deelt al zelf in en geeft geen melding.
+  - *Knoppen.* "✓ Klopt" deelt in zonder de app te openen. "Ander potje" opent de app op dat kaartje. "Later" legt
+    hem achteraan. De grote widget toont de oudste open betaling met vier potjes als knoppen en "Later".
+  - *Privacy by default.* Bedrag, winkel en potje staan alleen in de melding als iOS ze verbergt tot de iPhone
+    ontgrendeld is, of als de gebruiker "Verberg bedrag op vergrendelscherm" zelf uitzet. Knoppen vragen Face ID op
+    een vergrendelde iPhone. Per iPhone een apparaatsleutel (30 dagen, bij elke keer openen vernieuwd), per melding
+    een actiesleutel (48 uur, voor precies die betaling en dat potje).
+  - *Webpush blijft* voor wie de app in Safari gebruikt: alleen de avondmelding, zonder knoppen.

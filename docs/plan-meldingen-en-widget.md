@@ -1,6 +1,6 @@
 # Plan: melding na elke betaling en grote widget met knoppen
 
-Stand: 11 november 2026. Branch `claude/melding-widget-073005`. Nog niets gebouwd: eerst akkoord.
+Stand: 11 november 2026. Branch `claude/melding-widget-073005`. Akkoord van Stein op 11 november; gebouwd op deze branch. De stappen voor Xcode, Vercel en Supabase staan in `docs/native-app.md`.
 
 ## Doel in één zin
 
