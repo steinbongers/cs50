@@ -1,13 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { syncConnection } from "@/lib/bank/sync";
 import { verifyCredentials } from "@/lib/enablebanking/client";
+import { createPaymentSender, notifyNewPayments } from "@/lib/native/payments";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 300;
 
 /**
- * Cron (GitHub Actions, 2x per dag): ververst alle actieve bankkoppelingen.
- * Beveiligd met CRON_SECRET. Antwoord bevat alleen aantallen.
+ * Cron (GitHub Actions, 4x per dag): ververst alle actieve bankkoppelingen en stuurt daarna per
+ * nieuwe, nog open uitgave een melding met knoppen naar de iPhone (zie lib/native/payments.ts).
+ * Beveiligd met CRON_SECRET. Antwoord bevat alleen aantallen: de logs van Actions zijn openbaar.
  */
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -35,13 +37,26 @@ export async function GET(request: NextRequest) {
   let inserted = 0;
   let failed = 0;
   let expired = 0;
-  for (const connection of connections ?? []) {
-    const result = await syncConnection(admin, connection);
-    if (result.expired) expired++;
-    else if (result.error) failed++;
-    else synced++;
-    inserted += result.inserted;
+  let merged = 0;
+  let notified = 0;
+  const sender = createPaymentSender();
+  try {
+    for (const connection of connections ?? []) {
+      const result = await syncConnection(admin, connection);
+      if (result.expired) expired++;
+      else if (result.error) failed++;
+      else synced++;
+      inserted += result.inserted;
+      merged += result.merged;
+      try {
+        notified += await notifyNewPayments(admin, connection.user_id, result.newIds, sender);
+      } catch {
+        // een melding die niet lukt, mag de rest van de ronde niet stoppen
+      }
+    }
+  } finally {
+    sender.close();
   }
 
-  return NextResponse.json({ connections: connections?.length ?? 0, synced, failed, expired, inserted });
+  return NextResponse.json({ connections: connections?.length ?? 0, synced, failed, expired, inserted, merged, notified });
 }

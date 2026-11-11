@@ -1,41 +1,26 @@
 import { NextResponse } from "next/server";
-import { loadFreeToSpend } from "@/lib/insights/free-to-spend";
-import { countOpenTransactionsFor, type WidgetPayload } from "@/lib/native/widget";
-import { bearerToken, hashWidgetToken } from "@/lib/native/widget-token";
+import { authenticateWidget, NO_STORE } from "@/lib/native/device-auth";
+import { loadWidgetPayload } from "@/lib/native/widget";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const NO_STORE = { "Cache-Control": "private, no-store" };
-
-function unauthorized() {
-  return NextResponse.json({ error: "Widget niet gekoppeld" }, { status: 401, headers: NO_STORE });
-}
-
 /**
- * Twee getallen voor de iOS-widget: open kaartjes en vrij tot je salaris.
- * De widget heeft geen inlogsessie; hij stuurt `Authorization: Bearer <widgetsleutel>`.
+ * Gegevens voor de iOS-widget: open kaartjes, vrij tot je salaris en (voor de grote widget)
+ * de oudste open betaling met potjesknoppen. De widget heeft geen inlogsessie; hij stuurt
+ * `Authorization: Bearer <apparaatsleutel>` (of de oude widgetsleutel van een eerdere build).
  * We zoeken de sleutel op via zijn hash, met de service-role-client.
  */
 export async function GET(request: Request) {
-  const token = bearerToken(request.headers.get("authorization"));
-  if (!token) return unauthorized();
-
   const supabase = createAdminClient();
-  const { data: row, error } = await supabase
-    .from("widget_tokens")
-    .select("user_id")
-    .eq("token_hash", hashWidgetToken(token))
-    .maybeSingle();
-  if (error) return NextResponse.json({ error: "Even niet beschikbaar" }, { status: 503, headers: NO_STORE });
-  if (!row) return unauthorized();
+  let userId: string | null;
+  try {
+    userId = await authenticateWidget(supabase, request);
+  } catch {
+    return NextResponse.json({ error: "Even niet beschikbaar" }, { status: 503, headers: NO_STORE });
+  }
+  if (!userId) return NextResponse.json({ error: "Widget niet gekoppeld" }, { status: 401, headers: NO_STORE });
 
   try {
-    const [open, free] = await Promise.all([
-      countOpenTransactionsFor(supabase, row.user_id),
-      // Zonder salarisdag of saldo toont de widget alleen de kaartjes.
-      loadFreeToSpend(supabase, row.user_id, new Date()).catch(() => null),
-    ]);
-    const payload: WidgetPayload = { open, free };
-    return NextResponse.json(payload, { headers: NO_STORE });
+    return NextResponse.json(await loadWidgetPayload(supabase, userId), { headers: NO_STORE });
   } catch {
     return NextResponse.json({ error: "Even niet beschikbaar" }, { status: 503, headers: NO_STORE });
   }

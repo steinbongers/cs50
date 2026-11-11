@@ -6,7 +6,8 @@
 export type SwipeDirection = "left" | "right" | "up" | "down";
 export type ConnectionProvider = "enablebanking" | "csv";
 export type ConnectionStatus = "active" | "expiring" | "expired" | "revoked";
-export type TransactionSource = "bank" | "csv" | "cash" | "split";
+export type TransactionSource = "bank" | "csv" | "cash" | "split" | "applepay";
+export type PreviewSetting = "always" | "when_unlocked" | "never";
 export type ShareStatus = "open" | "received" | "settled_elsewhere";
 export type CategorySystemKey = "voorgeschoten" | "contant" | "terug" | "verdeeld" | "negeer";
 
@@ -27,6 +28,10 @@ export type ProfileRow = {
   focus_category_id: string | null;
   /** Voor welke periode (eerste dag) de focus geldt. */
   focus_period_start: string | null;
+  /** Bedrag, winkel en potje op het vergrendelscherm tonen (standaard uit: privacy by default). */
+  lock_screen_details: boolean;
+  /** Melding met knoppen na elke betaling (iPhone-app). */
+  payment_notifications: boolean;
 };
 
 export type InviteCodeRow = {
@@ -128,6 +133,10 @@ export type TransactionRow = {
   refund_for_id: string | null;
   /** Deel van een verdeelde afschrijving (source 'split'): de afschrijving zelf. */
   split_parent_id: string | null;
+  /** Winkelnaam zoals Apple Wallet hem doorgaf (Apple Pay-route). */
+  wallet_merchant: string | null;
+  /** Melding met knoppen verstuurd voor deze betaling. */
+  notified_at: string | null;
   created_at: string;
 };
 
@@ -144,6 +153,20 @@ export type WidgetTokenRow = {
   user_id: string;
   token_hash: string;
   created_at: string;
+};
+
+/** Een gekoppelde iPhone (installatie van de app). Alleen voor de service role. */
+export type NativeDeviceRow = {
+  id: string;
+  user_id: string;
+  installation_id: string;
+  key_hash: string;
+  apns_token: string | null;
+  apns_env: "production" | "sandbox" | null;
+  previews: PreviewSetting;
+  created_at: string;
+  last_seen_at: string;
+  expires_at: string;
 };
 
 export type TransactionShareRow = {
@@ -209,6 +232,8 @@ export type Database = {
           | "invite_code"
           | "focus_category_id"
           | "focus_period_start"
+          | "lock_screen_details"
+          | "payment_notifications"
         >
       >;
       categories: Table<
@@ -285,6 +310,8 @@ export type Database = {
           | "refund_for_id"
           | "split_parent_id"
           | "account_id"
+          | "wallet_merchant"
+          | "notified_at"
           | "created_at"
         >
       >;
@@ -296,6 +323,10 @@ export type Database = {
         >
       >;
       share_groups: Table<ShareGroupRow, WithOptional<ShareGroupRow, "id" | "created_at">>;
+      native_devices: Table<
+        NativeDeviceRow,
+        WithOptional<NativeDeviceRow, "id" | "apns_token" | "apns_env" | "previews" | "created_at" | "last_seen_at">
+      >;
       widget_tokens: Table<WidgetTokenRow, WithOptional<WidgetTokenRow, "created_at">>;
       category_rules: Table<CategoryRuleRow, WithOptional<CategoryRuleRow, "id" | "created_at">>;
       events: Table<EventRow, WithOptional<EventRow, "id" | "payload" | "created_at">>;

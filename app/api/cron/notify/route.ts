@@ -4,6 +4,8 @@ import { daysUntil } from "@/lib/bank/connections";
 import { toISODate } from "@/lib/format";
 import { amsterdamToday, currentPeriod } from "@/lib/periods";
 import { expiringMessage, monthReviewMessage, openCardsMessage, weekMessage } from "@/lib/push/copy";
+import { createPaymentSender, sendNativeAlert } from "@/lib/native/payments";
+import { isApnsConfigured } from "@/lib/push/apns";
 import { isPushConfigured, isPushUsable, sendPushToUser } from "@/lib/push/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -37,8 +39,14 @@ export async function GET(request: NextRequest) {
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Geen toegang" }, { status: 401 });
   }
-  if (!isPushConfigured()) return NextResponse.json({ skipped: "push niet ingesteld" });
-  if (!isPushUsable()) return NextResponse.json({ error: "Push verkeerd ingesteld: controleer de VAPID-sleutels." }, { status: 500 });
+  // Webpush (Safari) en APNs (iPhone-app) staan los van elkaar: één van beide is genoeg.
+  const webPush = isPushConfigured();
+  if (!webPush && !isApnsConfigured()) return NextResponse.json({ skipped: "push niet ingesteld" });
+  if (webPush && !isPushUsable()) return NextResponse.json({ error: "Push verkeerd ingesteld: controleer de VAPID-sleutels." }, { status: 500 });
+  const sender = createPaymentSender();
+  /** Webpush en de iPhone-app samen. */
+  const deliver = async (userId: string, message: { title: string; body: string; url: string; tag: string }) =>
+    (webPush ? await sendPushToUser(admin, userId, message) : 0) + (await sendNativeAlert(admin, sender, userId, message).catch(() => 0));
 
   const { hour, dateISO, dayIndex } = amsterdamNow();
   const [year, month, day] = dateISO.split("-").map(Number);
@@ -100,7 +108,7 @@ export async function GET(request: NextRequest) {
       continue;
     }
 
-    const delivered = await sendPushToUser(admin, profile.id, message);
+    const delivered = await deliver(profile.id, message);
     if (delivered === 0) undelivered++;
     if (delivered > 0) {
       sent++;
@@ -120,7 +128,7 @@ export async function GET(request: NextRequest) {
   for (const connection of connections ?? []) {
     const days = daysUntil(connection.valid_until);
     if (days === null || days > CONNECTION_EXPIRY_WARNING_DAYS) continue;
-    const delivered = await sendPushToUser(admin, connection.user_id, { ...expiringMessage(days), url: "/bank/koppelen?reconnect=1&ref=push&tag=bank-verloopt", tag: "bank-verloopt" });
+    const delivered = await deliver(connection.user_id, { ...expiringMessage(days), url: "/bank/koppelen?reconnect=1&ref=push&tag=bank-verloopt", tag: "bank-verloopt" });
     // Pas als 'gemeld' markeren wanneer er echt een apparaat is bereikt; anders de volgende keer opnieuw.
     await admin
       .from("bank_connections")
@@ -136,5 +144,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  sender.close();
   return NextResponse.json({ sent, skipped, undelivered, expiryNotified });
 }

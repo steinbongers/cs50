@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { EnableBankingError, getAccountBalances, getAccountTransactions } from "@/lib/enablebanking/client";
 import { toISODate } from "@/lib/format";
+import { mergeWalletPayments } from "@/lib/native/payments";
 import { applyRules } from "@/lib/transactions/apply-rules";
 import type { BankConnectionRow, ConnectionStatus, Database } from "@/lib/supabase/types";
 import { statusFor } from "./connections";
@@ -14,6 +15,10 @@ export interface SyncResult {
   error?: string;
   /** Toestemming verlopen of ingetrokken: geen fout, de gebruiker moet opnieuw koppelen. */
   expired?: boolean;
+  /** Id's van de nieuw opgeslagen transacties (voor de melding per betaling na de cron). */
+  newIds: string[];
+  /** Zoveel nieuwe bankregels bleken een eerder binnengekomen Apple Pay-betaling. */
+  merged: number;
 }
 
 const MAX_PAGES_PER_ACCOUNT = 30;
@@ -40,6 +45,8 @@ export async function syncConnection(
   const ownIbanHashes = new Set((ownAccounts ?? []).map((a) => a.iban_hash).filter((h): h is string => Boolean(h)));
 
   let inserted = 0;
+  let merged = 0;
+  const newIds: string[] = [];
   let syncedAccounts = 0;
   let error: string | undefined;
   let status: ConnectionStatus = statusFor(connection, now);
@@ -47,7 +54,7 @@ export async function syncConnection(
   if (status === "revoked" || status === "expired") {
     const message = "De bankkoppeling is niet meer geldig.";
     await supabase.from("bank_connections").update({ status, last_error: message }).eq("id", connection.id);
-    return { inserted: 0, accounts: 0, status, error: message, expired: true };
+    return { inserted: 0, accounts: 0, status, error: message, expired: true, newIds: [], merged: 0 };
   }
 
   for (const account of accounts ?? []) {
@@ -82,11 +89,19 @@ export async function syncConnection(
           .select("id");
         if (insertError) throw new Error("Transacties konden niet worden opgeslagen.");
         inserted += insertedRows?.length ?? 0;
+        const ids = (insertedRows ?? []).map((r) => r.id);
+        newIds.push(...ids);
         // Vaste ontvangers (door de gebruiker zelf ingesteld) meteen in hun potje.
         try {
-          await applyRules(supabase, userId, { ids: (insertedRows ?? []).map((r) => r.id) });
+          await applyRules(supabase, userId, { ids });
         } catch {
           // dan blijven ze gewoon als kaartje staan
+        }
+        // Al via Apple Pay binnen? Dan wordt het één regel, met de keuze die al gemaakt was.
+        try {
+          merged += (await mergeWalletPayments(supabase, userId, ids)).length;
+        } catch {
+          // dan staan ze er even dubbel; de volgende ronde ziet ze niet meer als nieuw
         }
       }
 
@@ -124,5 +139,5 @@ export async function syncConnection(
     })
     .eq("id", connection.id);
 
-  return { inserted, accounts: syncedAccounts, status, error };
+  return { inserted, accounts: syncedAccounts, status, error, newIds, merged };
 }
