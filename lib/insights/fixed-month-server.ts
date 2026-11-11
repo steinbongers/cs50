@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureNietMeetellenCategory } from "@/lib/categories/system";
-import { currentPeriod, previousPeriod, type Period } from "@/lib/periods";
+import { currentPeriod } from "@/lib/periods";
 import type { CategorySystemKey, Database } from "@/lib/supabase/types";
-import { fixedTotals, groupMonth, monthLeft, type FixedItem, type MonthGroup } from "./fixed-month";
+import { fixedTotals, fixedWindow, groupMonth, monthLeft, type FixedItem, type FixedWindow, type MonthGroup } from "./fixed-month";
 import { loadTrackingStart, overviewStartsOn } from "./overview-start";
 
 /**
@@ -48,14 +48,17 @@ export async function loadFixedItems(supabase: Client, userId: string): Promise<
   return (data ?? []).map((r) => ({ direction: r.direction, key: r.counterparty_key, name: r.name, amount: Number(r.amount) }));
 }
 
-/** De vorige salarismaand als lijst per verkoper (ook wat op Telt niet mee staat: dat is juist de historie). */
-export async function loadPreviousMonth(
+/**
+ * De periode waaruit je vaste posten kiest (zie `fixedWindow`) als lijst per verkoper. Ook wat op
+ * Telt niet mee staat: dat is juist de historie van vóór je start.
+ */
+export async function loadFixedWindow(
   supabase: Client,
   userId: string,
   salaryDay: number | null,
   today: Date,
-): Promise<{ period: Period; groups: MonthGroup[] }> {
-  const period = previousPeriod(salaryDay, today);
+): Promise<{ period: FixedWindow; groups: MonthGroup[] }> {
+  const period = fixedWindow(salaryDay, today);
   const { data } = await supabase
     .from("transactions")
     .select("booking_date, amount, counterparty")

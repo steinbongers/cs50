@@ -358,3 +358,7 @@ Keuzes die het team maakte bij het verwerken van QA en review. Stein kan ze teru
     widget in plaats van de schatting op het saldo. Aanpassen via Instellingen > Je vaste maand.
   - Zonder ingestelde vaste maand blijft alles zoals het was: "Vrij tot je salaris" op basis van saldo en de
     automatisch herkende vaste lasten.
+  - *Aanpassing dezelfde dag (Stein):* de lijst komt uit de **lopende** salarismaand, van de salarisdag tot en met
+    vandaag (voor Stein op 11 november: 20 oktober tot vandaag), niet uit de maand ervoor. Alleen als de lopende
+    maand jonger is dan 14 dagen staat er te weinig in en neemt de app de hele vorige maand. Wat later in de maand
+    nog komt, voeg je zelf toe.

@@ -14,9 +14,8 @@ import { deleteSession, startAuthorization } from "@/lib/enablebanking/client";
 import { isEnableBankingConfigured } from "@/lib/enablebanking/jwt";
 import { logEvent } from "@/lib/events";
 import { ignoreOpenBefore, loadFixedItems } from "@/lib/insights/fixed-month-server";
-import { cleanFixedItems } from "@/lib/insights/fixed-month";
+import { cleanFixedItems, fixedWindow } from "@/lib/insights/fixed-month";
 import { loadTrackingStart } from "@/lib/insights/overview-start";
-import { previousPeriod } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 import { BANK_AUTH_COOKIE, type BankAuthCookie } from "@/lib/bank/auth-cookie";
 import { DEFAULT_IMPORT_FROM, importFromDate, isImportFrom } from "@/lib/bank/import-from";
@@ -255,7 +254,7 @@ export async function startFromToday(): Promise<StartFreshResult> {
 }
 
 /**
- * Haalt de vorige salarismaand op voor "Je vaste maand", voor wie al gekoppeld was. Wat daarbij
+ * Haalt de lopende salarismaand tot nu toe op voor "Je vaste maand", voor wie al gekoppeld was. Wat daarbij
  * nieuw binnenkomt en ouder is dan waar je stapel begon, komt niet op de stapel (Telt niet mee).
  */
 export async function fetchPreviousMonth(): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -268,7 +267,7 @@ export async function fetchPreviousMonth(): Promise<{ ok: true } | { ok: false; 
   const { data: profile } = await supabase.from("profiles").select("salary_day").eq("id", user.id).maybeSingle();
   const today = amsterdamToday();
   const cutoff = (await loadTrackingStart(supabase, user.id).catch(() => null)) ?? toISODate(today);
-  const result = await syncConnection(supabase, connection, { dateFrom: previousPeriod(profile?.salary_day ?? null, today).startISO });
+  const result = await syncConnection(supabase, connection, { dateFrom: fixedWindow(profile?.salary_day ?? null, today).startISO });
   if (result.error) return { ok: false, error: "Ophalen lukte niet. Probeer het zo nog eens." };
   await ignoreOpenBefore(supabase, user.id, cutoff, result.newIds).catch(() => 0);
   refresh();
