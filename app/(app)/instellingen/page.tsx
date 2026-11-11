@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { CircleHelp, Download, Info, Landmark, LayoutGrid, Pin, ShieldCheck } from "lucide-react";
+import { CircleHelp, Download, Info, Landmark, LayoutGrid, Pin, Repeat, ShieldCheck } from "lucide-react";
 import { AppLockToggle } from "@/components/native/app-lock-toggle";
 import { PaymentSettings } from "@/components/native/payment-settings";
 import { SignOutButton } from "@/components/native/sign-out-button";
@@ -64,6 +64,13 @@ export default async function InstellingenPage() {
           className={ROW_FOCUS}
         />
         <SalaryDayRow salaryDay={profile.salary_day} />
+        <ListRow
+          href="/instellingen/vaste-maand"
+          icon={Repeat}
+          iconClass="bg-cat-groen-soft text-cat-groen"
+          label={<RowLabel label="Je vaste maand" hint="Vaste kosten en inkomsten: wat je vrij hebt" />}
+          className={ROW_FOCUS}
+        />
         <ListRow
           href="/bank/koppelen?next=/instellingen"
           icon={Landmark}

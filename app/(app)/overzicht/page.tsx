@@ -8,6 +8,7 @@ import { CategoryBadge } from "@/components/categories/category-badge";
 import { BalanceButton } from "@/components/overview/balance-button";
 import { FocusCard } from "@/components/overview/focus-card";
 import { FreeToSpendCard } from "@/components/overview/free-to-spend";
+import { MonthLeftCard } from "@/components/overview/month-left-card";
 import { IncomeView, type IncomeGroup } from "@/components/overview/income-view";
 import { MonthClosingSheet } from "@/components/overview/month-closing";
 import { SpendBar, type SpendSlice } from "@/components/overview/spend-bar";
@@ -55,6 +56,7 @@ import {
 } from "@/lib/insights/compute";
 import { loadFreeToSpendDetails } from "@/lib/insights/free-to-spend";
 import { monthClosing } from "@/lib/insights/month-closing";
+import { loadMonthLeft } from "@/lib/insights/fixed-month-server";
 import { loadTrackingStart, overviewStartsOn } from "@/lib/insights/overview-start";
 import { loadAccountBalances, loadInsightData } from "@/lib/insights/queries";
 import { recurringMonthlyTotal } from "@/lib/insights/recurring";
@@ -96,9 +98,16 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
   if (isCurrent && params.toch !== "1") {
     const startsOn = overviewStartsOn(await loadTrackingStart(supabase, user.id).catch(() => null), current);
     if (startsOn) {
+      const [monthLeft, linked] = await Promise.all([
+        loadMonthLeft(supabase, user.id, today).catch(() => null),
+        getPrimaryConnection(supabase, user.id),
+      ]);
       return (
         <>
           <PageHeader title="Overzicht" />
+          <div className="px-4">
+            <MonthLeftCard left={monthLeft} canSetUp={linked !== null} />
+          </div>
           <EmptyState
             icon={<ChartColumn />}
             title={`Je overzicht begint op ${formatLongDate(startsOn)}`}
@@ -117,7 +126,7 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
 
   // Oude verdelingen per persoon eerst omzetten naar bijhouden per uitgave.
   await convertOpenSharesToTracking().catch(() => 0);
-  const [connection, insight, accounts, openShares, awaitingRefunds, openCount, fixed] = await Promise.all([
+  const [connection, insight, accounts, openShares, awaitingRefunds, openCount, fixed, monthLeft] = await Promise.all([
     getPrimaryConnection(supabase, user.id),
     loadInsightData(supabase, today, { since: incomeSince }),
     loadAccountBalances(supabase),
@@ -126,6 +135,8 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
     countOpenTransactions().catch(() => 0),
     // Vaste lasten en "Vrij tot je salaris" alleen voor de lopende maand; mislukt het, dan staat er niets.
     isCurrent ? loadFreeToSpendDetails(supabase, user.id, today).catch(() => null) : null,
+    // Nog over deze maand, uit de vaste maand die de gebruiker zelf heeft aangetikt.
+    isCurrent ? loadMonthLeft(supabase, user.id, today).catch(() => null) : null,
   ]);
 
   const catMap = new Map(insight.cats.map((c) => [c.id, c]));
@@ -355,7 +366,9 @@ export default async function OverzichtPage({ searchParams }: PageProps<"/overzi
             ) : (
               <>
               {isCurrent && <CashWalletRow />}
-              {isCurrent && fixed?.free && <FreeToSpendCard free={fixed.free} />}
+              {/* Met een ingestelde vaste maand toont dat getal wat je vrij hebt; anders de schatting op je saldo. */}
+              {isCurrent && (monthLeft || !fixed?.free) && <MonthLeftCard left={monthLeft} canSetUp={connection !== null} />}
+              {isCurrent && !monthLeft && fixed?.free && <FreeToSpendCard free={fixed.free} />}
 
               {slices.length === 0 ? (
                 <Card padding="lg" className="text-center">

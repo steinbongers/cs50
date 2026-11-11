@@ -77,6 +77,8 @@ interface SortScreenProps {
   /** Uitgaven die nog op geld terug wachten (bijhouden), voor de tegel Terugbetaling. */
   awaitingRefunds?: AwaitingRefund[];
   coachStep: number;
+  /** "€ 412 over": wat er deze maand nog vrij is, als de vaste maand is ingesteld. */
+  monthLeftText?: string | null;
 }
 
 /** Boven dit aantal tegels mag de pagina scrollen; kaart en actieregel blijven dan staan. */
@@ -200,6 +202,7 @@ export function SortScreen({
   openShares: initialOpenShares,
   awaitingRefunds: initialAwaiting = [],
   coachStep: initialCoachStep,
+  monthLeftText = null,
 }: SortScreenProps) {
   const [queue, setQueue] = useState<OpenTransaction[]>(transactions);
   const [categories, setCategories] = useState<CategoryOption[]>(initialCategories);
@@ -1072,7 +1075,9 @@ export function SortScreen({
       <header className="safe-top-3 px-4">
         <div className="flex h-7 items-center justify-between gap-3">
           <h1 className="text-[17px] font-semibold">{ACTION_LABEL}</h1>
-          <p className="text-[13px] text-text-muted tabular-nums">Nog {remaining}</p>
+          <p className="text-[13px] text-text-muted tabular-nums">
+            {monthLeftText ? `${monthLeftText} · ` : ""}Nog {remaining}
+          </p>
         </div>
         <ProgressBar
           value={assignedCount}

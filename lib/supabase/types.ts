@@ -175,6 +175,17 @@ export type NativeDeviceRow = {
   expires_at: string;
 };
 
+/** Een vaste kostenpost of vaste inkomst die de gebruiker zelf heeft aangewezen. */
+export type FixedItemRow = {
+  id: string;
+  user_id: string;
+  direction: "uit" | "in";
+  counterparty_key: string;
+  name: string;
+  amount: number;
+  created_at: string;
+};
+
 export type TransactionShareRow = {
   id: string;
   user_id: string;
@@ -336,6 +347,7 @@ export type Database = {
         NativeDeviceRow,
         WithOptional<NativeDeviceRow, "id" | "apns_token" | "apns_env" | "previews" | "created_at" | "last_seen_at">
       >;
+      fixed_items: Table<FixedItemRow, WithOptional<FixedItemRow, "id" | "created_at">>;
       widget_tokens: Table<WidgetTokenRow, WithOptional<WidgetTokenRow, "created_at">>;
       category_rules: Table<CategoryRuleRow, WithOptional<CategoryRuleRow, "id" | "created_at">>;
       events: Table<EventRow, WithOptional<EventRow, "id" | "payload" | "created_at">>;

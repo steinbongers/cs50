@@ -6,7 +6,7 @@ import { currentPeriod } from "@/lib/periods";
  * meestal hoogstens 90 dagen terug; ouder kan, maar dan stuurt de bank het vaak niet.
  */
 export const IMPORT_FROM_OPTIONS = [
-  { value: "nu", label: "Vanaf vandaag", hint: "Alleen nieuwe betalingen" },
+  { value: "nu", label: "Vanaf vandaag", hint: "Je stapel begint met nieuwe betalingen" },
   { value: "periode", label: "Sinds je laatste salaris", hint: "Deze maand compleet" },
   { value: "30", label: "Afgelopen 30 dagen", hint: "" },
   { value: "90", label: "Afgelopen 90 dagen", hint: "Zo ver gaan de meeste banken terug" },

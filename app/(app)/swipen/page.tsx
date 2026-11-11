@@ -19,6 +19,8 @@ import {
   getOpenShares,
   getOpenTransactions,
 } from "@/lib/transactions/queries";
+import { monthLeftShort } from "@/components/overview/month-left-card";
+import { loadMonthLeft } from "@/lib/insights/fixed-month-server";
 import { SortScreen } from "./sort-screen";
 
 export const metadata: Metadata = { title: ACTION_LABEL };
@@ -33,12 +35,13 @@ export default async function SwipenPage({ searchParams }: PageProps<"/swipen">)
 
   // Oude verdelingen per persoon eerst omzetten naar bijhouden per uitgave.
   await convertOpenSharesToTracking().catch(() => 0);
-  const [categories, transactions, totalOpen, openShares, awaitingRefunds] = await Promise.all([
+  const [categories, transactions, totalOpen, openShares, awaitingRefunds, monthLeft] = await Promise.all([
     getActiveCategories(period),
     getOpenTransactions(undefined, firstId),
     countOpenTransactions(),
     getOpenShares(),
     getAwaitingRefunds(),
+    createClient().then((supabase) => loadMonthLeft(supabase, user.id, amsterdamToday())).catch(() => null),
   ]);
 
   if (categories.filter((c) => c.systemKey === null).length === 0) {
@@ -108,6 +111,7 @@ export default async function SwipenPage({ searchParams }: PageProps<"/swipen">)
       openShares={openShares}
       awaitingRefunds={awaitingRefunds}
       coachStep={profile.coach_step}
+      monthLeftText={monthLeftShort(monthLeft)}
     />
   );
 }

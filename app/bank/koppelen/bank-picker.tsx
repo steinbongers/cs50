@@ -47,6 +47,10 @@ export function BankPicker({ banks, next, reconnect }: { banks: BankOption[]; ne
         <div className="flex flex-col gap-2">
           <h2 className="px-1 text-[15px] leading-5 font-semibold">Kaartjes ophalen vanaf</h2>
           <ImportFromChoice value={importFrom} onChange={setImportFrom} />
+          <p className="px-1 text-[13px] leading-[18px] text-text-muted">
+            De app haalt ook je vorige maand op, zodat je kunt aantikken wat je vaste kosten en inkomsten zijn. Die
+            betalingen komen niet op je stapel en tellen nergens mee.
+          </p>
         </div>
       )}
       <Input

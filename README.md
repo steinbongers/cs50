@@ -73,6 +73,7 @@ Zonder `SUPABASE_SECRET_KEY` staat de uitnodigingscode-controle uit, zodat je lo
 ## Database
 
 Migraties staan in `supabase/migrations/` en zijn additief, met RLS op `(select auth.uid())`. De laatste is
+`20261112000000_vaste_maand.sql` (vaste kosten en inkomsten in `fixed_items`), na
 `20261111000100_kaart_en_afrekening.sql` (kaartnaam bij Apple Pay en de maandafrekening van de creditcard), na
 `20261111000000_meldingen_widget.sql` (Apple Pay als bron, gekoppelde iPhones in `native_devices`, instellingen
 voor meldingen per betaling en het vergrendelscherm).

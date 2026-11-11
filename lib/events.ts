@@ -144,7 +144,9 @@ export type EventType =
    */
   | "native_assign"
   /** "Begin vanaf vandaag": oudere open kaartjes naar Telt niet mee. `{ count_bucket: '0' | '1-50' | '50+' }` */
-  | "start_from_today";
+  | "start_from_today"
+  /** Vaste maand opgeslagen. `{ costs, income }` (aantallen aangetikte posten; nooit namen of bedragen) */
+  | "fixed_month_saved";
 
 export type OpenCardsBucket = "0" | "1-5" | "6-20" | "20+";
 

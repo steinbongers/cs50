@@ -1,6 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { loadMonthLeft } from "@/lib/insights/fixed-month-server";
 import { loadFreeToSpend } from "@/lib/insights/free-to-spend";
+import { amsterdamToday } from "@/lib/periods";
 import type { Database } from "@/lib/supabase/types";
 import { oldestOpenCard, type WidgetCard } from "./payments";
 
@@ -38,8 +40,15 @@ export async function loadWidgetPayload(
 ): Promise<WidgetPayload> {
   const [open, free, card] = await Promise.all([
     countOpenTransactionsFor(supabase, userId),
-    // Zonder salarisdag of saldo toont de widget alleen de kaartjes.
-    loadFreeToSpend(supabase, userId, new Date()).catch(() => null),
+    // Met een ingestelde vaste maand (en een hele maand bezig): wat er deze maand nog over is.
+    // Anders de schatting op het saldo. Zonder salarisdag of saldo toont de widget alleen de kaartjes.
+    loadMonthLeft(supabase, userId, amsterdamToday())
+      .catch(() => null)
+      .then((left) =>
+        left?.status === "running"
+          ? { amount: left.amount, until: left.until }
+          : loadFreeToSpend(supabase, userId, new Date()).catch(() => null),
+      ),
     options.card === false ? null : oldestOpenCard(supabase, userId).catch(() => null),
   ]);
   return { open, free, card };

@@ -4,7 +4,7 @@ import { logEvent } from "@/lib/events";
 import { OnboardingSteps, type OnboardingStepKey } from "./steps";
 
 // Zelfde stapnamen als in steps.tsx; hier los, want dat is een clientmodule.
-const STEP_KEYS: readonly OnboardingStepKey[] = ["potjes", "salarisdag", "bank", "klaar"];
+const STEP_KEYS: readonly OnboardingStepKey[] = ["potjes", "salarisdag", "bank", "vast", "klaar"];
 
 /** Meting: welke onboardingstap is getoond. Alleen de vaste stapnaam. */
 async function logStepViewed(step: string): Promise<void> {
