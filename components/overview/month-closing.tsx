@@ -12,7 +12,7 @@ import { formatEuroWhole } from "@/lib/format";
 import type { MonthClosing } from "@/lib/insights/month-closing";
 import { cn } from "@/lib/utils";
 
-export interface FocusChoice {
+interface FocusChoice {
   id: string;
   name: string;
   icon: string;

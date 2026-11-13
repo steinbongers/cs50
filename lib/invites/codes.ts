@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export const INVITE_CODE_PATTERN = /^[A-Z0-9-]{4,32}$/;
+const INVITE_CODE_PATTERN = /^[A-Z0-9-]{4,32}$/;
 
 export function normalizeInviteCode(raw: unknown): string | null {
   if (typeof raw !== "string") return null;

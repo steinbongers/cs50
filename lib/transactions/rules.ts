@@ -9,7 +9,7 @@ import { counterpartyKey } from "./same-counterparty";
  * niet automatisch in het potje van de uitgaven bij diezelfde ontvanger belandt.
  * Een geldautomaat wordt nooit een vaste ontvanger: waar contant geld heen gaat, verschilt elke keer.
  */
-export const MAX_RULE_KEY_LENGTH = 120;
+const MAX_RULE_KEY_LENGTH = 120;
 
 export function ruleKey(counterparty: string | null, amount: number): string | null {
   const key = counterpartyKey(counterparty ?? "");

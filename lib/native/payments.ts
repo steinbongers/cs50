@@ -74,7 +74,7 @@ async function recentChoices(admin: Admin, userId: string): Promise<HistoryRow[]
   return (data ?? []).filter((r): r is HistoryRow => typeof r.category_id === "string");
 }
 
-export async function suggestCategory(admin: Admin, userId: string, merchant: string | null): Promise<CategoryInfo | null> {
+async function suggestCategory(admin: Admin, userId: string, merchant: string | null): Promise<CategoryInfo | null> {
   if (!merchantKey(merchant)) return null;
   const [categories, history] = await Promise.all([choosableCategories(admin, userId), recentChoices(admin, userId)]);
   const spend = categories.filter((c) => !c.is_income);
@@ -104,7 +104,7 @@ async function profileFlags(admin: Admin, userId: string): Promise<ProfileFlags>
 }
 
 /** Wat de iPhone nodig heeft om een melding met knoppen te tonen (ook voor de lokale Apple Pay-melding). */
-export interface PaymentPrompt {
+interface PaymentPrompt {
   transactionId: string;
   title: string;
   body: string;
@@ -115,7 +115,7 @@ export interface PaymentPrompt {
   action: string | null;
 }
 
-export function buildPrompt(input: {
+function buildPrompt(input: {
   userId: string;
   transactionId: string;
   merchant: string | null;
@@ -336,14 +336,14 @@ export async function mergeWalletPayments(supabase: Admin, userId: string, bankI
 
 // --- Apple Pay binnen via Opdrachten -----------------------------------------------------
 
-export type WalletIntakeResult =
+type WalletIntakeResult =
   | { status: "prompt"; prompt: PaymentPrompt }
   /** Al in een potje (vaste ontvanger), al gemeld, of meldingen per betaling staan uit. */
   | { status: "quiet"; transactionId: string }
   | { status: "error" };
 
 /** Twee keer dezelfde automatisering binnen twee minuten (iOS herhaalt soms) is één betaling. */
-export function walletDedupeHash(userId: string, merchant: string, amount: number, now: Date): string {
+function walletDedupeHash(userId: string, merchant: string, amount: number, now: Date): string {
   const bucket = Math.floor(now.getTime() / (2 * 60 * 1000));
   return `ap:${createHash("sha256").update(`${userId}|${merchantKey(merchant)}|${amount.toFixed(2)}|${bucket}`).digest("hex")}`;
 }
@@ -452,7 +452,7 @@ export async function receiveWalletPayment(
 
 // --- Indelen vanaf melding of widget -----------------------------------------------------
 
-export type DeviceAssignResult = "ok" | "already" | "not_found";
+type DeviceAssignResult = "ok" | "already" | "not_found";
 
 /**
  * Zet een open betaling in een potje, zonder verdeling. Alleen als hij nog open is: een tweede
@@ -500,7 +500,7 @@ export async function skipFromDevice(admin: Admin, userId: string, transactionId
 
 // --- Grote widget ----------------------------------------------------------------------
 
-export const WIDGET_BUTTONS = 4;
+const WIDGET_BUTTONS = 4;
 
 export interface WidgetCard {
   id: string;

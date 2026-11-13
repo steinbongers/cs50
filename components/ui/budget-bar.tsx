@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export interface BudgetBarProps {
+interface BudgetBarProps {
   /** Uitgegeven gedeeld door budget. Wordt begrensd op 0 tot 1. */
   ratio: number;
   /** Over je budget: de vulling wordt amber (nooit rood). */

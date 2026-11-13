@@ -8,7 +8,7 @@ import type { BankConnectionRow, ConnectionStatus, Database } from "@/lib/supaba
 import { statusFor } from "./connections";
 import { mapTransaction, pickBalance, type TransactionInsert } from "./mapping";
 
-export interface SyncResult {
+interface SyncResult {
   inserted: number;
   accounts: number;
   status: ConnectionStatus;

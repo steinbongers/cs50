@@ -39,7 +39,7 @@ export function fixedWindow(salaryDay: number | null | undefined, today: Date): 
   return { startISO: previous.startISO, endISO: previous.endISO, current: false };
 }
 
-export interface MonthTx {
+interface MonthTx {
   bookingDate: string;
   /** Negatief = uitgave, positief = inkomst. */
   amount: number;
@@ -59,7 +59,7 @@ export interface MonthGroup {
 }
 
 const cents = (n: number) => Math.round(n * 100);
-export const round2 = (n: number) => Math.round(n * 100) / 100;
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Woorden die op een vaste last of vaste inkomst wijzen. */
 const LIKELY_OUT =
@@ -103,7 +103,7 @@ export interface FixedItem {
   amount: number;
 }
 
-export interface FixedTotals {
+interface FixedTotals {
   fixedIn: number;
   fixedOut: number;
   /** Wat er per maand vrij is na de vaste kosten. */
@@ -120,7 +120,7 @@ export function fixedTotals(items: readonly FixedItem[]): FixedTotals {
   return { fixedIn: inCents / 100, fixedOut: outCents / 100, freePerMonth: (inCents - outCents) / 100 };
 }
 
-export interface CountedTx {
+interface CountedTx {
   amount: number;
   counterparty: string | null;
 }
@@ -147,7 +147,7 @@ export function monthLeft(items: readonly FixedItem[], txs: readonly CountedTx[]
 }
 
 export const MAX_FIXED_ITEMS = 60;
-export const MAX_FIXED_NAME = 80;
+const MAX_FIXED_NAME = 80;
 
 /** Controleert wat de gebruiker opslaat; alles wat niet klopt valt weg. Elke post één keer. */
 export function cleanFixedItems(input: unknown): FixedItem[] {

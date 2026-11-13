@@ -5,7 +5,7 @@
 export const MIN_SPLIT_PERSONS = 2;
 export const MAX_SPLIT_PERSONS = 20;
 
-export interface SplitResult {
+interface SplitResult {
   /** Jouw deel, positief bedrag. */
   ownShare: number;
   /** Delen van de anderen, positief; sommen precies op tot het totaal min jouw deel. */

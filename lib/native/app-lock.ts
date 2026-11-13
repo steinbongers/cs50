@@ -10,13 +10,13 @@
 
 import { BIOMETRIC_LOCK } from "./plugins";
 
-export const APP_LOCK_STORAGE_KEY = "app_lock";
-export const APP_LOCK_ATTRIBUTE = "data-app-lock";
+const APP_LOCK_STORAGE_KEY = "app_lock";
+const APP_LOCK_ATTRIBUTE = "data-app-lock";
 
 /** Zo lang mag de app op de achtergrond staan voordat hij weer op slot gaat. */
 export const LOCK_AFTER_MS = 60 * 1000;
 
-export type LockState = "locked" | "shield" | null;
+type LockState = "locked" | "shield" | null;
 
 /**
  * Wat er gebeurt als de app weer zichtbaar wordt.

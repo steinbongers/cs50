@@ -24,7 +24,7 @@ export function isCategoryColor(value: unknown): value is CategoryColor {
 /**
  * Tailwind-klassen per kleur. Volledig uitgeschreven zodat Tailwind ze kan vinden.
  */
-export const CATEGORY_COLOR_CLASSES: Record<
+const CATEGORY_COLOR_CLASSES: Record<
   CategoryColor,
   { bg: string; text: string; solid: string; ring: string }
 > = {

@@ -46,7 +46,7 @@ export function recentPeriods(salaryDay: number | null, today: Date, count: numb
   return [...before, currentPeriod(salaryDay, today)];
 }
 
-export interface PeriodFlow {
+interface PeriodFlow {
   startISO: string;
   endISO: string;
   income: number;
@@ -159,7 +159,7 @@ export function unsortedIncoming(txs: TxLite[], from: string, to: string): numbe
   return round2(total);
 }
 
-export interface PotjeSeries {
+interface PotjeSeries {
   /** Potje-id, of `OTHER_POTJES_ID` voor de rest samen. */
   id: string;
   /** Uitgegeven per periode, zelfde volgorde als de periodes (nooit negatief). */
@@ -216,7 +216,7 @@ export function cumulativeSpend(txs: TxLite[], cats: Map<string, CatLite>, perio
   return series;
 }
 
-export interface AverageCurve {
+interface AverageCurve {
   values: number[];
   periodsUsed: number;
 }
@@ -244,7 +244,7 @@ export function averageCumulative(
   return { values, periodsUsed: curves.length };
 }
 
-export interface WeekdaySpend {
+interface WeekdaySpend {
   /** Maandag eerst. */
   totals: number[];
   /** Zoveel van die weekdagen vallen in de reeks. */
@@ -278,7 +278,7 @@ export function spendPerWeekday(txs: TxLite[], cats: Map<string, CatLite>, from:
   return { totals: rounded, days, average: rounded.map((t, i) => (days[i] > 0 ? round2(t / days[i]) : 0)) };
 }
 
-export interface LargeExpense {
+interface LargeExpense {
   tx: TxLite;
   /** Wat de uitgave meetelt (eigen deel), positief. */
   amount: number;
@@ -318,7 +318,7 @@ export function incomeTransactionsPerCategory(
   return groups;
 }
 
-export interface FixedSplit {
+interface FixedSplit {
   fixed: number;
   rest: number;
   /** Deel vaste lasten van het totaal, 0 tot 1. */

@@ -24,7 +24,7 @@ const sizeClasses: Record<ButtonSize, string> = {
   lg: "h-13 min-h-13 px-5 text-base",
 };
 
-export function buttonClasses(opts: {
+function buttonClasses(opts: {
   variant?: ButtonVariant;
   size?: ButtonSize;
   fullWidth?: boolean;

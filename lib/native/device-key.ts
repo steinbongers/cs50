@@ -12,7 +12,7 @@ import { createHash, randomBytes } from "node:crypto";
  * De vorm is dezelfde als de oude widgetsleutel, zodat `bearerToken` hem ook herkent.
  */
 
-export const DEVICE_KEY_TTL_DAYS = 30;
+const DEVICE_KEY_TTL_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function generateDeviceKey(): string {

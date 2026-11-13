@@ -17,7 +17,7 @@ function capacitor(): CapacitorGlobal | undefined {
   return (window as unknown as { Capacitor?: CapacitorGlobal }).Capacitor;
 }
 
-export function isNativeApp(): boolean {
+function isNativeApp(): boolean {
   try {
     return capacitor()?.isNativePlatform?.() === true;
   } catch {

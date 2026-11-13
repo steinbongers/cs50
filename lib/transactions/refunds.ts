@@ -39,7 +39,7 @@ export function receivedPerExpense(rows: { refundForId: string | null; amount: n
   return totals;
 }
 
-export interface RefundOutcome {
+interface RefundOutcome {
   /** Al terug plus wat er nu binnenkomt. */
   received: number;
   /** Wat er overblijft voor jou als dit alles is (nooit negatief). */

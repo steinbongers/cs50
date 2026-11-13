@@ -18,7 +18,7 @@ export function ratioText(r: Ratio): string {
 }
 
 /** Blauw = doel gehaald, amber = nog niet. Nooit rood. */
-export function GoalDot({ met }: { met: boolean }) {
+function GoalDot({ met }: { met: boolean }) {
   return (
     <span className="inline-flex items-center">
       <span aria-hidden className={`inline-block size-2 rounded-full ${met ? "bg-primary" : "bg-accent"}`} />
@@ -103,7 +103,7 @@ const STATUS_CLASS: Record<GoStatus, string> = {
 };
 
 /** "52% (34–70%) · 12 van 23", "3,4 s", of null als er (nog) geen getal is. */
-export function goValueText(row: GoNoGoRow): string | null {
+function goValueText(row: GoNoGoRow): string | null {
   if (row.status === "niet gemeten" || row.status === "te weinig data" || row.value === null) return null;
   if (typeof row.value === "number") return seconds(row.value * 1000);
   const r = row.value;

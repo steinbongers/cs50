@@ -6,9 +6,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { PreviewSetting } from "@/lib/supabase/types";
 import { deviceKeyExpiry, generateDeviceKey, hashDeviceKey, isApnsToken, isInstallationId } from "./device-key";
 
-export type LinkResult = { ok: true; key: string; expiresAt: string } | { ok: false; error: string };
+type LinkResult = { ok: true; key: string; expiresAt: string } | { ok: false; error: string };
 
-export interface LinkInput {
+interface LinkInput {
   installationId: string;
   apnsToken?: string | null;
   apnsEnv?: "production" | "sandbox" | null;

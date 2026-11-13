@@ -9,7 +9,7 @@ import type { Database } from "@/lib/supabase/types";
  */
 
 /** Minimale lengte van een zoekterm na opschonen. */
-export const MIN_QUERY_LENGTH = 2;
+const MIN_QUERY_LENGTH = 2;
 
 /** Zoveel resultaten tonen we hooguit; daarna vraag je specifieker. */
 export const SEARCH_LIMIT = 200;
@@ -57,7 +57,7 @@ export interface SearchResult {
   splitParts: number | null;
 }
 
-export interface SearchOptions {
+interface SearchOptions {
   /** Ruwe of al opgeschoonde zoekterm; wordt hier (opnieuw) opgeschoond. */
   q?: string | null;
   categoryId?: string | null;
@@ -172,7 +172,7 @@ export function groupByDay<T extends { bookingDate: string }>(rows: readonly T[]
   return groups;
 }
 
-export type SearchResultsBucket = "0" | "1-5" | "6+";
+type SearchResultsBucket = "0" | "1-5" | "6+";
 
 /** Aantal resultaten als bucket voor `search_used`; nooit een exact aantal of de zoekterm. */
 export function resultsBucket(n: number): SearchResultsBucket {

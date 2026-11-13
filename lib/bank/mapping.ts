@@ -20,7 +20,7 @@ export function hashIban(iban: string | null | undefined): string | null {
 }
 
 /** Boekdatum met terugval op valuta- of transactiedatum. */
-export function bookingDateOf(tx: EbTransaction): string | null {
+function bookingDateOf(tx: EbTransaction): string | null {
   return tx.booking_date ?? tx.value_date ?? tx.transaction_date ?? null;
 }
 

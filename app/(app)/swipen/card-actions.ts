@@ -19,7 +19,7 @@ import { isCreditCardSettlement } from "@/lib/transactions/credit-card";
 const isUuid = (v: unknown): v is string => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v);
 const GENERIC = "Dat lukte niet. Probeer het nog eens.";
 
-export type CardCoverage =
+type CardCoverage =
   | { ok: true; coveredCents: number; restCents: number; count: number; until: string | null }
   | { ok: false };
 
@@ -74,7 +74,7 @@ export async function cardCoverage(transactionId: string): Promise<CardCoverage>
   return { ok: true, coveredCents, restCents, count: ids.length, until };
 }
 
-export type SettleCardResult = { ok: true; restId: string | null } | { ok: false; error: string };
+type SettleCardResult = { ok: true; restId: string | null } | { ok: false; error: string };
 
 /**
  * Haalt het deel dat al via Apple Pay is ingedeeld van de afrekening af.

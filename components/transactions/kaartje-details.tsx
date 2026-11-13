@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { formatEuro, formatLongDay, formatSignedEuro } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export interface KaartjeDetailsData {
+interface KaartjeDetailsData {
   bookingDate: string;
   /** "14:32" als de bank een tijd meestuurde, anders null. */
   bookingTime: string | null;

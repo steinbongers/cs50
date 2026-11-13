@@ -3,12 +3,12 @@
 import { useRef, type KeyboardEvent } from "react";
 import { cn } from "@/lib/utils";
 
-export interface SegmentedOption<T extends string> {
+interface SegmentedOption<T extends string> {
   value: T;
   label: string;
 }
 
-export interface SegmentedProps<T extends string> {
+interface SegmentedProps<T extends string> {
   options: ReadonlyArray<SegmentedOption<T>>;
   /** De gekozen waarde. Mag leeg zijn: dan is er niets gekozen (we kiezen nooit voor de gebruiker). */
   value: T | null | undefined;

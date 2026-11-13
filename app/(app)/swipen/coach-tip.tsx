@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /** Waar het pijltje van de ballon naar wijst: midden (de tegels), links (de schakelaar), rechts (Later). */
-export type CoachArrow = "center" | "left" | "right";
+type CoachArrow = "center" | "left" | "right";
 
 export const COACH_STEPS: ReadonlyArray<{ title: string; text?: string; arrow: CoachArrow }> = [
   {
@@ -24,7 +24,7 @@ export const COACH_STEPS: ReadonlyArray<{ title: string; text?: string; arrow: C
   },
 ];
 
-export const COACH_DONE_TEXT = "Je kent het nu. Succes.";
+const COACH_DONE_TEXT = "Je kent het nu. Succes.";
 
 interface CoachTipProps {
   /** Stap uit COACH_STEPS, of "done" voor het korte afscheid. */

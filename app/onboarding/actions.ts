@@ -23,7 +23,7 @@ export type OnboardingCategoryDraft = CategoryDraft & {
   suggestion?: QuickSuggestionKey | null;
 };
 
-export type SaveCategoriesResult = { error: string } | undefined;
+type SaveCategoriesResult = { error: string } | undefined;
 
 function isValidDraft(value: unknown): value is OnboardingCategoryDraft {
   if (typeof value !== "object" || value === null) return false;

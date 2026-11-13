@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export type AuthFormState = {
   error?: string;
-  success?: "confirm-email" | "magic-link-sent";
+  success?: "confirm-email";
   /** Ingevulde waarden, zodat het formulier na een fout niet leeg is. */
   email?: string;
   displayName?: string;
@@ -28,7 +28,7 @@ function isValidEmail(email: string): boolean {
 }
 
 /** Alleen relatieve paden toestaan als redirectdoel (geen open redirect). */
-export async function safeNextPath(value: string | null | undefined): Promise<string> {
+async function safeNextPath(value: string | null | undefined): Promise<string> {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
   return value;
 }
@@ -158,28 +158,6 @@ export async function startAppleSignIn(
   });
   if (error || !data.url) return { error: "Inloggen met Apple is nu niet beschikbaar." };
   return { url: data.url };
-}
-
-export async function sendMagicLink(
-  _prev: AuthFormState,
-  formData: FormData,
-): Promise<AuthFormState> {
-  const email = readString(formData, "email");
-  const next = await safeNextPath(readString(formData, "next"));
-  if (!isValidEmail(email)) return { error: "Vul een geldig e-mailadres in.", email };
-
-  const origin = await getOrigin();
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      shouldCreateUser: true,
-    },
-  });
-
-  if (error) return { error: translateAuthError(error.message), email };
-  return { success: "magic-link-sent", email };
 }
 
 export async function signOut(): Promise<void> {

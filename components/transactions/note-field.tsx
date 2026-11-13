@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { saveNote } from "@/lib/transactions/actions";
 import { cn } from "@/lib/utils";
 
-export const NOTE_MAX = 140;
+const NOTE_MAX = 140;
 /** Vanaf hier tonen we hoeveel tekens je nog hebt. */
 const NOTE_COUNTER_FROM = 120;
 /** Zo lang staat "Bewaard" onder het veld na opslaan. */

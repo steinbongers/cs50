@@ -29,7 +29,7 @@ interface SessionSummaryProps {
 }
 
 /** Kop van het afrondmoment. "Stapel weg" alleen als de stapel echt leeg is. */
-export function headline(count: number, remaining: number): string {
+function headline(count: number, remaining: number): string {
   if (count === 0) return "Niets gekozen, wel gekeken";
   if (count === 1) return remaining > 0 ? "Eén kaartje, klein maar fijn" : "Eén kaartje en de stapel is weg";
   if (remaining > 0) return count < 5 ? "Dat ging vlot" : "Even pauze, goed bezig";
@@ -39,7 +39,7 @@ export function headline(count: number, remaining: number): string {
 }
 
 /** "12 kaartjes in een potje, 3 op Later" */
-export function summaryLine(assigned: number, skipped: number): string {
+function summaryLine(assigned: number, skipped: number): string {
   const cards = assigned === 1 ? "1 kaartje" : `${assigned} kaartjes`;
   return skipped > 0 ? `${cards} in een potje, ${skipped} op Later` : `${cards} in een potje`;
 }

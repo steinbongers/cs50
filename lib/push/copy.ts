@@ -4,7 +4,7 @@ import { ACTION_VERB } from "@/config/app";
  * Meldingsteksten. Titel hoogstens 40 tekens, tekst hoogstens 90.
  * Nooit bedragen of winkelnamen (het vergrendelscherm is openbaar) en geen uitroeptekens.
  */
-export type PushCopy = { title: string; body: string };
+type PushCopy = { title: string; body: string };
 
 /**
  * Kaartjes wachten. Afwisseling op basis van de dag, zodat het niet gaat vervelen.

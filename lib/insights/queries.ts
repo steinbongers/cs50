@@ -8,12 +8,12 @@ import type { CatLite, TxLite } from "./compute";
 /** Hoeveel dagen historie we laden voor gemiddelden (ruim vijf periodes). */
 const HISTORY_DAYS = 160;
 
-export interface InsightData {
+interface InsightData {
   txs: TxLite[];
   cats: CatLite[];
 }
 
-export interface InsightOptions {
+interface InsightOptions {
   /** Laad ook alles vanaf deze datum ("YYYY-MM-DD"), als die verder terug ligt dan de standaardhistorie. */
   since?: string;
 }

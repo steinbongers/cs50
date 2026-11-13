@@ -34,7 +34,7 @@ interface CategoryTilesProps {
 }
 
 /** Zo lang ingedrukt houden: deze naam gaat voortaan altijd in dit potje. */
-export const HOLD_MS = 550;
+const HOLD_MS = 550;
 /** Wie verder schuift dan dit, scrolt: dan niet altijd in dit potje. */
 const HOLD_SLOP_PX = 10;
 

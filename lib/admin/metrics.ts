@@ -43,9 +43,9 @@ export interface ChurnLite {
 const DAY_MS = 864e5;
 const WEEK_MS = 7 * DAY_MS;
 /** Onder dit aantal gebruikers tonen we geen percentage. */
-export const MIN_USERS = 5;
+const MIN_USERS = 5;
 /** Cohorten kleiner dan dit staan grijs. */
-export const MIN_COHORT = 3;
+const MIN_COHORT = 3;
 
 // ---------------------------------------------------------------------------
 // Basis
@@ -129,7 +129,7 @@ function startOfWeek(date: Date): Date {
 // Actieve gebruikers per week
 // ---------------------------------------------------------------------------
 
-export interface WeeklyActive {
+interface WeeklyActive {
   weekStart: string;
   activeUsers: number;
 }
@@ -158,7 +158,7 @@ export function weeklyActiveUsers(events: EventLite[], today: Date, weeks = 12):
 
 export const RETENTION_WEEKS = [1, 2, 4, 8, 12] as const;
 
-export interface CohortRetention {
+interface CohortRetention {
   cohortWeek: string;
   /** Aantal registraties in die week, inclusief verwijderde accounts. */
   size: number;
@@ -283,8 +283,8 @@ export function labeledWithin7Days(
   return { percentage: eligible === 0 ? null : Math.round((within / eligible) * 100), eligible, within, users: users.size };
 }
 
-export const ACTIVATION_WINDOW_MS = 72 * 3600 * 1000;
-export const ACTIVATION_SWIPES = 10;
+const ACTIVATION_WINDOW_MS = 72 * 3600 * 1000;
+const ACTIVATION_SWIPES = 10;
 
 /**
  * Activatie: onboarding af, bank gekoppeld en minstens 10 kaartjes ingedeeld,
@@ -325,7 +325,7 @@ function isTimedCard(e: EventLite): boolean {
   return e.durationMs !== null && e.durationMs > 0 && e.durationMs < 10 * 60 * 1000;
 }
 
-export interface CardTiming {
+interface CardTiming {
   medianMs: number | null;
   p75Ms: number | null;
   cards: number;
@@ -355,9 +355,9 @@ export function timePerCard(events: EventLite[]): CardTiming {
 // Trechter
 // ---------------------------------------------------------------------------
 
-export type FunnelStepKey = "signup" | "potjes" | "salarisdag" | "bank_started" | "bank_connected" | "coach";
+type FunnelStepKey = "signup" | "potjes" | "salarisdag" | "bank_started" | "bank_connected" | "coach";
 
-export interface FunnelStep {
+interface FunnelStep {
   key: FunnelStepKey;
   label: string;
   /** Naam van de stap in de zin over uitval ("bank koppelen"). */
@@ -374,7 +374,7 @@ const FUNNEL: readonly { key: FunnelStepKey; label: string; dropLabel: string; m
   { key: "coach", label: "Eerste kaartjes", dropLabel: "eerste kaartjes", match: (e) => e.type === "coach_completed" },
 ];
 
-export interface FunnelResult {
+interface FunnelResult {
   steps: FunnelStep[];
   biggestDrop: { step: FunnelStep; lost: number; of: number } | null;
 }
@@ -453,7 +453,7 @@ export interface StreakTx {
 }
 
 export const STREAK_BUCKETS = ["0", "1-2", "3-6", "7+"] as const;
-export type StreakBucket = (typeof STREAK_BUCKETS)[number];
+type StreakBucket = (typeof STREAK_BUCKETS)[number];
 
 export function streakBucket(days: number): StreakBucket {
   if (days <= 0) return "0";
@@ -462,7 +462,7 @@ export function streakBucket(days: number): StreakBucket {
   return "7+";
 }
 
-export interface Habit {
+interface Habit {
   /** Mediaan van het gemiddelde aantal actieve dagen per week, per actieve gebruiker. */
   medianActiveDays: number | null;
   /** Gebruikers die in de laatste `weeks` weken minstens één dag actief waren. */
@@ -542,7 +542,7 @@ export interface ShareLite {
   receivedAt: string | null;
 }
 
-export interface Sharing {
+interface Sharing {
   /** Actieve gebruikers (swipe in 4 weken) met minstens één deel in 4 weken. */
   usersWithShare: Ratio;
   /** Delen via de bank, minstens 14 dagen oud, afgehandeld binnen 14 dagen. */
@@ -595,7 +595,7 @@ export function sharing(events: EventLite[], shares: ShareLite[], today: Date): 
 // Meldingen en startscherm
 // ---------------------------------------------------------------------------
 
-export interface PushTagRate extends Ratio {
+interface PushTagRate extends Ratio {
   tag: string;
 }
 
@@ -626,7 +626,7 @@ export function pushOpenRate(events: EventLite[]): PushTagRate[] {
     });
 }
 
-export interface StartTabSplit {
+interface StartTabSplit {
   opens: number;
   users: number;
   startTab: Record<"swipen" | "overzicht" | "anders", number>;
@@ -680,7 +680,7 @@ export interface PotjeTx {
   isInternal: boolean;
 }
 
-export interface Potjes {
+interface Potjes {
   /** Aandeel van het uitgegeven bedrag dat in Overig staat (alleen het totaal). */
   overigShare: number | null;
   /** Gebruikers met ingedeelde uitgaven (basis van `overigShare`). */
@@ -827,13 +827,13 @@ export interface GoNoGoRow {
   hint?: string;
 }
 
-export interface GoNoGo {
+interface GoNoGo {
   rows: GoNoGoRow[];
   /** Een kernmetric staat op no-go: dan is het geheel no-go. */
   veto: boolean;
 }
 
-export interface GoNoGoInput {
+interface GoNoGoInput {
   profiles: ProfileLite[];
   events: EventLite[];
   txTimings: TxTiming[];

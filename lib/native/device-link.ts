@@ -12,7 +12,7 @@ export function nativePushAvailable(): boolean {
   return hasNativePlugin(NATIVE_PUSH);
 }
 
-export type DeviceLinkResult = { ok: true; push: boolean } | { ok: false; reason: "unavailable" | "denied" | "failed" };
+type DeviceLinkResult = { ok: true; push: boolean } | { ok: false; reason: "unavailable" | "denied" | "failed" };
 
 export async function linkThisDevice(options: { askPermission?: boolean } = {}): Promise<DeviceLinkResult> {
   if (!nativePushAvailable()) return { ok: false, reason: "unavailable" };

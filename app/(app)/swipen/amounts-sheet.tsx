@@ -27,7 +27,7 @@ import { parseEuroInput } from "../potjes/[id]/goal-sheet";
  * - `split`: een afschrijving (vaak de creditcard). Het hele bedrag moet verdeeld zijn, met per
  *   regel een knop Rest en per deel een eigen notitie.
  */
-export type AmountsMode = "cash" | "split";
+type AmountsMode = "cash" | "split";
 
 interface AmountsSheetProps {
   mode: AmountsMode;

@@ -5,7 +5,7 @@
  */
 export const MAX_GROUP_NAME_LENGTH = 40;
 export const MAX_MEMBER_NAME_LENGTH = 60;
-export const MIN_GROUP_MEMBERS = 1;
+const MIN_GROUP_MEMBERS = 1;
 /** Plus jijzelf is dat 12 personen, ruim binnen MAX_SPLIT_PERSONS. */
 export const MAX_GROUP_MEMBERS = 11;
 export const MAX_GROUPS = 20;
@@ -16,7 +16,7 @@ export interface ShareGroup {
   members: string[];
 }
 
-export type GroupInput = { ok: true; name: string; members: string[] } | { ok: false; error: string };
+type GroupInput = { ok: true; name: string; members: string[] } | { ok: false; error: string };
 
 /** Sleutel om namen te vergelijken: zonder hoofdletters en dubbele spaties. */
 export function nameKey(name: string): string {
@@ -24,7 +24,7 @@ export function nameKey(name: string): string {
 }
 
 /** Eén naam opschonen: spaties weg aan de randen, dubbele spaties enkel, maximaal 60 tekens. */
-export function cleanName(name: string, max = MAX_MEMBER_NAME_LENGTH): string {
+function cleanName(name: string, max = MAX_MEMBER_NAME_LENGTH): string {
   return name.trim().replace(/\s+/g, " ").slice(0, max).trim();
 }
 

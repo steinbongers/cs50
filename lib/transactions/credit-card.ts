@@ -4,7 +4,7 @@
  * niets in: het blijft een hint. Pure helper, ook bruikbaar in tests en clientcode.
  */
 
-export interface CreditCardCandidate {
+interface CreditCardCandidate {
   counterparty?: string | null;
   description?: string | null;
   rawCounterparty?: string | null;

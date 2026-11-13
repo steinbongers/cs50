@@ -1,5 +1,4 @@
 import { ChevronRight, type LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -55,9 +54,4 @@ export function AnchorRow({ href, icon: Icon, iconClass, label, hint, value, dow
       </span>
     </a>
   );
-}
-
-/** Kleine uitlegregel onder een rij, binnen dezelfde kaart. */
-export function RowNote({ children }: { children: ReactNode }) {
-  return <p className="px-4 pt-1 pb-3 text-[13px] leading-[18px] text-text-muted">{children}</p>;
 }
