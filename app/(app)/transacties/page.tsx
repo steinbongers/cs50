@@ -122,7 +122,7 @@ export default async function TransactiesPage({ searchParams }: PageProps<"/tran
             ) : hasFilters ? (
               <EmptyState title="Hier staat niets" description="Kies een andere maand of een ander potje." />
             ) : (
-              <EmptyState title="Nog geen betalingen" description="Zodra je bank iets stuurt, vind je het hier terug." />
+              <EmptyState title="Nog geen kaartjes" description="Zodra je bank iets stuurt, vind je het hier terug." />
             )}
           </Card>
         </div>
@@ -133,7 +133,7 @@ export default async function TransactiesPage({ searchParams }: PageProps<"/tran
             <p className="px-4 pt-3 text-center text-[13px] text-text-muted">
               {hasFilters
                 ? `Je ziet de nieuwste ${limit}. Zoek specifieker voor oudere.`
-                : "Je ziet de nieuwste 50. Zoek of kies een maand voor meer."}
+                : "Zoek of kies een maand voor oudere kaartjes."}
             </p>
           )}
         </>

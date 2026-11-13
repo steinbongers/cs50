@@ -8,7 +8,7 @@ import type { FreeToSpend } from "@/lib/insights/free-to-spend";
 import { freeUntilLabel } from "./overview-copy";
 
 /**
- * "Vrij tot de 25e": je saldo min de vaste lasten die nog komen. Tik opent de
+ * "Nog over tot de 25e": je saldo min de vaste kosten die nog komen. Tik opent de
  * berekening, zodat het getal nooit uit de lucht komt vallen.
  */
 export function FreeToSpendCard({ free }: { free: FreeToSpend }) {
@@ -30,7 +30,7 @@ export function FreeToSpendCard({ free }: { free: FreeToSpend }) {
         <span className="sr-only">Bekijk hoe dit is berekend</span>
         <IconChevronRight size={18} className="shrink-0 text-text-muted" />
       </button>
-      <Sheet open={open} onClose={close} title={label} description="Je saldo min de vaste lasten die nog komen.">
+      <Sheet open={open} onClose={close} title={label} description="Je saldo min de vaste kosten die nog komen.">
         <dl className="flex flex-col divide-y">
           <div className="flex items-center justify-between gap-3 py-3">
             <dt className="font-medium">Saldo nu</dt>
@@ -38,7 +38,7 @@ export function FreeToSpendCard({ free }: { free: FreeToSpend }) {
           </div>
           {free.upcoming.length > 0 ? (
             <div className="py-3">
-              <dt className="font-medium">Komende vaste lasten</dt>
+              <dt className="font-medium">Komende vaste kosten</dt>
               <dd>
                 <ul className="mt-1 flex flex-col">
                   {free.upcoming.map((u) => (
@@ -55,19 +55,16 @@ export function FreeToSpendCard({ free }: { free: FreeToSpend }) {
             </div>
           ) : (
             <div className="flex items-center justify-between gap-3 py-3">
-              <dt className="font-medium">Komende vaste lasten</dt>
+              <dt className="font-medium">Komende vaste kosten</dt>
               <dd className="text-[13px] leading-[18px] text-text-muted">Geen meer deze maand</dd>
             </div>
           )}
           <div className="flex items-center justify-between gap-3 py-3">
-            <dt className="font-semibold">Vrij te besteden</dt>
+            <dt className="font-semibold">Nog over</dt>
             <dd className="font-semibold tabular-nums">{formatEuro(free.amount)}</dd>
           </div>
         </dl>
-        <p className="mt-1 text-[13px] leading-[18px] text-text-muted">
-          Een schatting. Vaste lasten herkennen we aan betalingen die elke maand terugkomen. Andere uitgaven zitten er
-          niet in.
-        </p>
+        <p className="mt-1 text-[13px] leading-[18px] text-text-muted">Een schatting.</p>
       </Sheet>
     </>
   );

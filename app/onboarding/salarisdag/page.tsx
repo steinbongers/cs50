@@ -12,7 +12,7 @@ export default async function OnboardingSalarisdagPage() {
   return (
     <div className="flex flex-1 flex-col">
       <StepHeader title="Wanneer komt je geld binnen?">
-        Daar begint je maand. Zo zie je wat je met dít salaris doet.
+        Daar begint je maand.
       </StepHeader>
       <SalaryDayForm initialDay={profile.salary_day} />
     </div>

@@ -48,5 +48,5 @@ test("koppen zeggen de conclusie", () => {
   assert.equal(cumulativeTitle(505, 500, "oktober"), "Je zit precies rond je gemiddelde");
   assert.equal(cumulativeTitle(80, null, "oktober"), `Je gaf in oktober tot nu toe €${NBSP}80 uit`);
   assert.equal(weekdayTitle(5), "Op zaterdag geef je het meest uit");
-  assert.equal(fixedTitle(0.384), "Vaste lasten zijn 38% van je uitgaven");
+  assert.equal(fixedTitle(0.384), "Vaste kosten zijn 38% van je uitgaven");
 });

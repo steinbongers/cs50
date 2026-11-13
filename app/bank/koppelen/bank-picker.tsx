@@ -48,9 +48,7 @@ export function BankPicker({ banks, next, reconnect }: { banks: BankOption[]; ne
           <h2 className="px-1 text-[15px] leading-5 font-semibold">Kaartjes ophalen vanaf</h2>
           <ImportFromChoice value={importFrom} onChange={setImportFrom} />
           <p className="px-1 text-[13px] leading-[18px] text-text-muted">
-            De app haalt ook je betalingen sinds je laatste salaris op (of de maand ervoor, als je salaris er net is),
-            zodat je kunt aantikken wat je vaste kosten en inkomsten zijn. Wat ouder is dan je keuze hierboven komt niet
-            op je stapel en telt nergens mee.
+            Wat ouder is, komt niet op je stapel.
           </p>
         </div>
       )}

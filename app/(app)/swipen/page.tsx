@@ -19,8 +19,7 @@ import {
   getOpenShares,
   getOpenTransactions,
 } from "@/lib/transactions/queries";
-import { monthLeftShort } from "@/components/overview/month-left-card";
-import { loadFixedItems, loadMonthLeft } from "@/lib/insights/fixed-month-server";
+import { loadFixedItems } from "@/lib/insights/fixed-month-server";
 import { SortScreen } from "./sort-screen";
 
 export const metadata: Metadata = { title: ACTION_LABEL };
@@ -35,13 +34,12 @@ export default async function SwipenPage({ searchParams }: PageProps<"/swipen">)
 
   // Oude verdelingen per persoon eerst omzetten naar bijhouden per uitgave.
   await convertOpenSharesToTracking().catch(() => 0);
-  const [categories, transactions, totalOpen, openShares, awaitingRefunds, monthLeft, fixedItems] = await Promise.all([
+  const [categories, transactions, totalOpen, openShares, awaitingRefunds, fixedItems] = await Promise.all([
     getActiveCategories(period),
     getOpenTransactions(undefined, firstId),
     countOpenTransactions(),
     getOpenShares(),
     getAwaitingRefunds(),
-    createClient().then((supabase) => loadMonthLeft(supabase, user.id, amsterdamToday())).catch(() => null),
     createClient().then((supabase) => loadFixedItems(supabase, user.id)).catch(() => []),
   ]);
 
@@ -52,7 +50,6 @@ export default async function SwipenPage({ searchParams }: PageProps<"/swipen">)
         <EmptyState
           icon={<IconJar size={28} />}
           title="Eerst even potjes kiezen"
-          description="Zonder potjes valt er niets te kiezen. Dat is zo gebeurd."
           action={<ButtonLink href="/onboarding/potjes">Potjes kiezen</ButtonLink>}
         />
       </>
@@ -71,7 +68,7 @@ export default async function SwipenPage({ searchParams }: PageProps<"/swipen">)
           <EmptyState
             icon={<Landmark />}
             title="Hier komen je kaartjes"
-            description="Zodra je bank gekoppeld is, ligt hier je eerste stapel."
+            description="Koppel je bank voor je eerste stapel."
             action={<ButtonLink href="/bank/koppelen?next=/swipen">Bank koppelen</ButtonLink>}
           />
         </>
@@ -88,7 +85,7 @@ export default async function SwipenPage({ searchParams }: PageProps<"/swipen">)
         <EmptyState
           icon={<CheckCheck />}
           title="Stapel leeg"
-          description="Alles zit in een potje. Nieuwe kaartjes komen vanzelf."
+          description="Alles zit in een potje."
           action={
             <ButtonLink href="/overzicht" variant="secondary">
               Naar je maand
@@ -112,7 +109,6 @@ export default async function SwipenPage({ searchParams }: PageProps<"/swipen">)
       openShares={openShares}
       awaitingRefunds={awaitingRefunds}
       coachStep={profile.coach_step}
-      monthLeftText={monthLeftShort(monthLeft)}
       fixedKeys={fixedItems.map((i) => `${i.direction}:${i.key}`)}
     />
   );

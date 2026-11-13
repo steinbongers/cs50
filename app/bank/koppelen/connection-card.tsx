@@ -76,7 +76,7 @@ export function ConnectionCard({
       </div>
       {/* De opgeslagen fout kan banktekst bevatten; we tonen een vaste zin. */}
       {lastError && status !== "revoked" && (
-        <p className="text-[13px] leading-[18px] text-text-muted">De laatste keer verversen lukte niet. We proberen het vanzelf opnieuw.</p>
+        <p className="text-[13px] leading-[18px] text-text-muted">Verversen lukte niet, we proberen het opnieuw.</p>
       )}
       {status !== "revoked" && <DisconnectButton />}
       {showReconnect && (

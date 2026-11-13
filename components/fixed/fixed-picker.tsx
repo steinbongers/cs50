@@ -33,7 +33,7 @@ export interface FixedPickerProps {
   groups: MonthGroup[];
   /** Wat eerder is opgeslagen. */
   saved: FixedItem[];
-  /** "20 oktober tot vandaag" */
+  /** "20 oktober tot vandaag". Staat niet meer in beeld; blijft voor de bestaande aanroepen. */
   periodText: string;
   hasBank: boolean;
   /** Waar je na opslaan heen gaat. */
@@ -45,9 +45,9 @@ export interface FixedPickerProps {
 
 /**
  * Je vaste maand: tik aan wat elke maand terugkomt. Niets staat vooraf aan; wat er het meest
- * als vast uitziet staat alleen bovenaan. Onderaan loopt mee wat er per maand vrij blijft.
+ * als vast uitziet staat alleen bovenaan. Onderaan loopt mee wat er per maand over blijft.
  */
-export function FixedPicker({ groups, saved, periodText, hasBank, next, saveLabel, skipLabel }: FixedPickerProps) {
+export function FixedPicker({ groups, saved, hasBank, next, saveLabel, skipLabel }: FixedPickerProps) {
   const router = useRouter();
   const [extra, setExtra] = useState<Row[]>(() => {
     // Eerder opgeslagen posten die niet in de vorige maand zitten (zelf toegevoegd, of een oudere maand).
@@ -200,12 +200,12 @@ export function FixedPicker({ groups, saved, periodText, hasBank, next, saveLabe
           <Card className="flex flex-col gap-3">
             <p className="text-[15px] leading-[22px]">
               {hasBank
-                ? `Er staan nog geen betalingen van ${periodText} in de app. Haal ze op, dan kun je hieronder aantikken wat vast is.`
-                : "Koppel eerst je bank. Dan staan hier je betalingen sinds je laatste salaris, per verkoper. Je kunt ook zelf posten toevoegen."}
+                ? "Haal eerst je kaartjes op."
+                : "Koppel eerst je bank, of voeg zelf iets toe."}
             </p>
             {hasBank && (
               <Button variant="secondary" onClick={fetchMonth} disabled={fetching}>
-                {fetching ? "Bezig met ophalen" : "Betalingen ophalen"}
+                {fetching ? "Bezig met ophalen" : "Kaartjes ophalen"}
               </Button>
             )}
           </Card>
@@ -253,23 +253,18 @@ export function FixedPicker({ groups, saved, periodText, hasBank, next, saveLabe
             onClick={() => setAdding(true)}
             className="flex min-h-11 items-center justify-center gap-1.5 text-[15px] font-medium text-primary"
           >
-            <Plus size={16} aria-hidden /> Zelf een post toevoegen
+            <Plus size={16} aria-hidden /> Zelf toevoegen
           </button>
         )}
 
         <p className="px-1 text-[13px] leading-[18px] text-text-muted">
-          Wat later in de maand nog komt, of per jaar of kwartaal, staat er niet bij. Voeg het zelf toe met het bedrag
-          per maand.
-          Aanpassen kan altijd via Instellingen.
+          Mist er iets? Voeg het zelf toe.
         </p>
       </div>
 
       <div className="sticky bottom-0 mt-auto bg-bg/95 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur">
-        <div className="mb-2 flex items-baseline justify-between px-1" aria-live="polite">
-          <span className="text-[13px] text-text-muted">
-            {formatEuro(totals.fixedIn)} erin, {formatEuro(totals.fixedOut)} eruit
-          </span>
-          <span className="text-[15px] font-semibold tabular-nums">Vrij per maand {formatEuro(totals.freePerMonth)}</span>
+        <div className="mb-2 flex items-baseline justify-end px-1" aria-live="polite">
+          <span className="text-[15px] font-semibold tabular-nums">Over per maand {formatEuro(totals.freePerMonth)}</span>
         </div>
         {error && (
           <p role="alert" className="mb-2 px-1 text-[13px] text-negative">

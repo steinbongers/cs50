@@ -62,12 +62,12 @@ interface TransactionCardProps {
 
 export const CASH_QUESTION = "Waar heb je dit contant geld aan uitgegeven?";
 /** Onderaan een herkende creditcard-afrekening (in plaats van de omschrijving, die zegt dan weinig). */
-export const CREDIT_CARD_HINT = "Verdeel over je potjes met Verdelen";
+export const CREDIT_CARD_HINT = "Tik op Verdelen";
 
 /**
- * De kaart bovenin: datum, tegenpartij en bedrag groot, omschrijving (of je
- * notitie) en saldo klein. Tik op de kaart voor de volledige banktekst.
- * Bij een pinopname staat onderaan de vraag in plaats van omschrijving en saldo (het saldo staat in de banktekst).
+ * De kaart bovenin: datum, naam en bedrag groot, omschrijving (of je notitie) klein.
+ * Tijd en saldo daarna staan niet op de kaart maar in de banktekst (tik op de kaart).
+ * Bij een pinopname staat onderaan de vraag in plaats van de omschrijving.
  * Bij een herkende creditcard staat onderaan de hint om hem te verdelen (je eigen notitie gaat voor).
  */
 export function TransactionCard({
@@ -117,7 +117,6 @@ export function TransactionCard({
       <div className="flex items-center justify-between gap-3">
         <p className="truncate text-[15px] leading-5 font-medium">
           {formatLongDay(transaction.bookingDate)}
-          {transaction.bookingTime && <span className="text-text-muted"> · {transaction.bookingTime}</span>}
         </p>
         {cash ? (
           <span className="shrink-0 rounded-full bg-primary-soft px-2 py-0.5 text-[11px] leading-[13px] font-medium text-primary">
@@ -159,9 +158,6 @@ export function TransactionCard({
         >
           {footer}
         </p>
-        {!cash && transaction.balanceAfter !== null && (
-          <p className="shrink-0 tabular-nums">Saldo daarna {formatEuro(transaction.balanceAfter)}</p>
-        )}
       </div>
     </motion.article>
   );

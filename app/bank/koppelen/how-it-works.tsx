@@ -1,9 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { APP_NAME } from "@/config/app";
 
-/** Gelijk aan CONSENT_DAYS in app/bank/actions.ts (een "use server"-bestand exporteert alleen functies). */
-const CONSENT_DAYS = 90;
-
 /**
  * Uitleg vóór het kiezen van een bank: wat de app wel en niet kan, en hoe de
  * toestemming loopt. Ingeklapt, zodat wie het al weet meteen door kan.
@@ -28,14 +25,13 @@ export function HowItWorks() {
         <div>
           <dt className="font-medium">Wat {APP_NAME} niet kan</dt>
           <dd className="text-text-muted">
-            Geld overmaken kan niet. Je inloggegevens zien we nooit: die typ je alleen bij je bank.
+            We kunnen niets overmaken en zien je wachtwoord nooit.
           </dd>
         </div>
         <div>
           <dt className="font-medium">Toestemming geef je zelf</dt>
           <dd className="text-text-muted">
-            Dat doe je in de app of op de site van je eigen bank. Die toestemming geldt {CONSENT_DAYS} dagen. Daarna
-            vraagt je bank het opnieuw; we laten het je op tijd weten.
+            Dat doe je bij je eigen bank, en af en toe opnieuw.
           </dd>
         </div>
         <div>
@@ -45,9 +41,7 @@ export function HowItWorks() {
         <div>
           <dt className="font-medium">Via Enable Banking</dt>
           <dd className="text-text-muted">
-            Enable Banking haalt de gegevens bij je bank op en geeft ze door aan {APP_NAME}. Dat Finse bedrijf staat
-            hiervoor geregistreerd bij de Finse financiële toezichthouder. Het toestemmingsscherm dat je onderweg ziet, is
-            van hen.
+            Enable Banking, een Fins bedrijf onder toezicht, haalt je gegevens op.
           </dd>
         </div>
       </dl>

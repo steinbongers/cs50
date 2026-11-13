@@ -11,7 +11,7 @@ import { recurringMonthlyTotal } from "@/lib/insights/recurring";
 import { amsterdamToday } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "Vaste lasten en abonnementen" };
+export const metadata: Metadata = { title: "Vaste kosten" };
 
 /** Alleen inzicht: wat elke maand terugkomt. Opzeggen doe je zelf, buiten de app. */
 export default async function VasteLastenPage() {
@@ -23,19 +23,18 @@ export default async function VasteLastenPage() {
 
   return (
     <>
-      <PageHeader title="Vaste lasten" subtitle="En abonnementen" backHref="/overzicht" />
+      <PageHeader title="Vaste kosten" backHref="/overzicht" />
       <div className="flex flex-col gap-4 px-4 pb-8">
         {charges.length === 0 ? (
           <Card padding="none">
             <EmptyState
               icon={<Repeat />}
-              title="Nog geen vaste lasten gevonden"
-              description="Betalingen die elke maand terugkomen, zie je hier vanzelf."
+              title="Nog geen vaste kosten gevonden"
             />
           </Card>
         ) : (
           <>
-            <p className="px-1 text-[15px]">{recurringSummary(total, charges.length)}</p>
+            <p className="px-1 text-[15px]">{recurringSummary(total)}</p>
             <Card padding="none">
               <ul className="divide-y">
                 {charges.map((c) => (
@@ -52,10 +51,7 @@ export default async function VasteLastenPage() {
                 ))}
               </ul>
             </Card>
-            <p className="px-1 text-[13px] leading-[18px] text-text-muted">
-              Herkend aan betalingen die in minstens twee van de laatste drie maanden terugkwamen, met ongeveer hetzelfde
-              bedrag. Het bedrag is een gemiddelde.
-            </p>
+            <p className="px-1 text-[13px] leading-[18px] text-text-muted">Herkend omdat het elke maand terugkomt.</p>
           </>
         )}
       </div>

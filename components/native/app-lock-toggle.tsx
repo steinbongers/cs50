@@ -66,7 +66,7 @@ export function AppLockToggle() {
     <ListRow
       icon={ScanFace}
       iconClass="bg-cat-groen-soft text-cat-groen"
-      label={<RowLabel label="Face ID-slot" hint={note ?? "Vraagt Face ID bij het openen"} />}
+      label={<RowLabel label="Face ID-slot" hint={note ?? undefined} />}
       trailing={<Switch checked={on} onCheckedChange={(next) => void change(next)} disabled={busy} label="Face ID-slot" />}
     />
   );

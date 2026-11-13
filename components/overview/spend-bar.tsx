@@ -42,9 +42,9 @@ interface SpendBarProps {
 
 /**
  * Groot bedrag met één dunne balk eronder: per potje een stuk, grootste eerst (besluit van
- * Stein, in plaats van de ring). Tik op een stuk of op een naam eronder en je ziet dat potje
- * met zijn bedrag en aandeel; nog een keer tikken zet het totaal terug. Kleur is nooit het
- * enige kenmerk: elke naam staat eronder, en "nog in te delen" is gearceerd.
+ * Stein, in plaats van de ring). Tik op een stuk en je ziet dat potje met naam, bedrag en
+ * aandeel; nog een keer tikken zet het totaal terug. Geen legenda: de potjeslijst eronder is de
+ * legenda, elk stuk heeft een schermlezernaam en "nog in te delen" is gearceerd.
  */
 export function SpendBar({ slices, unsorted, total, label }: SpendBarProps) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -86,73 +86,43 @@ export function SpendBar({ slices, unsorted, total, label }: SpendBarProps) {
         )}
       </div>
 
+      {/* Hoge tikvlakken (44 px) rond een balk van 12 px; 2 px ruimte tussen de stukken. */}
       {barTotal > 0 && (
-        <>
-          {/* Hoge tikvlakken (44 px) rond een balk van 12 px; 2 px ruimte tussen de stukken. */}
-          <div className="flex w-full gap-[2px]" role="group" aria-label={`Uitgaven per potje in ${label}: ${summary}`}>
-            {segments.map((slice, i) => {
-              const dimmed = selected !== null && selected !== slice.id;
-              return (
-                <button
-                  key={slice.id}
-                  type="button"
-                  onClick={() => toggle(slice.id)}
-                  aria-pressed={selected === slice.id}
-                  aria-label={`${slice.name}: ${formatEuroWhole(slice.amount)}, ${percent(slice.amount, barTotal)}`}
-                  className="flex h-11 min-w-[6px] items-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                  style={{ flexGrow: slice.amount, flexBasis: 0 }}
-                >
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "block h-3 w-full transition-opacity duration-150",
-                      i === 0 && "rounded-l-full",
-                      i === segments.length - 1 && "rounded-r-full",
-                      dimmed && "opacity-30",
-                    )}
-                    style={
-                      slice.id === OPEN_ID
-                        ? {
-                            backgroundImage:
-                              "repeating-linear-gradient(135deg, var(--text-muted) 0 2px, transparent 2px 5px)",
-                            boxShadow: "inset 0 0 0 1px var(--text-muted)",
-                          }
-                        : { backgroundColor: fillFor(slice) }
-                    }
-                  />
-                </button>
-              );
-            })}
-          </div>
-
-          <ul className="-mt-1 flex flex-wrap justify-center gap-x-3 gap-y-1">
-            {segments.map((slice) => (
-              <li key={slice.id}>
-                <button
-                  type="button"
-                  onClick={() => toggle(slice.id)}
+        <div className="flex w-full gap-[2px]" role="group" aria-label={`Uitgaven per potje in ${label}: ${summary}`}>
+          {segments.map((slice, i) => {
+            const dimmed = selected !== null && selected !== slice.id;
+            return (
+              <button
+                key={slice.id}
+                type="button"
+                onClick={() => toggle(slice.id)}
+                aria-pressed={selected === slice.id}
+                aria-label={`${slice.name}: ${formatEuroWhole(slice.amount)}, ${percent(slice.amount, barTotal)}`}
+                className="flex h-11 min-w-[6px] items-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                style={{ flexGrow: slice.amount, flexBasis: 0 }}
+              >
+                <span
                   aria-hidden
-                  tabIndex={-1}
                   className={cn(
-                    "inline-flex min-h-7 items-center gap-1.5 text-[13px] text-text-muted transition-opacity duration-150",
-                    selected !== null && selected !== slice.id && "opacity-50",
+                    "block h-3 w-full transition-opacity duration-150",
+                    i === 0 && "rounded-l-full",
+                    i === segments.length - 1 && "rounded-r-full",
+                    dimmed && "opacity-30",
                   )}
-                >
-                  <span
-                    className="size-2 shrink-0 rounded-full"
-                    style={
-                      slice.id === OPEN_ID
-                        ? { boxShadow: "inset 0 0 0 1.5px var(--text-muted)" }
-                        : { backgroundColor: fillFor(slice) }
-                    }
-                  />
-                  <span>{slice.name}</span>
-                  <span className="tabular-nums">{percent(slice.amount, barTotal)}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
+                  style={
+                    slice.id === OPEN_ID
+                      ? {
+                          backgroundImage:
+                            "repeating-linear-gradient(135deg, var(--text-muted) 0 2px, transparent 2px 5px)",
+                          boxShadow: "inset 0 0 0 1px var(--text-muted)",
+                        }
+                      : { backgroundColor: fillFor(slice) }
+                  }
+                />
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );

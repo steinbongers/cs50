@@ -13,7 +13,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { SAVINGS_SINCE, savingsStandText, signedWhole } from "@/components/overview/overview-copy";
 import { categoryColorClasses } from "@/lib/categories/palette";
 import type { CategoryDraft } from "@/lib/categories/types";
-import { formatDay, formatDayShort, formatEuro, formatEuroWhole, formatSignedEuro } from "@/lib/format";
+import { formatDay, formatDayShort, formatEuroWhole, formatSignedEuro } from "@/lib/format";
 import { budgetLabel, budgetStatus, goalLabel, goalStatus } from "@/lib/insights/budget";
 import type { WeekPoint } from "@/lib/insights/compute";
 import { cn } from "@/lib/utils";
@@ -23,25 +23,16 @@ import { GoalSheet } from "./goal-sheet";
 import { TransactionSheet } from "./transaction-sheet";
 
 /**
- * Wat er onder de datum staat: bij een terugbetaling waar hij bij hoort, bij een deel van welke
- * afschrijving, bij een uitgave of hij nog op geld terug wacht en wat er al terug is, anders (oude
- * verdeling) jouw deel.
+ * Wat er onder de datum staat, kort en zonder bedragen (die staan in de sheet): bij een
+ * terugbetaling waar hij bij hoort, bij een deel van welke afschrijving, bij een uitgave of hij
+ * nog op geld terug wacht of al geld terug kreeg, anders (oude verdeling) jouw deel.
  */
 function refundNote(tx: DetailTransaction): string {
   if (tx.refundFor) return ` · Terug voor: ${tx.refundFor}`;
   if (tx.splitOf) return ` · ${tx.splitOf}`;
-  const received = tx.refundReceived ?? 0;
-  if (tx.awaitingRefund) {
-    return received > 0
-      ? ` · Wacht op geld terug, ${formatEuro(received)} van ${formatEuro(Math.abs(tx.amount))} terug`
-      : " · Wacht op geld terug";
-  }
-  if (received > 0) {
-    // Afgerond. Met een eigen schatting is own_share schatting plus wat via de bank terugkwam.
-    const own = Math.max(0, (tx.ownShare ?? Math.abs(tx.amount)) - received);
-    return ` · ${formatEuro(received)} terug, jouw deel ${formatEuro(own)}`;
-  }
-  if (tx.ownShare !== null) return ` · jouw deel van ${formatEuro(Math.abs(tx.amount))}`;
+  if (tx.awaitingRefund) return " · wacht op geld terug";
+  if ((tx.refundReceived ?? 0) > 0) return " · geld terug";
+  if (tx.ownShare !== null) return " · jouw deel";
   return "";
 }
 

@@ -88,8 +88,7 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
           {connection && status === "active" && !reconnect ? "Je bankkoppeling" : "Koppel je bank"}
         </h1>
         <p className="mt-2 text-[15px] leading-5 text-text-muted">
-          Je logt in bij je eigen bank en geeft toestemming om mee te kijken. Wij kunnen nooit geld overmaken. Af en
-          toe vraagt je bank opnieuw om toestemming. Wij laten het je op tijd weten.
+          Je logt in bij je eigen bank. We kijken alleen mee.
         </p>
       </div>
 
@@ -135,9 +134,6 @@ export default async function BankKoppelenPage({ searchParams }: PageProps<"/ban
           </>
         ) : null}
 
-        <p className="px-1 text-[13px] leading-[18px] text-text-muted">
-          Je koppelt één bank, met al je rekeningen daar. Geld dat je naar jezelf overmaakt, slaan we over.
-        </p>
       </div>
     </div>
   );

@@ -79,8 +79,6 @@ interface SortScreenProps {
   /** Uitgaven die nog op geld terug wachten (bijhouden), voor de tegel Terugbetaling. */
   awaitingRefunds?: AwaitingRefund[];
   coachStep: number;
-  /** "€ 412 over": wat er deze maand nog vrij is, als de vaste maand is ingesteld. */
-  monthLeftText?: string | null;
   /** Vaste posten die al zijn ingesteld, als "uit:sleutel" of "in:sleutel". */
   fixedKeys?: string[];
 }
@@ -91,8 +89,6 @@ const STICKY_FROM_TILES = 21;
 const COACH_DONE_MS = 2500;
 /** Hoe lang een foutmelding in de pil blijft staan. */
 const ERROR_MS = 5000;
-/** Na zoveel ms is het vliegende kaartje in het potje (zie TransactionCard): dan telt het bedrag op. */
-const GULP_DELAY_MS = 540;
 
 /** Een groep keuzes die in één keer terug kan; bij een vaste ontvanger gaat ook de regel weg. */
 interface UndoGroup {
@@ -101,12 +97,6 @@ interface UndoGroup {
   ruleId?: string;
   /** Alle kaartjes die de regel indeelde, ook die niet op de lokale stapel lagen. */
   revertIds?: string[];
-}
-
-/** Hoeveel er bij het potje bijkomt als deze kaart erin gaat (bij een verdeling alleen jouw deel). */
-function spentDelta(transaction: OpenTransaction, category: CategoryOption, ownShare?: number): number {
-  if (category.isIncome) return Math.max(transaction.amount, 0);
-  return transaction.amount < 0 ? (ownShare ?? -transaction.amount) : -transaction.amount;
 }
 
 const VOORGESCHOTEN_OPTION: CategoryOption = {
@@ -206,7 +196,6 @@ export function SortScreen({
   openShares: initialOpenShares,
   awaitingRefunds: initialAwaiting = [],
   coachStep: initialCoachStep,
-  monthLeftText = null,
   fixedKeys = [],
 }: SortScreenProps) {
   // Vaste posten (Je vaste maand): tijdens het indelen aan en uit te zetten per verkoper.
@@ -401,14 +390,6 @@ export function SortScreen({
     });
   }, [finished, adoptedBatch, assignedCount, skipped, undone, startTransition]);
 
-  function bumpCategoryTotal(categoryId: string, delta: number) {
-    setCategories((prev) =>
-      prev.map((c) =>
-        c.id === categoryId ? { ...c, spentThisPeriod: Math.round((c.spentThisPeriod + delta) * 100) / 100 } : c,
-      ),
-    );
-  }
-
   const pick = useCallback(
     (category: CategoryOption) => {
       if (!current) return;
@@ -419,8 +400,6 @@ export function SortScreen({
       const track = split.enabled && transaction.amount < 0 && !category.isIncome && !category.isSavings;
       const decision: Decision = { transaction, category, track: track || undefined };
 
-      const delta = spentDelta(transaction, category);
-
       setError(null);
       setHint(null);
       setCardExit({ kind: "assign", target: null });
@@ -430,8 +409,6 @@ export function SortScreen({
       setUndo(decision);
       setUndoBulk(null);
       setPulse((p) => ({ id: category.id, key: p.key + 1 }));
-      // Het bedrag op de tegel telt op zodra het potje het kaartje "opschrokt" (na de vlucht).
-      setTimeout(() => bumpCategoryTotal(category.id, delta), GULP_DELAY_MS);
       if (track) {
         // Meteen beschikbaar voor de tegel Terugbetaling, zonder refresh.
         setAwaiting((prev) => [
@@ -461,7 +438,6 @@ export function SortScreen({
           setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
           setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
           setUndo((u) => (u?.transaction.id === transaction.id ? null : u));
-          bumpCategoryTotal(category.id, -delta);
           if (track) setAwaiting((prev) => prev.filter((a) => a.id !== transaction.id));
           setError(result.error);
         }
@@ -478,7 +454,6 @@ export function SortScreen({
       const durationMs = performance.now() - shownAt.current;
       const target = category ?? GELD_TERUG_OPTION;
       const decision: Decision = { transaction, category: target };
-      const delta = category ? spentDelta(transaction, category) : 0;
 
       setRefundOpen(false);
       setError(null);
@@ -490,7 +465,6 @@ export function SortScreen({
       setUndoBulk(null);
       if (category) {
         setPulse((p) => ({ id: category.id, key: p.key + 1 }));
-        bumpCategoryTotal(category.id, delta);
       }
       setAnnouncement(
         category ? `${transaction.counterparty}: geld terug, van ${category.name} af` : `${transaction.counterparty}: geld terug`,
@@ -502,7 +476,6 @@ export function SortScreen({
           setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
           setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
           setUndo((u) => (u?.transaction.id === transaction.id ? null : u));
-          if (category) bumpCategoryTotal(category.id, -delta);
           setError(result.error);
         }
       });
@@ -529,8 +502,8 @@ export function SortScreen({
     apply(next);
     setHint(
       next
-        ? `${transaction.counterparty} is nu een vaste post van ${formatEuro(Math.abs(transaction.amount))} per maand`
-        : `${transaction.counterparty} is geen vaste post meer`,
+        ? `${transaction.counterparty} komt nu elke maand terug`
+        : `${transaction.counterparty} komt niet meer elke maand terug`,
     );
     startTransition(async () => {
       const result = await toggleFixedItem({ name: transaction.counterparty, amount: transaction.amount, fixed: next });
@@ -614,7 +587,6 @@ export function SortScreen({
       const transaction = current;
       const durationMs = performance.now() - shownAt.current;
       const decision: Decision = { transaction, category, refund: { complete, estimate } };
-      const delta = spentDelta(transaction, category);
       const received = refundOutcome(expense.amount, expense.received, transaction.amount).received;
 
       setSettleOpen(false);
@@ -626,7 +598,6 @@ export function SortScreen({
       setUndo(decision);
       setUndoBulk(null);
       setPulse((p) => ({ id: category.id, key: p.key + 1 }));
-      bumpCategoryTotal(category.id, delta);
       refundForByTransaction.current.set(transaction.id, { before: expense, complete });
       setAwaiting((prev) =>
         complete ? prev.filter((a) => a.id !== expense.id) : prev.map((a) => (a.id === expense.id ? { ...a, received } : a)),
@@ -646,7 +617,6 @@ export function SortScreen({
           setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
           setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
           setUndo((u) => (u?.transaction.id === transaction.id ? null : u));
-          bumpCategoryTotal(category.id, -delta);
           refundForByTransaction.current.delete(transaction.id);
           setAwaiting((prev) => [expense, ...prev.filter((a) => a.id !== expense.id)]);
           setError(result.error);
@@ -679,7 +649,6 @@ export function SortScreen({
       setUndoBulk(null);
       setPartSplits((prev) => new Map(prev).set(transaction.id, local));
       if (parts.length === 1) setPulse((p) => ({ id: parts[0].category.id, key: p.key + 1 }));
-      parts.forEach((p) => bumpCategoryTotal(p.category.id, p.amount));
       setAnnouncement(local.text);
 
       startTransition(async () => {
@@ -693,7 +662,6 @@ export function SortScreen({
             next.delete(transaction.id);
             return next;
           });
-          parts.forEach((p) => bumpCategoryTotal(p.category.id, -p.amount));
           setError(result.error);
         }
       });
@@ -725,7 +693,6 @@ export function SortScreen({
       setUndo(decision);
       setUndoBulk(null);
       setPartSplits((prev) => new Map(prev).set(transaction.id, local));
-      parts.forEach((p) => bumpCategoryTotal(p.category.id, p.amount));
       setAnnouncement(`${transaction.counterparty}: ${local.text.toLowerCase()}`);
 
       startTransition(async () => {
@@ -739,7 +706,6 @@ export function SortScreen({
             next.delete(transaction.id);
             return next;
           });
-          parts.forEach((p) => bumpCategoryTotal(p.category.id, -p.amount));
           setError(result.error);
         }
       });
@@ -767,7 +733,7 @@ export function SortScreen({
       const text =
         restCents === 0
           ? "Al ingedeeld via Apple Pay: telt niet dubbel"
-          : `${formatEuro(coveredCents / 100)} was al ingedeeld. De rest ligt klaar.`;
+          : `${formatEuro(coveredCents / 100)} was al ingedeeld, de rest ligt klaar.`;
       const decision: Decision = { transaction, category: VERDEELD_OPTION, ownShare: 0 };
       const rest: OpenTransaction | null = result.restId
         ? {
@@ -812,7 +778,7 @@ export function SortScreen({
 
   const handleUndo = useCallback(() => {
     if (!undo) return;
-    const { transaction, category, ownShare } = undo;
+    const { transaction, category } = undo;
     warning();
     setUndo(null);
     setError(null);
@@ -825,7 +791,6 @@ export function SortScreen({
     setUndone((u) => u + 1);
     if (category.id === CONTANT_OPTION.id || category.id === VERDEELD_OPTION.id) {
       // De contante uitgaven of delen gaan weer uit de potjes (de server verwijdert ze).
-      partSplits.get(transaction.id)?.parts.forEach((p) => bumpCategoryTotal(p.category.id, -p.amount));
       setPartSplits((prev) => {
         const next = new Map(prev);
         next.delete(transaction.id);
@@ -848,14 +813,13 @@ export function SortScreen({
         refundForByTransaction.current.delete(transaction.id);
         setAwaiting((prev) => [refundFor.before, ...prev.filter((a) => a.id !== refundFor.before.id)]);
       }
-      bumpCategoryTotal(category.id, -spentDelta(transaction, category, ownShare));
     }
     setAnnouncement(`${transaction.counterparty} terug uit ${category.name}`);
     startTransition(async () => {
       const result = await undoAssign(transaction.id);
       if (!result.ok) setError(result.error);
     });
-  }, [undo, partSplits, startTransition]);
+  }, [undo, startTransition]);
 
   // Aanbod na een gewone keuze: dezelfde tegenpartij staat nog vaker op de stapel.
   // Nooit bij een verdeling, terugbetaling of pinopname; jij tikt zelf op "Ook de andere".
@@ -887,7 +851,6 @@ export function SortScreen({
     setDecisions((d) => [...d, ...decisionsSame]);
     setUndo(null);
     setUndoBulk(group);
-    decisionsSame.forEach((d) => bumpCategoryTotal(category.id, spentDelta(d.transaction, category)));
     setAnnouncement(`Nog ${decisionsSame.length} van ${undo.transaction.counterparty} in ${category.name}`);
 
     startTransition(async () => {
@@ -896,7 +859,6 @@ export function SortScreen({
         setQueue((q) => [...decisionsSame.map((d) => d.transaction), ...q.filter((t) => !ids.has(t.id))]);
         setDecisions((d) => d.filter((x) => !ids.has(x.transaction.id)));
         setUndoBulk((u) => (u === group ? null : u));
-        decisionsSame.forEach((d) => bumpCategoryTotal(category.id, -spentDelta(d.transaction, category)));
         setError(result.error);
       }
     });
@@ -909,7 +871,7 @@ export function SortScreen({
       if (!current || isCashWithdrawal(current)) return;
       if (split.enabled) {
         warning();
-        setHint("Een vaste ontvanger gaat zonder geld terug. Zet de schakelaar eerst uit.");
+        setHint("Zet eerst ‘Ik krijg een deel terug’ uit.");
         return;
       }
       const transaction = current;
@@ -924,14 +886,12 @@ export function SortScreen({
       setUndo(null);
       setUndoBulk(null);
       setPulse((p) => ({ id: category.id, key: p.key + 1 }));
-      bumpCategoryTotal(category.id, spentDelta(transaction, category));
 
       startTransition(async () => {
         const result = await assignAlways(transaction.id, category.id, durationMs, { coach: showCoach });
         if (!result.ok) {
           setQueue((q) => [transaction, ...q.filter((t) => t.id !== transaction.id)]);
           setDecisions((d) => d.filter((x) => x.transaction.id !== transaction.id));
-          bumpCategoryTotal(category.id, -spentDelta(transaction, category));
           setError(result.error);
           return;
         }
@@ -942,7 +902,6 @@ export function SortScreen({
           .map((t) => ({ transaction: t, category }));
         setQueue((q) => q.filter((t) => !otherIds.has(t.id)));
         setDecisions((d) => [...d, ...others]);
-        others.forEach((d) => bumpCategoryTotal(category.id, spentDelta(d.transaction, category)));
         const name = transaction.counterparty;
         const text = `${name} gaat voortaan in ${category.name}`;
         setAnnouncement(otherIds.size > 0 ? `${text}. Nog ${otherIds.size} kaartjes meegenomen.` : text);
@@ -962,7 +921,6 @@ export function SortScreen({
     const group = undoBulk.decisions;
     const { ruleId, revertIds } = undoBulk;
     const ids = new Set(group.map((d) => d.transaction.id));
-    const category = group[0].category;
     warning();
     setUndoBulk(null);
     setError(null);
@@ -970,7 +928,6 @@ export function SortScreen({
     setQueue((q) => [...group.map((d) => d.transaction), ...q]);
     setDecisions((d) => d.filter((x) => !ids.has(x.transaction.id)));
     setUndone((u) => u + group.length);
-    group.forEach((d) => bumpCategoryTotal(category.id, -spentDelta(d.transaction, category)));
     setAnnouncement(group.length === 1 ? "Kaartje terug op de stapel" : `${group.length} kaartjes terug op de stapel`);
     startTransition(async () => {
       const result = ruleId ? await removeRule(ruleId, revertIds ?? [...ids]) : await undoMany([...ids]);
@@ -1115,9 +1072,7 @@ export function SortScreen({
       <header className="safe-top-3 px-4">
         <div className="flex h-7 items-center justify-between gap-3">
           <h1 className="text-[17px] font-semibold">{ACTION_LABEL}</h1>
-          <p className="text-[13px] text-text-muted tabular-nums">
-            {monthLeftText ? `${monthLeftText} · ` : ""}Nog {remaining}
-          </p>
+          <p className="text-[13px] text-text-muted tabular-nums">Nog {remaining}</p>
         </div>
         <ProgressBar
           value={assignedCount}
@@ -1176,9 +1131,6 @@ export function SortScreen({
                 {split.enabled ? <Check size={14} strokeWidth={2.5} aria-hidden /> : <Undo2 size={14} aria-hidden />}
                 Ik krijg een deel terug
               </button>
-              {split.enabled && (
-                <span className="min-w-0 truncate text-[12px] leading-4 text-text-muted max-[389px]:hidden">Je houdt bij wat terugkomt</span>
-              )}
             </>
           ) : isIncoming ? (
             <p className="min-w-0 truncate px-1 text-[13px] text-text-muted" aria-hidden>
@@ -1186,13 +1138,13 @@ export function SortScreen({
             </p>
           ) : null}
           <div className="ml-auto flex shrink-0 items-center">
-            {/* Vaste post: komt elke maand terug. Alleen het icoon op smalle schermen, zodat de regel niet breekt. */}
+            {/* Elke maand: vaste kosten of inkomsten. Alleen het icoon op smalle schermen, zodat de regel niet breekt. */}
             {!isCash && current.counterparty !== "Onbekende tegenpartij" && (
               <button
                 type="button"
                 role="switch"
                 aria-checked={isFixed}
-                aria-label={isFixed ? "Vaste post, tik om weg te halen" : "Maak hier een vaste post van"}
+                aria-label={isFixed ? "Komt elke maand terug, tik om uit te zetten" : "Dit komt elke maand terug"}
                 onClick={toggleFixed}
                 className={cn(
                   "inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-2.5 text-[13px] font-medium transition-colors duration-150",
@@ -1201,7 +1153,7 @@ export function SortScreen({
                 )}
               >
                 <Repeat size={14} strokeWidth={2.25} aria-hidden />
-                <span className="max-[429px]:hidden">Vast</span>
+                <span className="max-[429px]:hidden">Elke maand</span>
               </button>
             )}
             {/* Telt niet mee: buiten je maand, Overzicht en potjes (een borg, iets zakelijks). */}
@@ -1288,7 +1240,7 @@ export function SortScreen({
               onClick={() => {
                 if (split.enabled) {
                   warning();
-                  setHint("Verdelen gaat zonder geld terug. Zet de schakelaar eerst uit.");
+                  setHint("Zet eerst ‘Ik krijg een deel terug’ uit.");
                   return;
                 }
                 tap();

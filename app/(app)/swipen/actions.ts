@@ -835,7 +835,7 @@ export async function assignAlways(
     .maybeSingle();
   if (!transaction) return { ok: false, error: GENERIC_ERROR };
   if (isCashWithdrawal(cashCandidate(transaction))) {
-    return { ok: false, error: "Een geldautomaat wordt geen vaste ontvanger. Kies het potje met een tik." };
+    return { ok: false, error: "Een geldautomaat kan niet altijd in één potje. Kies het potje met een tik." };
   }
   const match = ruleKey(transaction.counterparty, Number(transaction.amount));
   if (!match) return { ok: false, error: "Deze ontvanger kunnen we niet herkennen. Kies het potje gewoon met een tik." };

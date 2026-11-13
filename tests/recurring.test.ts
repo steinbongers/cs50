@@ -120,7 +120,7 @@ test("vrij tot je salaris: saldo min wat nog komt vóór de salarisdag", () => {
     ["telefoon", "2026-10-12"],
     ["sport", "2026-10-15"],
   ]);
-  assert.equal(freeUntilLabel(free.until), "Vrij tot de 23e");
+  assert.equal(freeUntilLabel(free.until), "Nog over tot de 23e");
 });
 
 test("vrij tot je salaris: niets zonder salarisdag of zonder bekend saldo", () => {
@@ -196,9 +196,9 @@ test("weekterugblik: neutrale teksten", () => {
   assert.equal(plain(weekDiffText(12, 0)), "De week ervoor niets");
 });
 
-test("vaste lasten: samenvatting enkel- en meervoud", () => {
-  assert.equal(plain(recurringSummary(47.2, 6)), "Je betaalt € 47 per maand aan 6 vaste lasten.");
-  assert.equal(plain(recurringSummary(12.99, 1)), "Je betaalt € 13 per maand aan 1 vaste last.");
+test("vaste kosten: samenvatting per maand", () => {
+  assert.equal(plain(recurringSummary(47.2)), "€ 47 per maand aan vaste kosten.");
+  assert.equal(plain(recurringSummary(12.99)), "€ 13 per maand aan vaste kosten.");
 });
 
 test("maandafsluiting: uitgegeven, grootste potje en aantal gesorteerde kaartjes", () => {

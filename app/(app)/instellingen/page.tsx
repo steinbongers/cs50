@@ -16,7 +16,7 @@ import type { BankConnectionRow } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import pkg from "@/package.json";
 import { DeleteAccountRow, ProfileCard, SalaryDayRow } from "./profile-settings";
-import { AnchorRow, ROW_FOCUS, RowLabel } from "./rows";
+import { AnchorRow, ROW_FOCUS } from "./rows";
 
 export const metadata: Metadata = { title: "Instellingen" };
 
@@ -53,14 +53,14 @@ export default async function InstellingenPage() {
           href="/potjes/beheren"
           icon={LayoutGrid}
           iconClass="bg-primary-soft text-primary"
-          label={<RowLabel label="Potjes beheren" hint="Volgorde en gearchiveerde potjes" />}
+          label="Potjes beheren"
           className={ROW_FOCUS}
         />
         <ListRow
           href="/instellingen/vaste-ontvangers"
           icon={Pin}
           iconClass="bg-cat-paars-soft text-cat-paars"
-          label={<RowLabel label="Vaste ontvangers" hint="Potje ingedrukt gehouden: gaat er altijd in" />}
+          label="Altijd in een potje"
           className={ROW_FOCUS}
         />
         <SalaryDayRow salaryDay={profile.salary_day} />
@@ -68,7 +68,7 @@ export default async function InstellingenPage() {
           href="/instellingen/vaste-maand"
           icon={Repeat}
           iconClass="bg-cat-groen-soft text-cat-groen"
-          label={<RowLabel label="Je vaste maand" hint="Vaste kosten en inkomsten: wat je vrij hebt" />}
+          label="Je vaste maand"
           className={ROW_FOCUS}
         />
         <ListRow
@@ -81,9 +81,12 @@ export default async function InstellingenPage() {
         />
       </ListGroup>
 
-      <ListGroup title="Meldingen en weergave">
+      <ListGroup title="Meldingen">
         <PushToggle enabled={profile.notifications_enabled} vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
         <PaymentSettings enabled={profile.payment_notifications} lockScreenDetails={profile.lock_screen_details} />
+      </ListGroup>
+
+      <ListGroup title="App">
         <ThemeToggle />
         <HapticsToggle />
         <AppLockToggle />
@@ -97,7 +100,6 @@ export default async function InstellingenPage() {
           icon={Download}
           iconClass="bg-cat-blauw-soft text-cat-blauw"
           label="Download je gegevens"
-          hint="Alles als CSV-bestand"
         />
         <ListRow
           href="/privacy"
@@ -106,6 +108,7 @@ export default async function InstellingenPage() {
           label="Privacy"
           className={ROW_FOCUS}
         />
+        <DeleteAccountRow />
       </ListGroup>
 
       <ListGroup title="Over">
@@ -133,10 +136,6 @@ export default async function InstellingenPage() {
             ROW_FOCUS,
           )}
         />
-      </ListGroup>
-
-      <ListGroup>
-        <DeleteAccountRow />
       </ListGroup>
     </div>
   );

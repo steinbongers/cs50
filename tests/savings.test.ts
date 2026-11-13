@@ -157,10 +157,10 @@ test("teksten over sparen: neutraal, met teken, en eerlijk over een negatieve st
 test("wat er over is noemt het sparen", () => {
   assert.equal(netLine(130, 100), `Inkomsten ${MINUS} uitgaven ${MINUS} gespaard: €${NBSP}130 over`);
   assert.equal(netLine(-40, 100), `€${NBSP}40 meer uitgegeven en gespaard dan binnenkwam`);
-  assert.equal(netLine(30, -200), `Inkomsten ${MINUS} uitgaven + uit je spaarpot: €${NBSP}30 over`);
+  assert.equal(netLine(30, -200), `€${NBSP}30 over`);
   assert.equal(netLine(230), `Inkomsten ${MINUS} uitgaven: €${NBSP}230 over`);
   assert.equal(
     flowTitle({ income: 1800, spent: 1700, saved: 300, net: -200, periods: 2 }, 0),
-    `Gemiddeld geef en spaar je €${NBSP}200 per maand meer dan er binnenkomt`,
+    `Gemiddeld gaat er €${NBSP}200 per maand meer uit dan erin`,
   );
 });

@@ -39,8 +39,7 @@ export function StartFromToday() {
           Begin vanaf vandaag
         </h2>
         <p className="text-[13px] leading-[18px] text-text-muted">
-          Haalt alle open kaartjes van vóór vandaag van je stapel. Ze tellen nergens mee. Wat je al in een potje zette,
-          blijft staan. Terugzetten kan per kaartje bij Alle kaartjes.
+          Oudere kaartjes gaan van je stapel en tellen niet mee.
         </p>
       </div>
       {confirming ? (

@@ -7,7 +7,7 @@ import { Flame, Snowflake } from "lucide-react";
 export function StreakChip({ days, forgiven = false }: { days: number; forgiven?: boolean }) {
   if (days <= 0) return null;
   const base = `${days} ${days === 1 ? "dag" : "dagen"} op rij alles in een potje`;
-  const label = forgiven ? `${base}. Eén dag overgeslagen, je reeks blijft gewoon staan.` : base;
+  const label = forgiven ? `${base}. Eén dag missen mag.` : base;
   return (
     <span
       className="inline-flex h-8 items-center gap-1 rounded-full bg-accent-soft px-2.5 text-[13px] font-semibold tabular-nums text-accent-strong"

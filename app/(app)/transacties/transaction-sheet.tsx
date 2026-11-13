@@ -71,7 +71,7 @@ function SheetBody({ transaction, categories }: { transaction: SearchResult; cat
       ) : onStack ? (
         <section className="flex flex-col gap-3" aria-label="Indelen">
           <p className="text-[15px] text-text-muted">
-            Dit kaartje ligt nog op de stapel. Daar kies je het potje, en deel je het als je geld terugkrijgt.
+            Dit kaartje ligt nog op je stapel.
           </p>
           <ButtonLink href="/swipen" fullWidth>
             Naar {ACTION_LABEL}
@@ -163,7 +163,7 @@ function CountedSection({ transactionId, counted }: { transactionId: string; cou
     <section className="flex flex-col gap-1.5 border-t border-border pt-4" aria-label={counted ? "Niet meetellen" : "Telt niet mee"}>
       {!counted && (
         <p className="pb-1 text-[15px] text-text-muted">
-          Dit kaartje telt niet mee in je maand, Overzicht en potjes.
+          Dit kaartje telt niet mee.
         </p>
       )}
       <Button variant="secondary" fullWidth onClick={run} loading={isPending} disabled={done}>
@@ -175,7 +175,7 @@ function CountedSection({ transactionId, counted }: { transactionId: string; cou
         ) : done ? (
           counted ? "Telt niet meer mee." : `Terug op de stapel. Kies het potje bij ${ACTION_LABEL}.`
         ) : counted ? (
-          "Dan telt het nergens mee. Terugzetten kan altijd hier."
+          "Dan telt het niet mee."
         ) : null}
       </p>
     </section>

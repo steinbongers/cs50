@@ -8,8 +8,8 @@ export const metadata: Metadata = { title: "Koppel je bank" };
 
 const TRUST: ReadonlyArray<{ icon: LucideIcon; text: string }> = [
   { icon: Eye, text: "Alleen meekijken" },
-  { icon: Lock, text: "Wij kunnen nooit geld overmaken" },
-  { icon: RefreshCw, text: "Af en toe vraagt je bank opnieuw om toestemming. Wij laten het je op tijd weten." },
+  { icon: Lock, text: "We kunnen nooit geld overmaken" },
+  { icon: RefreshCw, text: "Je bank vraagt af en toe opnieuw toestemming." },
 ];
 
 /**

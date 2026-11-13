@@ -60,7 +60,7 @@ export function RefundSheet({ open, onClose, amount, categories, pending = false
             Zonder potje
           </Button>
           <p className="text-center text-[13px] leading-[18px] text-text-muted">
-            Dan gaat het alleen van je totaal af, niet van een potje.
+            Dan gaat het alleen van je totaal af.
           </p>
         </div>
       </div>

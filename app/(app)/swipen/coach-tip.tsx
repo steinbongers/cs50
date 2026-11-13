@@ -1,7 +1,6 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { UNDO_WINDOW_MS } from "@/config/app";
 import { cn } from "@/lib/utils";
 
 /** Waar het pijltje van de ballon naar wijst: midden (de tegels), links (de schakelaar), rechts (Later). */
@@ -9,18 +8,18 @@ export type CoachArrow = "center" | "left" | "right";
 
 export const COACH_STEPS: ReadonlyArray<{ title: string; text?: string; arrow: CoachArrow }> = [
   {
-    title: "Elk kaartje is één betaling",
-    text: "Tik op het potje waar hij hoort. Ingedrukt houden: die ontvanger gaat er voortaan altijd in.",
+    title: "Elk kaartje is één bedrag",
+    text: "Tik op het potje waar hij hoort.",
     arrow: "center",
   },
   {
     title: "Vergist? Ongedaan maken",
-    text: `Je hebt ${UNDO_WINDOW_MS / 1000} seconden. Geen zin in deze? Tik op Later.`,
+    text: "Tik op Ongedaan maken, of op Later als je twijfelt.",
     arrow: "right",
   },
   {
     title: "Samen betaald?",
-    text: "Zet ‘Ik krijg een deel terug’ aan. Wat terugkomt, gaat er vanzelf af.",
+    text: "Zet ‘Ik krijg een deel terug’ aan.",
     arrow: "left",
   },
 ];
