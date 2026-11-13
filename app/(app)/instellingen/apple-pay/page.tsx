@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { APP_NAME } from "@/config/app";
 import { requireUser } from "@/lib/auth";
 import { cardKind, parseCardChoices } from "@/lib/native/wallet-card";
 import { createClient } from "@/lib/supabase/server";
@@ -10,30 +10,85 @@ import { ApplePayStatus } from "./status";
 
 export const metadata: Metadata = { title: "Apple Pay instellen" };
 
-const STEPS: { title: string; text: string }[] = [
+/** Naam van een knop of veld in Opdrachten: vet en letterlijk. */
+function B({ children }: { children: ReactNode }) {
+  return <strong className="font-semibold text-text">{children}</strong>;
+}
+
+/** Per stap: de titel is de ene tik die telt, eronder hooguit één korte zin. */
+const STEPS: { key: string; title: ReactNode; text: ReactNode }[] = [
   {
-    title: "Open de app Opdrachten",
-    text: "Die staat standaard op je iPhone. Tik onderin op Automatisering en dan rechtsboven op het plusje.",
+    key: "open",
+    title: (
+      <>
+        Open <B>Opdrachten</B>
+      </>
+    ),
+    text: (
+      <>
+        Tik op <B>Automatisering</B> en dan op <B>+</B>.
+      </>
+    ),
   },
   {
-    title: "Kies Transactie",
-    text: "Scrol naar beneden tot je Transactie ziet (met het Wallet-icoon). Staat hij er niet, dan heeft je iPhone iOS 17 of nieuwer nodig.",
+    key: "transactie",
+    title: (
+      <>
+        Kies <B>Transactie</B>
+      </>
+    ),
+    text: "Die staat onderaan de lijst.",
   },
   {
-    title: "Kies je kaarten en Voer direct uit",
-    text: "Vink je bankpas aan, en je creditcard als je die met Apple Pay gebruikt. Laat alle categorieën aan staan. Kies Voer direct uit en zet Meld bij uitvoeren uit. Tik op Volgende.",
+    key: "kaart",
+    title: "Vink je kaart aan",
+    text: (
+      <>
+        Kies <B>Voer direct uit</B>, zet <B>Meld bij uitvoeren</B> uit en tik op <B>Volgende</B>.
+      </>
+    ),
   },
   {
-    title: "Kies de actie Betaling indelen",
-    text: `Tik op Nieuwe lege automatisering en zoek op "Betaling indelen". De actie hoort bij ${APP_NAME}.`,
+    key: "actie",
+    title: (
+      <>
+        Tik op <B>Nieuwe lege automatisering</B>
+      </>
+    ),
+    text: (
+      <>
+        Zoek <B>Betaling indelen</B> en tik erop.
+      </>
+    ),
   },
   {
-    title: "Vul Winkel, Bedrag en Kaart in",
-    text: "Tik in de actie op Winkel, kies Invoer opdracht en daarna Winkel. Doe hetzelfde bij Bedrag. Tik op het pijltje in de actie voor het veld Kaart en kies daar Kaart of pas.",
+    key: "velden",
+    title: "Vul de drie velden",
+    text: (
+      <>
+        Tik op een veld, kies <B>Invoer opdracht</B> en dan de naam hieronder.
+        <span className="mt-1 flex flex-col">
+          <span>
+            <B>Winkel</B> wordt Winkel
+          </span>
+          <span>
+            <B>Bedrag</B> wordt Bedrag
+          </span>
+          <span>
+            <B>Kaart</B> (achter het pijltje) wordt Kaart of pas
+          </span>
+        </span>
+      </>
+    ),
   },
   {
-    title: "Tik op Gereed",
-    text: "Klaar. Bij je volgende betaling met Apple Pay krijg je binnen een paar seconden een melding.",
+    key: "gereed",
+    title: (
+      <>
+        Tik op <B>Gereed</B>
+      </>
+    ),
+    text: "Bij je volgende betaling krijg je een melding.",
   },
 ];
 
@@ -52,8 +107,7 @@ export default async function ApplePayPage() {
       <PageHeader title="Apple Pay instellen" backHref="/instellingen" />
       <div className="flex flex-col gap-4 px-4 pb-8">
         <p className="px-1 text-[15px] leading-[22px] text-text-muted">
-          Je bank geeft een betaling pas na uren door. Met Apple Pay kan het meteen: je iPhone vertelt de app na elke
-          betaling de winkel en het bedrag, en je krijgt een melding om hem in een potje te zetten. Je stelt dit één keer in.
+          Krijg meteen na het betalen een melding. Je stelt dit één keer in.
         </p>
 
         <ApplePayStatus />
@@ -61,7 +115,7 @@ export default async function ApplePayPage() {
         <Card padding="none" className="overflow-hidden">
           <ol>
             {STEPS.map((step, index) => (
-              <li key={step.title} className="flex gap-3 border-b border-border px-4 py-3 last:border-b-0">
+              <li key={step.key} className="flex gap-3 border-b border-border px-4 py-3 last:border-b-0">
                 <span
                   aria-hidden
                   className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[13px] font-semibold text-primary"
@@ -80,23 +134,8 @@ export default async function ApplePayPage() {
         <WalletCards cards={cards} />
 
         <div className="flex flex-col gap-2 px-1 text-[13px] leading-[18px] text-text-muted">
-          <p>
-            Wat de app krijgt: de winkel, het bedrag en de naam van de kaart zoals die in Wallet staat. Geen kaartnummer. De namen van de knoppen in Opdrachten
-            kunnen per iOS-versie iets verschillen.
-          </p>
-          <p>
-            Dit werkt alleen voor betalingen met Apple Pay. Pin je met je pasje of betaal je met iDEAL, dan komt de
-            betaling via je bank binnen, een paar keer per dag. Komt dezelfde betaling ook via de bank, dan voegt de app
-            ze samen: je ziet hem één keer.
-          </p>
-          <p>
-            Betaal je met een creditcard, dan schrijft je bank één keer per maand het totaal af. Op dat kaartje staat dan
-            hoeveel je al via Apple Pay hebt ingedeeld. Eén tik haalt dat eraf, zodat niets dubbel telt.
-          </p>
-          <p>
-            Stoppen? Verwijder de automatisering in Opdrachten (veeg hem naar links), of zet Melding na elke betaling uit
-            in Instellingen.
-          </p>
+          <p>We krijgen alleen winkel, bedrag en kaartnaam, geen kaartnummer.</p>
+          <p>Stoppen? Verwijder de automatisering in Opdrachten.</p>
         </div>
       </div>
     </>

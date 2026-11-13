@@ -14,7 +14,7 @@ export default async function OnboardingVastPage() {
   return (
     <div className="flex flex-1 flex-col">
       <StepHeader title="Je vaste maand">
-        Dit ging er in en uit van {data.periodText}. Tik aan wat elke maand terugkomt, dan weet je wat je vrij hebt.
+        Tik aan wat elke maand terugkomt.
       </StepHeader>
       <FixedPicker {...data} next="/onboarding/klaar" saveLabel="Verder" skipLabel="Later doen" />
     </div>

@@ -34,21 +34,19 @@ export interface PaymentCopyInput {
 
 export function paymentMessage(input: PaymentCopyInput): { title: string; body: string } {
   if (!input.details) {
-    return input.categoryName
-      ? { title: "Nieuwe betaling", body: "Klopt het voorgestelde potje? Ontgrendel om te kijken." }
-      : { title: "Nieuwe betaling", body: "In welk potje? Ontgrendel om te kijken." };
+    return { title: "Nieuwe betaling", body: "Ontgrendel om hem in te delen." };
   }
   const euro = formatEuro(Math.abs(input.amount));
   const where = input.merchant ? ` bij ${input.merchant}` : "";
   const title = clip(`${euro}${where}`, 40);
   const body = input.categoryName
-    ? clip(`${input.categoryName}? Tik op Klopt, of kies een ander potje.`, 90)
-    : "In welk potje? Kies er een, of bewaar hem voor later.";
+    ? clip(`${input.categoryName}? Tik op Klopt.`, 90)
+    : "In welk potje?";
   return { title, body };
 }
 
 export function manyPaymentsMessage(count: number): { title: string; body: string } {
-  return { title: `${count} nieuwe betalingen`, body: "Ze liggen klaar op je stapel. Even indelen?" };
+  return { title: `${count} nieuwe betalingen`, body: "Ze liggen op je stapel." };
 }
 
 /** Geen meldingen per betaling tussen 22:00 en 07:00 in Amsterdam. */

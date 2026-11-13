@@ -318,7 +318,7 @@ export async function toggleFixedItem(input: { name: string; amount: number; fix
   const user = await requireUser();
   const direction = input?.amount < 0 ? "uit" : "in";
   const [item] = cleanFixedItems([{ direction, name: input?.name, amount: Math.abs(Number(input?.amount)) }]);
-  if (!item) return { ok: false, error: "Hier kan geen vaste post van worden gemaakt." };
+  if (!item) return { ok: false, error: "Dit kan niet elke maand terugkomen." };
   const supabase = await createClient();
 
   if (!input.fixed) {
@@ -334,7 +334,7 @@ export async function toggleFixedItem(input: { name: string; amount: number; fix
   }
 
   const { count } = await supabase.from("fixed_items").select("id", { count: "exact", head: true }).eq("user_id", user.id);
-  if ((count ?? 0) >= MAX_FIXED_ITEMS) return { ok: false, error: "Je hebt al veel vaste posten. Haal er eerst een weg in Instellingen." };
+  if ((count ?? 0) >= MAX_FIXED_ITEMS) return { ok: false, error: "Je hebt al veel vaste kosten en inkomsten. Haal er eerst een weg in Instellingen." };
   const { error } = await supabase
     .from("fixed_items")
     .upsert(

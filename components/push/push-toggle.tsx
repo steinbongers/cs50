@@ -117,7 +117,7 @@ export function PushToggle({ enabled, vapidPublicKey }: { enabled: boolean; vapi
     : support === "denied"
       ? DENIED
       : support === "ios-not-installed"
-        ? "Op de iPhone werkt dit als je de app op je beginscherm zet. Tik op Delen en kies Zet op beginscherm."
+        ? "Zet de app eerst op je beginscherm."
         : support === "no-sw"
           ? "Deze browser kan geen meldingen tonen."
           : null;

@@ -37,7 +37,7 @@ export function ImportEarlier() {
           Eerdere kaartjes ophalen
         </h2>
         <p className="text-[13px] leading-[18px] text-text-muted">
-          Handig als je geld terugkrijgt voor iets van vóór de app. Dubbele kaartjes komen er niet bij.
+          Handig als je nog geld terugkrijgt van vroeger.
         </p>
       </div>
       <ImportFromChoice value={choice} onChange={setChoice} exclude={["nu"]} />

@@ -58,7 +58,7 @@ export type CompareLine =
 export function compareLine(comparison: Comparison | null): CompareLine | null {
   if (!comparison || comparison.daysElapsed < COMPARE_MIN_DAYS) return null;
   if (comparison.periodsUsed === 0 || comparison.average === null) {
-    return { kind: "note", text: "Je eerste maand. Vanaf volgende maand zie je hier je gemiddelde." };
+    return { kind: "note", text: "Volgende maand zie je hier je gemiddelde." };
   }
   // Bij weinig historie een losse regel onder de chip, zodat de chip op één regel past.
   const basis =
@@ -78,14 +78,14 @@ export function openCardsText(count: number): string {
   return count === 1 ? "1 kaartje wacht" : `${count} kaartjes wachten`;
 }
 
-/** "Vrij tot de 25e": de dag van de volgende salarisdag ("YYYY-MM-DD"). */
+/** "Nog over tot de 25e": de dag van de volgende salarisdag ("YYYY-MM-DD"). */
 export function freeUntilLabel(untilISO: string): string {
-  return `Vrij tot de ${Number(untilISO.slice(8, 10))}e`;
+  return `Nog over tot de ${Number(untilISO.slice(8, 10))}e`;
 }
 
-/** "Je betaalt € 47 per maand aan 6 vaste lasten." */
-export function recurringSummary(total: number, count: number): string {
-  return `Je betaalt ${formatEuroWhole(total)} per maand aan ${count} ${count === 1 ? "vaste last" : "vaste lasten"}.`;
+/** "€ 47 per maand aan vaste kosten." */
+export function recurringSummary(total: number): string {
+  return `${formatEuroWhole(total)} per maand aan vaste kosten.`;
 }
 
 /** "Meestal rond de 28e". */

@@ -68,12 +68,12 @@ export function WidgetSetupRow() {
     }
   }
 
-  // De hint is één regel (afgekapt): kort houden.
+  // Alleen een hint bij een fout of na het koppelen (één regel, afgekapt).
   const hint = failed
     ? "Koppelen lukte niet. Probeer het opnieuw."
     : linked
       ? "Voeg hem toe via je beginscherm"
-      : "Kaartjes en vrij geld op je beginscherm";
+      : undefined;
 
   return (
     <ListRow

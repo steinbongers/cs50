@@ -102,7 +102,7 @@ export function SalaryDayForm({ initialDay }: { initialDay: number | null }) {
           })}
         </div>
         <p className="mt-3 px-1 text-[13px] leading-[18px] text-text-muted">
-          Valt die dag in het weekend? Dan tellen we vanaf de vrijdag ervoor.
+          In het weekend telt de vrijdag ervoor.
         </p>
 
         <button

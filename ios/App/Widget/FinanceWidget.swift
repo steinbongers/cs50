@@ -3,7 +3,7 @@ import SwiftUI
 import AppIntents
 
 // Widget op het beginscherm.
-// - Klein en middel: "Nog N kaartjes" en "Vrij tot de 25e: € 340" (alleen lezen).
+// - Klein en middel: "Nog N kaartjes" en "Nog over tot de 25e: € 340" (alleen lezen).
 // - Groot (interactief, iOS 17): de oudste open betaling met je meestgebruikte potjes als knoppen
 //   en "Later". Een tik deelt in zonder de app te openen en toont meteen de volgende.
 //
@@ -160,13 +160,13 @@ enum WidgetText {
         return open == 1 ? "Nog 1 kaartje" : "Nog \(open) kaartjes"
     }
 
-    /// "Vrij tot de 25e", uit "YYYY-MM-DD".
+    /// "Nog over tot de 25e", uit "YYYY-MM-DD".
     static func freeLabel(_ until: String) -> String {
         let parts = until.split(separator: "-")
         if parts.count >= 3, let day = Int(parts[2].prefix(2)) {
-            return "Vrij tot de \(day)e"
+            return "Nog over tot de \(day)e"
         }
-        return "Vrij te besteden"
+        return "Nog over"
     }
 
     /// "€ 12,40": met centen, zonder teken (een uitgave is een uitgave).
@@ -221,7 +221,7 @@ enum WidgetActions {
 
 /// Zet de getoonde betaling in een potje.
 struct AssignCardIntent: AppIntent {
-    static var title: LocalizedStringResource = "In een potje zetten"
+    static var title: LocalizedStringResource = "Indelen"
     static var isDiscoverable = false
 
     @Parameter(title: "Betaling") var transactionId: String
@@ -327,11 +327,8 @@ struct LargeCardView: View {
                 Image(systemName: "checkmark.circle")
                     .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(.tint)
-                Text("Alles in een potje")
+                Text("Stapel leeg")
                     .font(.system(size: 20, weight: .semibold))
-                Text("Je stapel is leeg.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary)
             }
 
             Spacer(minLength: 0)
@@ -387,10 +384,10 @@ struct FreeView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             } else {
-                Text("Vrij te besteden")
+                Text("Nog over")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
-                Text("Stel je salarisdag in")
+                Text("Kies je vaste kosten in de app")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
@@ -464,8 +461,8 @@ struct FinanceWidget: Widget {
         StaticConfiguration(kind: kind, provider: FinanceProvider()) { entry in
             FinanceWidgetView(entry: entry)
         }
-        .configurationDisplayName("Kaartjes en vrij geld")
-        .description("Hoeveel kaartjes er nog liggen en wat je vrij hebt tot je salaris. Groot: deel je oudste betaling in met één tik.")
+        .configurationDisplayName("Kaartjes en Nog over")
+        .description("Je kaartjes en wat je nog over hebt.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

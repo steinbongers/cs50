@@ -40,7 +40,7 @@ export function KaartjeDetails({ transaction, children }: { transaction: Kaartje
         </dd>
       </div>
       <div>
-        <dt className="text-[13px] leading-[18px] text-text-muted">Tegenpartij</dt>
+        <dt className="text-[13px] leading-[18px] text-text-muted">Naam</dt>
         <dd className="font-medium break-words">{transaction.counterparty}</dd>
       </div>
       <div>

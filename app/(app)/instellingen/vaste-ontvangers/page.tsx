@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ruleLabel } from "@/lib/transactions/rules";
 import { RuleList, type RuleItem } from "./rule-list";
 
-export const metadata: Metadata = { title: "Vaste ontvangers" };
+export const metadata: Metadata = { title: "Altijd in een potje" };
 
 export default async function VasteOntvangersPage() {
   const user = await requireUser();
@@ -38,11 +38,10 @@ export default async function VasteOntvangersPage() {
 
   return (
     <>
-      <PageHeader title="Vaste ontvangers" backHref="/instellingen" />
+      <PageHeader title="Altijd in een potje" backHref="/instellingen" />
       <div className="flex flex-col gap-4 px-4 pb-8">
         <p className="px-1 text-[13px] leading-[18px] text-text-muted">
-          Houd op het hoofdscherm een potje ingedrukt, dan gaat die ontvanger voortaan altijd daarin. Haal je er een weg,
-          dan blijft wat al is ingedeeld gewoon staan.
+          Houd bij het indelen een potje ingedrukt om iemand toe te voegen.
         </p>
         <RuleList items={items} />
       </div>

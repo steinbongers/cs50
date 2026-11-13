@@ -265,7 +265,7 @@ export function SettleSheet({
               Hoort niet bij een uitgave
             </Button>
             <p className="text-center text-[13px] leading-[18px] text-text-muted">
-              Dan kies je zelf een potje waar het van af gaat, of zonder potje.
+              Dan kies je zelf een potje.
             </p>
           </div>
         )}

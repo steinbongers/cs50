@@ -35,11 +35,11 @@ export function ApplePayStatus() {
   if (state === "loading") return null;
 
   const text: Record<Exclude<State, "loading">, string> = {
-    web: "Dit kan alleen in de iPhone-app. Open de app op je iPhone en kom hier terug.",
+    web: "Dit kan alleen in de iPhone-app.",
     "old-ios": "Hiervoor heeft je iPhone iOS 17 of nieuwer nodig.",
-    unlinked: "Zet eerst meldingen aan op deze iPhone. Zonder melding zie je de betaling niet.",
+    unlinked: "Zet eerst meldingen aan.",
     denied: "Meldingen staan uit voor deze app. Zet ze aan in de instellingen van je iPhone.",
-    ready: "Deze iPhone is klaar. Volg de stappen hieronder.",
+    ready: "Deze iPhone is klaar.",
   };
 
   async function act() {

@@ -40,7 +40,7 @@ export default async function OnboardingPotjesPage() {
   return (
     <div className="flex flex-1 flex-col">
       <StepHeader title="Welke potjes passen bij jou?">
-        Zet uit wat je niet gebruikt. Naam, icoon en kleur pas je later nog aan.
+        Zet uit wat je niet gebruikt.
       </StepHeader>
       <CategoryPicker initialDrafts={drafts} />
     </div>

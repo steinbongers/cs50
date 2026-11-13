@@ -36,12 +36,12 @@ export default async function OnboardingKlaarPage() {
         </h1>
         {noBank && (
           <p className="mt-2 max-w-xs text-[15px] leading-5 text-text-muted">
-            Koppel je bank, dan komen je betalingen als kaartjes binnen.
+            Koppel je bank, dan komen je kaartjes vanzelf.
           </p>
         )}
         {open > 0 && (
           <p className="mt-2 max-w-xs text-[15px] leading-5 text-text-muted">
-            {open === 1 ? "1 kaartje wacht op je." : `${open} kaartjes wachten op je.`} Eén tik per kaartje.
+            {open === 1 ? "1 kaartje wacht op je." : `${open} kaartjes wachten op je.`}
           </p>
         )}
       </div>

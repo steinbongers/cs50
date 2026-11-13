@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 interface CategoryTilesProps {
   categories: CategoryOption[];
-  /** Inkomend kaartje: spaarpotjes krijgen dan klein "Uit je spaarpot" in plaats van hun bedrag. */
+  /** Inkomend kaartje: spaarpotjes krijgen dan klein "Uit je spaarpot" onder hun naam. */
   incoming?: boolean;
   onPick: (category: CategoryOption) => void;
   /** Ingedrukt houden: deze ontvanger gaat voortaan altijd in dit potje. */
@@ -33,9 +33,9 @@ interface CategoryTilesProps {
   tight?: boolean;
 }
 
-/** Zo lang ingedrukt houden maakt een vaste ontvanger. */
+/** Zo lang ingedrukt houden: deze naam gaat voortaan altijd in dit potje. */
 export const HOLD_MS = 550;
-/** Wie verder schuift dan dit, scrolt: dan geen vaste ontvanger. */
+/** Wie verder schuift dan dit, scrolt: dan niet altijd in dit potje. */
 const HOLD_SLOP_PX = 10;
 
 /** Vanaf dit aantal tegels worden ze iets lager (72 px). */
@@ -77,19 +77,13 @@ function repaymentLabel({ total, count, awaiting }: { total: number; count: numb
   return awaiting === 1 ? "1 uitgave" : `${awaiting} uitgaven`;
 }
 
-/** Bedrag deze maand in hele euro's; leeg bij € 0. */
-function wholeAmount(value: number): string | null {
-  const rounded = Math.round(value);
-  return rounded === 0 ? null : formatEuroWhole(rounded);
-}
-
 /**
  * Alle potjes als gelijke tegels, vier per rij, in de vaste volgorde van de
  * gebruiker. Terugbetaling (alleen bij inkomend geld) staat achteraan, vóór '+',
  * zodat elk potje altijd op dezelfde plek blijft (spiergeheugen). Niets is voorgeselecteerd
  * of gemarkeerd: de gebruiker beslist blanco.
- * Het bedrag van deze maand staat klein op de tegel (besluit van Stein). Bij inkomend geld
- * staan de spaarpotjes tussen de inkomstenpotjes, met klein "Uit je spaarpot" eronder.
+ * Tegels tonen alleen icoon en naam, geen bedragen (rustiger, BRIEF eenvoud punt 9). Bij inkomend
+ * geld staan de spaarpotjes tussen de inkomstenpotjes, met klein "Uit je spaarpot" eronder.
  */
 export function CategoryTiles({
   categories,
@@ -129,14 +123,9 @@ export function CategoryTiles({
       {visible.map((category) => {
         const colors = categoryColorClasses(category.color);
         const pulsing = pulseId === category.id;
-        const amount = wholeAmount(category.spentThisPeriod);
         // Geld uit je spaarpot halen is geen inkomen: de tegel zegt dat klein, zonder kleur.
         const savingsOut = incoming && category.isSavings;
-        const ariaLabel = savingsOut
-          ? `${category.name}, uit je spaarpot`
-          : amount
-            ? `${category.name}, ${amount} deze maand`
-            : category.name;
+        const ariaLabel = savingsOut ? `${category.name}, uit je spaarpot` : category.name;
         return (
           <motion.li
             // Bij elke keuze opnieuw afspelen: de key wisselt met pulseKey.
@@ -209,23 +198,13 @@ export function CategoryTiles({
               <span className={cn("relative", nameClasses)} aria-hidden>
                 {tileName(category.name)}
               </span>
-              {savingsOut ? (
+              {savingsOut && (
                 <span
                   className={cn("relative whitespace-nowrap text-text-muted max-[389px]:text-[9.5px]", amountClasses)}
                   aria-hidden
                 >
                   {SAVINGS_OUT_LABEL}
                 </span>
-              ) : (
-                <motion.span
-                  className={cn("relative text-text-muted", amountClasses)}
-                  aria-hidden
-                  // Het nieuwe bedrag springt op zodra het kaartje binnen is.
-                  animate={pulsing && !reduce ? { scale: [1, 1, 1.14, 1] } : { scale: 1 }}
-                  transition={{ duration: 0.95, times: [0, 0.6, 0.75, 1], ease: [0.45, 0, 0.55, 1] }}
-                >
-                  {amount ?? ""}
-                </motion.span>
               )}
             </button>
           </motion.li>

@@ -54,7 +54,7 @@ export function IncomeView({
         <Card padding="lg" className="text-center">
           <p className="text-[15px] text-text-muted">
             {!hasIncomePotje
-              ? "Je hebt nog geen inkomstenpotje. Maak er een, dan zie je hier wat er binnenkomt."
+              ? "Maak een inkomstenpotje om te zien wat binnenkomt."
               : isCurrent
                 ? "Deze maand kwam er nog niets binnen in een inkomstenpotje."
                 : `In ${monthName} kwam er niets binnen in een inkomstenpotje.`}
@@ -159,7 +159,7 @@ function UnsortedNote({ amount }: { amount: number }) {
       href="/swipen"
       className="-my-1 flex min-h-11 items-center gap-1 self-center rounded-control px-2 text-[13px] leading-[18px] text-text-muted transition-colors duration-150 hover:bg-surface-muted"
     >
-      {formatEuroWhole(amount)} binnengekomen zit nog in geen potje
+      {formatEuroWhole(amount)} binnengekomen, nog niet ingedeeld
       <IconChevronRight size={16} className="shrink-0" />
     </Link>
   );

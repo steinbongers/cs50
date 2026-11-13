@@ -29,7 +29,7 @@ export function RuleList({ items }: { items: RuleItem[] }) {
   if (visible.length === 0) {
     return (
       <p className="rounded-2xl bg-surface px-4 py-5 text-center text-[15px] leading-5 text-text-muted shadow-card">
-        Nog geen vaste ontvangers.
+        Nog niemand staat altijd in een potje.
       </p>
     );
   }

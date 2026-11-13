@@ -88,7 +88,7 @@ export function PaymentSettings({ enabled, lockScreenDetails }: { enabled: boole
     ? "Meldingen staan uit op je iPhone. Tik om ze aan te zetten."
     : failed
       ? "Aanzetten lukte niet. Probeer het opnieuw."
-      : "Met knoppen: Klopt of Ander potje";
+      : undefined;
 
   return (
     <>
@@ -107,14 +107,14 @@ export function PaymentSettings({ enabled, lockScreenDetails }: { enabled: boole
       <ListRow
         icon={EyeOff}
         iconClass="bg-cat-grijs-soft text-cat-grijs"
-        label={<RowLabel label="Verberg bedrag op vergrendelscherm" hint="Bedrag en winkel pas na ontgrendelen" />}
+        label="Verberg bedrag op vergrendelscherm"
         trailing={<Switch checked={hide} onCheckedChange={changeHide} label="Verberg bedrag op vergrendelscherm" />}
       />
       <ListRow
         href="/instellingen/apple-pay"
         icon={Wallet}
         iconClass="bg-cat-indigo-soft text-cat-indigo"
-        label={<RowLabel label="Apple Pay instellen" hint="Melding meteen na het betalen" />}
+        label="Apple Pay instellen"
         className={ROW_FOCUS}
       />
     </>

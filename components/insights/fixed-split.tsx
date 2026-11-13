@@ -7,19 +7,19 @@ import { cn } from "@/lib/utils";
 interface FixedSplitProps {
   fixed: number;
   rest: number;
-  /** Deel vaste lasten, 0 tot 1. */
+  /** Deel vaste kosten, 0 tot 1. */
   share: number;
 }
 
 /**
- * Twee getallen en één balk: vaste lasten in de volle kleur, de rest in een lichtere stap
+ * Twee getallen en één balk: vaste kosten in de volle kleur, de rest in een lichtere stap
  * van dezelfde kleur, met 2 px ruimte ertussen. Tik op een deel voor het aandeel.
  */
 export function FixedSplit({ fixed, rest, share }: FixedSplitProps) {
   const [selected, setSelected] = useState<"fixed" | "rest" | null>(null);
   const percent = Math.round(share * 100);
   const parts = [
-    { key: "fixed" as const, label: "Vaste lasten", amount: fixed, percent, className: "bg-chart-out", grow: share },
+    { key: "fixed" as const, label: "Vaste kosten", amount: fixed, percent, className: "bg-chart-out", grow: share },
     { key: "rest" as const, label: "De rest", amount: rest, percent: 100 - percent, className: "bg-chart-out-soft", grow: 1 - share },
   ];
   const focus = parts.find((p) => p.key === selected);

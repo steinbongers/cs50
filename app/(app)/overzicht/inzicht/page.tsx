@@ -19,6 +19,7 @@ import {
 import { PotjeMultiples, type PotjeRow } from "@/components/insights/potje-multiples";
 import { WeekdayChart } from "@/components/insights/weekday-chart";
 import { capitalize, periodMonthName, periodSubtitle } from "@/components/overview/overview-copy";
+import { WeekReviewCard } from "@/components/overview/week-review-card";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -41,6 +42,7 @@ import {
 import { previousPeriods } from "@/lib/insights/compute";
 import { loadInsightData } from "@/lib/insights/queries";
 import { detectRecurring, recurringMonthlyTotal } from "@/lib/insights/recurring";
+import { weekReview } from "@/lib/insights/week";
 import { amsterdamToday } from "@/lib/periods";
 import { createClient } from "@/lib/supabase/server";
 
@@ -122,12 +124,19 @@ export default async function InzichtPage() {
   // e. Grootste uitgaven deze periode.
   const largest = largestExpenses(insight.txs, catMap, current.startISO, current.endISO, 5);
 
-  // f. Vaste lasten tegenover de rest van een gemiddelde maand.
-  // Vaste spaaroverboekingen niet: hier staan vaste lasten tegenover je uitgaven, en sparen is geen uitgave.
+  // f. Vaste kosten tegenover de rest van een gemiddelde maand.
+  // Vaste spaaroverboekingen niet: hier staan vaste kosten tegenover je uitgaven, en sparen is geen uitgave.
   const recurringIn = recurringInput(insight.txs, insight.cats, { withoutSavings: true });
   const recurring = detectRecurring(recurringIn.txs, recurringIn.systemIds, salaryDay, today);
   const recurringTotal = recurringMonthlyTotal(recurring);
   const split = average ? fixedVersusRest(recurringTotal, average.spent) : null;
+
+  // Weekterugblik (zondag en maandag): staat hier bovenaan, niet meer op Overzicht.
+  const week = weekReview(insight.txs, catMap, today);
+  const weekItems = (week?.rows ?? []).flatMap((row) => {
+    const cat = catMap.get(row.categoryId);
+    return cat ? [{ id: cat.id, name: cat.name, icon: cat.icon, color: cat.color, spent: row.spent, previous: row.previous }] : [];
+  });
 
   if (!hasData) {
     return (
@@ -150,13 +159,11 @@ export default async function InzichtPage() {
     <>
       <PageHeader title="Meer inzicht" subtitle={subtitle} backHref="/overzicht" />
       <div className="flex flex-col gap-4 px-4 pb-8">
+        {week && weekItems.length > 0 && <WeekReviewCard weekStartISO={week.weekStartISO} weekEndISO={week.weekEndISO} items={weekItems} />}
+
         <ChartCard
           title={flowTitle(average, flows.at(-1)?.net ?? 0, flows.at(-1)?.saved ?? 0)}
-          subtitle={
-            anySaved
-              ? `Inkomsten en uitgaven per maand. Sparen telt niet als uitgave. ${capitalize(monthName)} loopt nog.`
-              : `Inkomsten en uitgaven per maand. ${capitalize(monthName)} loopt nog.`
-          }
+          subtitle="Inkomsten en uitgaven per maand."
           legend={
             <Legend
               items={[
@@ -190,7 +197,6 @@ export default async function InzichtPage() {
         ) : (
           <ChartCard
             title={`${biggest.name} is je grootste potje`}
-            subtitle={`Per maand, elk potje op een eigen schaal. Rechts: ${monthName} tot nu.`}
             footnote="Tik op een potje voor de bedragen."
             table={
               <ChartTable
@@ -211,7 +217,7 @@ export default async function InzichtPage() {
         ) : (
           <ChartCard
             title={cumulativeTitle(spentNow, avgNow, monthName)}
-            subtitle="Opgeteld per dag, tegenover je gemiddelde op dezelfde dag."
+            subtitle="Vergeleken met je gemiddelde."
             legend={
               <Legend
                 items={[
@@ -244,7 +250,6 @@ export default async function InzichtPage() {
         ) : (
           <ChartCard
             title={weekdayTitle(weekdayMax)}
-            subtitle="Gemiddeld per dag, deze en de vorige drie maanden."
             table={
               <ChartTable
                 head={["Dag", "Per dag", "Totaal"]}
@@ -303,24 +308,23 @@ export default async function InzichtPage() {
 
         {recurring.length === 0 ? (
           <Card>
-            <h2 className="text-[17px] leading-[22px] font-semibold">Vaste lasten en de rest</h2>
-            <Empty text="Nog geen vaste lasten gevonden. Betalingen die elke maand terugkomen, zie je hier vanzelf." />
+            <h2 className="text-[17px] leading-[22px] font-semibold">Vaste kosten en de rest</h2>
+            <Empty text="Nog geen vaste kosten gevonden." />
           </Card>
         ) : !split || !average ? (
           <Card>
-            <h2 className="text-[17px] leading-[22px] font-semibold">Vaste lasten en de rest</h2>
+            <h2 className="text-[17px] leading-[22px] font-semibold">Vaste kosten en de rest</h2>
             <Empty text="Na je eerste volle maand zie je hier hoeveel daarvan vastligt." />
           </Card>
         ) : (
           <ChartCard
             title={fixedTitle(split.share)}
-            subtitle="Per maand, tegenover wat je gemiddeld uitgeeft."
             footnote={basisText(average.periods)}
             table={
               <ChartTable
                 head={["", "Per maand", "Deel"]}
                 rows={[
-                  ["Vaste lasten", formatEuroWhole(split.fixed), `${Math.round(split.share * 100)}%`],
+                  ["Vaste kosten", formatEuroWhole(split.fixed), `${Math.round(split.share * 100)}%`],
                   ["De rest", formatEuroWhole(split.rest), `${100 - Math.round(split.share * 100)}%`],
                 ]}
               />
@@ -331,7 +335,7 @@ export default async function InzichtPage() {
               href="/overzicht/vaste-lasten"
               className="mt-1 -mb-1 flex min-h-11 items-center text-[13px] font-medium text-primary hover:underline"
             >
-              Bekijk je vaste lasten
+              Bekijk je vaste kosten
             </Link>
           </ChartCard>
         )}

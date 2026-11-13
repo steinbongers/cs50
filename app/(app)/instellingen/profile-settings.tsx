@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, Check, ChevronRight } from "lucide-react";
+import { CalendarDays, Check, ChevronRight, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
@@ -158,7 +158,7 @@ export function SalaryDayRow({ salaryDay }: { salaryDay: number | null }) {
               {day === null && <Check aria-hidden size={18} strokeWidth={2.25} className="shrink-0 text-primary" />}
             </button>
             </div>
-            <p className="text-[13px] text-text-muted">Valt die dag in het weekend? Dan tellen we vanaf de vrijdag ervoor.</p>
+            <p className="text-[13px] text-text-muted">In het weekend telt de vrijdag ervoor.</p>
           </div>
           {error && (
             <p className="text-[13px] leading-[18px] text-negative" role="alert">
@@ -174,7 +174,7 @@ export function SalaryDayRow({ salaryDay }: { salaryDay: number | null }) {
   );
 }
 
-/** Losse rij "Account verwijderen": één bevestiging, daarna direct en definitief weg. */
+/** Rij "Account verwijderen" (groep Gegevens): één bevestiging, daarna direct en definitief weg. */
 export function DeleteAccountRow() {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -195,17 +195,14 @@ export function DeleteAccountRow() {
 
   return (
     <>
-      <button
-        type="button"
+      <ListRow
+        icon={Trash2}
+        iconClass="bg-negative-soft text-negative"
+        label="Account verwijderen"
+        danger
         onClick={openSheet}
-        className={cn(
-          "flex min-h-[52px] w-full items-center justify-center px-4 text-[15px] leading-5 text-negative",
-          "transition-colors duration-150 active:bg-surface-muted",
-          ROW_FOCUS,
-        )}
-      >
-        Account verwijderen
-      </button>
+        className={ROW_FOCUS}
+      />
 
       <Sheet
         open={open}

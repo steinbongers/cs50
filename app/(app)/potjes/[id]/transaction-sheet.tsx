@@ -67,7 +67,7 @@ export function TransactionSheet({
                 Niet meetellen
               </Button>
               <p className="text-center text-[13px] leading-[18px] text-text-muted">
-                Dan telt dit kaartje niet mee in je maand, Overzicht en potjes. Terugzetten kan bij Alle kaartjes.
+                Dan telt dit kaartje niet mee.
               </p>
             </section>
           )}

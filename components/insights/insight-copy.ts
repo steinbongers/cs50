@@ -39,7 +39,7 @@ export function basisText(periods: number): string {
  * "Inkomsten − uitgaven: € 230 over" of "€ 40 meer uitgegeven dan binnenkwam". `net` is al
  * inkomsten − uitgaven − gespaard; met `saved` erbij zegt de regel dat ook:
  * "Inkomsten − uitgaven − gespaard: € 130 over". Kwam er geld uit je spaarpot (saved negatief),
- * dan "Inkomsten − uitgaven + uit je spaarpot: € 30 over".
+ * dan kort "€ 30 over".
  */
 export function netLine(net: number, saved = 0): string {
   const rounded = Math.round(net);
@@ -49,8 +49,8 @@ export function netLine(net: number, saved = 0): string {
     return `${formatEuroWhole(-rounded)} meer uitgegeven en gespaard dan binnenkwam`;
   }
   if (savedRounded < 0) {
-    if (rounded >= 0) return `Inkomsten ${MINUS} uitgaven + uit je spaarpot: ${formatEuroWhole(rounded)} over`;
-    return `${formatEuroWhole(-rounded)} meer uitgegeven dan binnenkwam, ook met wat uit je spaarpot kwam`;
+    if (rounded >= 0) return `${formatEuroWhole(rounded)} over`;
+    return `${formatEuroWhole(-rounded)} meer uitgegeven dan binnenkwam`;
   }
   if (rounded >= 0) return `Inkomsten ${MINUS} uitgaven: ${formatEuroWhole(rounded)} over`;
   return `${formatEuroWhole(-rounded)} meer uitgegeven dan binnenkwam`;
@@ -81,7 +81,7 @@ export function flowTitle(average: FlowAverage | null, currentNet: number, curre
     const net = Math.round(average.net);
     if (net >= 0) return `Gemiddeld hou je ${formatEuroWhole(net)} per maand over`;
     return Math.round(average.saved) > 0
-      ? `Gemiddeld geef en spaar je ${formatEuroWhole(-net)} per maand meer dan er binnenkomt`
+      ? `Gemiddeld gaat er ${formatEuroWhole(-net)} per maand meer uit dan erin`
       : `Gemiddeld geef je ${formatEuroWhole(-net)} per maand meer uit dan er binnenkomt`;
   }
   const net = Math.round(currentNet);
@@ -105,8 +105,8 @@ export function weekdayTitle(maxIndex: number): string {
   return `Op ${weekdayName(maxIndex)} geef je het meest uit`;
 }
 
-/** "Vaste lasten zijn 38% van je uitgaven". */
+/** "Vaste kosten zijn 38% van je uitgaven". */
 export function fixedTitle(share: number): string {
   const percent = Math.round(share * 100);
-  return percent >= 100 ? "Je uitgaven zijn bijna alleen vaste lasten" : `Vaste lasten zijn ${percent}% van je uitgaven`;
+  return percent >= 100 ? "Je uitgaven zijn bijna alleen vaste kosten" : `Vaste kosten zijn ${percent}% van je uitgaven`;
 }

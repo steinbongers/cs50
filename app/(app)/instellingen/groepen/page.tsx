@@ -37,7 +37,7 @@ export default async function GroepenPage() {
       <PageHeader title="Groepen" backHref="/instellingen" />
       <div className="flex flex-col gap-4 px-4 pb-8">
         <p className="px-1 text-[13px] leading-[18px] text-text-muted">
-          Deel je vaak met dezelfde mensen? Maak een groep. Bij &quot;Ik krijg een deel terug&quot; kies je hem met één tik.
+          Deel je vaak met dezelfde mensen? Maak een groep.
         </p>
         <GroupList items={items} />
       </div>

@@ -19,7 +19,7 @@ export function WalletCards({ cards }: { cards: { name: string; credit: boolean 
   if (cards.length === 0) {
     return (
       <p className="px-1 text-[13px] leading-[18px] text-text-muted">
-        Na je eerste betaling met Apple Pay staat hier je kaart. Dan kun je aangeven of het een creditcard is.
+        Je kaart verschijnt hier na je eerste betaling.
       </p>
     );
   }
@@ -41,7 +41,7 @@ export function WalletCards({ cards }: { cards: { name: string; credit: boolean 
             key={card.name}
             icon={CreditCard}
             iconClass="bg-cat-indigo-soft text-cat-indigo"
-            label={<RowLabel label={card.name} hint={credit ? "Creditcard: komt per maand via je bank" : "Betaalpas: komt ook via je bank"} />}
+            label={<RowLabel label={card.name} hint={credit ? "Creditcard" : "Betaalpas"} />}
             trailing={<Switch checked={credit} onCheckedChange={(next) => change(card.name, next)} label={`${card.name} is een creditcard`} />}
           />
         );
