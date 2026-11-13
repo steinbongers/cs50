@@ -7,7 +7,7 @@ import { IconClose } from "@/components/ui/icons";
 import { formatDayShort, formatEuroWhole } from "@/lib/format";
 import { weekDiffText } from "./overview-copy";
 
-export interface WeekReviewItem {
+interface WeekReviewItem {
   id: string;
   name: string;
   icon: string;

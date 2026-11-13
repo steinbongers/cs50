@@ -62,7 +62,7 @@ export function ChartCard({ title, subtitle, legend, table, footnote, children }
   );
 }
 
-export interface LegendItem {
+interface LegendItem {
   label: string;
   /** CSS-kleur van de reeks, bijvoorbeeld `var(--chart-in)`. */
   color: string;
@@ -99,7 +99,7 @@ export function Legend({ items }: { items: LegendItem[] }) {
   );
 }
 
-export interface TooltipRow {
+interface TooltipRow {
   value: string;
   label: string;
   /** Kleur van het lijnsleuteltje; leeg = geen sleutel. */

@@ -9,7 +9,7 @@ import type { Json } from "@/lib/supabase/types";
  * Payloads bevatten alleen id's, enums, aantallen, duren en buckets:
  * nooit bedragen, tegenpartijen, omschrijvingen, notities of namen.
  */
-export type EventType =
+type EventType =
   /**
    * App geopend, één keer per browsersessie.
    * `{ source: 'push' | 'direct', tag?: string, start_tab: 'swipen' | 'overzicht' | 'anders',
@@ -150,7 +150,7 @@ export type EventType =
   /** Vaste post gemaakt tijdens het indelen. `{ direction: 'uit' | 'in', source: 'swipen' }` (nooit naam of bedrag) */
   | "fixed_item_added";
 
-export type OpenCardsBucket = "0" | "1-5" | "6-20" | "20+";
+type OpenCardsBucket = "0" | "1-5" | "6-20" | "20+";
 
 /** Aantal open kaartjes als bucket voor `app_open`, zodat er geen exacte aantallen in de meting staan. */
 export function openCardsBucket(n: number): OpenCardsBucket {

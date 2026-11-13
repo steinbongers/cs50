@@ -243,7 +243,7 @@ export interface CategoryDeviation {
   periodsUsed: number;
 }
 
-export interface DeviationOptions {
+interface DeviationOptions {
   /** Hoeveel vorige periodes maximaal meetellen (standaard 3). */
   maxPeriods?: number;
 }
@@ -291,11 +291,11 @@ export function categoryDeviations(
 }
 
 /** Vanaf welk verschil (in euro's) een potje opvalt. */
-export const STANDOUT_MIN_DIFF = 25;
+const STANDOUT_MIN_DIFF = 25;
 /** Vanaf welk deel van het gemiddelde een potje opvalt. */
-export const STANDOUT_MIN_RATIO = 0.25;
+const STANDOUT_MIN_RATIO = 0.25;
 /** Pas na zoveel dagen in de periode is een vergelijking zinnig. */
-export const STANDOUT_MIN_DAYS = 7;
+const STANDOUT_MIN_DAYS = 7;
 
 /**
  * Het ene potje dat het noemen waard is, of null. Eerste item (lijst is al op
@@ -316,7 +316,7 @@ export function pickStandout(deviations: CategoryDeviation[], daysElapsed: numbe
   return null;
 }
 
-export interface Streak {
+interface Streak {
   days: number;
   /** Is de stapel op dit moment leeg? */
   todayDone: boolean;
@@ -325,7 +325,7 @@ export interface Streak {
 }
 
 /** Eén gemiste dag per zoveel dagen wordt opgevangen zonder dat de reeks breekt. */
-export const STREAK_GRACE_WINDOW = 7;
+const STREAK_GRACE_WINDOW = 7;
 
 /**
  * Dagstreak, vergevingsgezind:
@@ -405,14 +405,14 @@ export function weeklySeries(
   return points;
 }
 
-export interface MonthReviewCategory {
+interface MonthReviewCategory {
   category: CatLite;
   spent: number;
   average: number | null;
   budget: number | null;
 }
 
-export interface MonthReview {
+interface MonthReview {
   period: Period;
   total: number;
   average: number | null;

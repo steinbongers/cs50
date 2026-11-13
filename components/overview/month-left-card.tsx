@@ -6,12 +6,6 @@ import type { MonthLeft } from "@/lib/insights/fixed-month-server";
 const shell =
   "flex min-h-14 w-full items-center gap-3 rounded-card bg-surface px-4 py-3 text-left shadow-card transition-transform duration-100 active:scale-[0.98] motion-reduce:transition-none";
 
-/** Kort, voor de kop van Swipen en als schermlezertekst: "€ 412 over". */
-export function monthLeftShort(left: MonthLeft | null): string | null {
-  if (!left || left.status !== "running") return null;
-  return `${formatEuroWhole(left.amount)} over`;
-}
-
 /**
  * Nog over deze maand: vaste inkomsten min vaste kosten min wat je deze maand verder uitgaf.
  * Vóór je eerste hele maand: wat er per maand over is. Zonder vaste maand: een uitnodiging

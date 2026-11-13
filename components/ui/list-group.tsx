@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Card } from "./card";
 
-export interface ListGroupProps {
+interface ListGroupProps {
   title?: string;
   children: ReactNode;
   className?: string;
@@ -22,7 +22,7 @@ export function ListGroup({ title, children, className }: ListGroupProps) {
   );
 }
 
-export interface ListRowProps {
+interface ListRowProps {
   /** Lucide-icoon; wordt op 18px getekend in een tegel van 30px. */
   icon?: LucideIcon;
   /** Kleuren van de icoontegel, bijvoorbeeld `bg-cat-groen-soft text-cat-groen`. */

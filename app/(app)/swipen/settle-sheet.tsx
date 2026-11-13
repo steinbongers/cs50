@@ -16,8 +16,6 @@ import {
 } from "@/lib/transactions/refunds";
 import { cn } from "@/lib/utils";
 
-export { nameMatches };
-
 interface SettleSheetProps {
   open: boolean;
   onClose: () => void;

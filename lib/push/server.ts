@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 import type { Database } from "@/lib/supabase/types";
 
-export interface PushPayload {
+interface PushPayload {
   title: string;
   body: string;
   url?: string;

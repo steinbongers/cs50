@@ -4,7 +4,7 @@
  */
 import { formatEuroWhole } from "@/lib/format";
 
-export interface BudgetStatus {
+interface BudgetStatus {
   /** Gevuld deel van de balk, afgekapt op 0..1. */
   ratio: number;
   /** Wat er nog over is (nooit negatief). */
@@ -15,7 +15,7 @@ export interface BudgetStatus {
   state: "ok" | "over";
 }
 
-export interface GoalStatus {
+interface GoalStatus {
   /** Gevuld deel van de balk, afgekapt op 0..1. */
   ratio: number;
   /** Wat er nog nodig is (nooit negatief). */

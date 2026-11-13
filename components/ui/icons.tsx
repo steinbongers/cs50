@@ -18,16 +18,6 @@ function base({ size = 24, ...props }: IconProps) {
   };
 }
 
-export function IconHome(props: IconProps) {
-  return (
-    <svg {...base(props)}>
-      <path d="M3 11.5 12 4l9 7.5" />
-      <path d="M5 10.5V20h14v-9.5" />
-      <path d="M10 20v-5h4v5" />
-    </svg>
-  );
-}
-
 export function IconCards(props: IconProps) {
   return (
     <svg {...base(props)}>
@@ -43,15 +33,6 @@ export function IconJar(props: IconProps) {
       <path d="M8 3h8" />
       <path d="M7 6h10v2.5a3 3 0 0 1 .8 2L18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2l.2-8.5a3 3 0 0 1 .8-2z" />
       <path d="M8.5 14.5h7" />
-    </svg>
-  );
-}
-
-export function IconUser(props: IconProps) {
-  return (
-    <svg {...base(props)}>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21a8 8 0 0 1 16 0" />
     </svg>
   );
 }
@@ -112,35 +93,6 @@ export function IconBank(props: IconProps) {
       <path d="M4 9.5h16" />
       <path d="M6 10v7M10 10v7M14 10v7M18 10v7" />
       <path d="M3 20h18" />
-    </svg>
-  );
-}
-
-export function IconUpload(props: IconProps) {
-  return (
-    <svg {...base(props)}>
-      <path d="M12 16V4" />
-      <path d="m7 9 5-5 5 5" />
-      <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
-    </svg>
-  );
-}
-
-export function IconLogout(props: IconProps) {
-  return (
-    <svg {...base(props)}>
-      <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
-      <path d="m15 8 5 4-5 4" />
-      <path d="M20 12H10" />
-    </svg>
-  );
-}
-
-export function IconSparkle(props: IconProps) {
-  return (
-    <svg {...base(props)}>
-      <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
-      <path d="m6.5 6.5 2 2M15.5 15.5l2 2M6.5 17.5l2-2M15.5 8.5l2-2" />
     </svg>
   );
 }

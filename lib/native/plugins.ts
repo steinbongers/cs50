@@ -6,16 +6,16 @@
  * @capacitor/core pas als een plugin echt nodig is, zodat de webversie hem niet meedraagt.
  */
 
-export type Biometry = "faceId" | "touchId" | "none";
+type Biometry = "faceId" | "touchId" | "none";
 
-export interface BiometricLockPlugin {
+interface BiometricLockPlugin {
   /** Kan dit toestel ontgrendelen (Face ID, Touch ID of toegangscode)? */
   checkAvailability(): Promise<{ available: boolean; biometry: Biometry }>;
   /** Vraagt Face ID of Touch ID, met de toegangscode als terugval. Faalt bij annuleren. */
   authenticate(options: { reason: string }): Promise<void>;
 }
 
-export interface WidgetBridgePlugin {
+interface WidgetBridgePlugin {
   /** Zet de widgetsleutel in de gedeelde App Group en ververst de widgets. */
   setToken(options: { token: string }): Promise<void>;
   /** Haalt de sleutel weg; de widget toont dan weer "Open de app om de widget te koppelen". */
@@ -23,10 +23,10 @@ export interface WidgetBridgePlugin {
   status(): Promise<{ linked: boolean }>;
 }
 
-export type NativePermission = "granted" | "denied" | "prompt";
-export type NativePreviews = "always" | "when_unlocked" | "never";
+type NativePermission = "granted" | "denied" | "prompt";
+type NativePreviews = "always" | "when_unlocked" | "never";
 
-export interface NativePushPlugin {
+interface NativePushPlugin {
   /** Mag de app meldingen sturen, is dit toestel gekoppeld, en kan Opdrachten de Wallet-automatisering (iOS 17)? */
   status(): Promise<{ permission: NativePermission; linked: boolean; shortcutsAvailable: boolean }>;
   /** Toont de iOS-vraag om meldingen (één keer; daarna beslist iOS zelf). */

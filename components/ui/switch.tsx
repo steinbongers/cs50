@@ -2,9 +2,9 @@
 
 import { cn } from "@/lib/utils";
 
-export type SwitchSize = "md" | "sm";
+type SwitchSize = "md" | "sm";
 
-export interface SwitchProps {
+interface SwitchProps {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
   /** Toegankelijke naam. Zet de zichtbare tekst ernaast zelf neer (bijvoorbeeld in een ListRow). */

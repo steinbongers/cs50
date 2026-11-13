@@ -100,7 +100,7 @@ export async function startBankConnection(
   return { url };
 }
 
-export type RefreshResult =
+type RefreshResult =
   | { ok: true; inserted: number }
   | { ok: false; error: string; retryInMinutes?: number };
 
@@ -230,7 +230,7 @@ export async function disconnectBank(): Promise<{ ok: true } | { ok: false; erro
   return { ok: true };
 }
 
-export type StartFreshResult = { ok: true; count: number } | { ok: false; error: string };
+type StartFreshResult = { ok: true; count: number } | { ok: false; error: string };
 
 /**
  * "Begin vanaf vandaag": alle open kaartjes van vóór vandaag gaan naar Telt niet mee.
@@ -307,7 +307,7 @@ export async function saveFixedItems(input: unknown): Promise<{ ok: true } | { o
   return { ok: true };
 }
 
-export type ToggleFixedResult = { ok: true; fixed: boolean } | { ok: false; error: string };
+type ToggleFixedResult = { ok: true; fixed: boolean } | { ok: false; error: string };
 
 /**
  * Tijdens het indelen: maak van de verkoper op dit kaartje een vaste post (of haal hem weer weg).

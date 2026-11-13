@@ -21,14 +21,7 @@ import { success, tap, warning } from "@/lib/haptics";
 import type { QuickSuggestionKey } from "@/lib/categories/defaults";
 import { DEFAULT_CATEGORY_ICON } from "@/lib/categories/icons";
 import { CATEGORY_COLORS } from "@/lib/categories/palette";
-import {
-  CONTANT_CATEGORY,
-  GELD_TERUG_CATEGORY,
-  NIET_MEETELLEN_CATEGORY,
-  VERDEELD_CATEGORY,
-  VOORGESCHOTEN_CATEGORY,
-  type CategoryDraft,
-} from "@/lib/categories/types";
+import type { CategoryDraft } from "@/lib/categories/types";
 import { formatEuro } from "@/lib/format";
 import { isCashWithdrawal } from "@/lib/transactions/cash";
 import { isCreditCardSettlement } from "@/lib/transactions/credit-card";
@@ -43,19 +36,15 @@ import {
   assignMany,
   assignRefund,
   assignRefundFor,
-  completeCoach,
-  completeSession,
   createCategory,
-  setCoachStep,
   settleSharesWithTransaction,
   removeRule,
   skipTransaction,
-  splitCash,
-  splitTransaction,
   undoAssign,
   undoMany,
-  type CashSpendInput,
 } from "./actions";
+import { completeCoach, completeSession, setCoachStep } from "./coach-actions";
+import { splitCash, splitTransaction, type CashSpendInput } from "./split-actions";
 import { toggleFixedItem } from "@/app/bank/actions";
 import { counterpartyKey } from "@/lib/transactions/same-counterparty";
 import { cardCoverage, settleCardWithWallet } from "./card-actions";
@@ -67,6 +56,15 @@ import { RawSheet } from "./raw-sheet";
 import { SessionSummary, type Decision } from "./session-summary";
 import { RefundSheet } from "./refund-sheet";
 import { SettleSheet } from "./settle-sheet";
+import {
+  CONTANT_OPTION,
+  GELD_TERUG_OPTION,
+  NIET_MEETELLEN_OPTION,
+  VERDEELD_OPTION,
+  VOORGESCHOTEN_OPTION,
+  cashUndoText,
+  type PartsLocal,
+} from "./sort-screen-options";
 import { EMPTY_SPLIT, type SplitState } from "./split-panel";
 import { CASH_QUESTION, GhostCard, TransactionCard, type CardExit } from "./transaction-card";
 import { UndoToast } from "./undo-toast";
@@ -97,91 +95,6 @@ interface UndoGroup {
   ruleId?: string;
   /** Alle kaartjes die de regel indeelde, ook die niet op de lokale stapel lagen. */
   revertIds?: string[];
-}
-
-const VOORGESCHOTEN_OPTION: CategoryOption = {
-  id: "voorgeschoten",
-  name: VOORGESCHOTEN_CATEGORY.name,
-  icon: VOORGESCHOTEN_CATEGORY.icon,
-  color: VOORGESCHOTEN_CATEGORY.color,
-  isIncome: false,
-  isSavings: false,
-  systemKey: VOORGESCHOTEN_CATEGORY.systemKey,
-  spentThisPeriod: 0,
-  monthlyBudget: null,
-  goalAmount: null,
-};
-
-/** Telt niet mee: buiten maand, Overzicht en potjes. Het echte id kent alleen de server. */
-const NIET_MEETELLEN_OPTION: CategoryOption = {
-  id: "negeer",
-  name: NIET_MEETELLEN_CATEGORY.name,
-  icon: NIET_MEETELLEN_CATEGORY.icon,
-  color: NIET_MEETELLEN_CATEGORY.color,
-  isIncome: false,
-  isSavings: false,
-  systemKey: NIET_MEETELLEN_CATEGORY.systemKey,
-  spentThisPeriod: 0,
-  monthlyBudget: null,
-  goalAmount: null,
-};
-
-/** Geld terug zonder potje: gaat van het totaal af. Het echte id kent alleen de server. */
-const GELD_TERUG_OPTION: CategoryOption = {
-  id: "terug",
-  name: GELD_TERUG_CATEGORY.name,
-  icon: GELD_TERUG_CATEGORY.icon,
-  color: GELD_TERUG_CATEGORY.color,
-  isIncome: false,
-  isSavings: false,
-  systemKey: GELD_TERUG_CATEGORY.systemKey,
-  spentThisPeriod: 0,
-  monthlyBudget: null,
-  goalAmount: null,
-};
-
-const CONTANT_OPTION: CategoryOption = {
-  id: "contant",
-  name: CONTANT_CATEGORY.name,
-  icon: CONTANT_CATEGORY.icon,
-  color: CONTANT_CATEGORY.color,
-  isIncome: false,
-  isSavings: false,
-  systemKey: CONTANT_CATEGORY.systemKey,
-  spentThisPeriod: 0,
-  monthlyBudget: null,
-  goalAmount: null,
-};
-
-/** Afschrijving verdeeld over potjes. Het echte id kent alleen de server. */
-const VERDEELD_OPTION: CategoryOption = {
-  id: "verdeeld",
-  name: VERDEELD_CATEGORY.name,
-  icon: VERDEELD_CATEGORY.icon,
-  color: VERDEELD_CATEGORY.color,
-  isIncome: false,
-  isSavings: false,
-  systemKey: VERDEELD_CATEGORY.systemKey,
-  spentThisPeriod: 0,
-  monthlyBudget: null,
-  goalAmount: null,
-};
-
-/**
- * Een verdeelde (of bewaarde) pinopname of een verdeelde afschrijving: wat er per potje bijkwam,
- * voor ongedaan maken.
- */
-interface PartsLocal {
-  parts: { category: CategoryOption; amount: number }[];
-  text: string;
-}
-
-/** Tekst in de pil na het verdelen van een pinopname. */
-function cashUndoText(parts: PartsLocal["parts"], amountAbs: number): string {
-  if (parts.length === 0) return "Bewaard als contant";
-  const rest = Math.round((amountAbs - parts.reduce((sum, p) => sum + p.amount, 0)) * 100) / 100;
-  const where = parts.length === 1 ? `In ${parts[0].category.name}` : `In ${parts.length} potjes`;
-  return rest > 0 ? `${where}, ${formatEuro(rest)} contant over` : where;
 }
 
 /**

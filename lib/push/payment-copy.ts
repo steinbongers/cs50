@@ -24,7 +24,7 @@ function clip(text: string, max: number): string {
   return text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
 }
 
-export interface PaymentCopyInput {
+interface PaymentCopyInput {
   merchant: string | null;
   /** Bedrag van de uitgave, positief of negatief. */
   amount: number;

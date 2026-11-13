@@ -11,7 +11,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 export const ACTION_TOKEN_TTL_MS = 48 * 60 * 60 * 1000;
 
-export interface ActionClaims {
+interface ActionClaims {
   /** Gebruiker */
   u: string;
   /** Transactie */

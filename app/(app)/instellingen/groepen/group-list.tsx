@@ -8,7 +8,6 @@ import { Field, Input } from "@/components/ui/input";
 import { ListGroup } from "@/components/ui/list-group";
 import { Sheet } from "@/components/ui/sheet";
 import { formatEuro } from "@/lib/format";
-import { clearCachedGroups } from "@/lib/groups/cache";
 import { MAX_GROUP_MEMBERS, MAX_GROUP_NAME_LENGTH, MAX_MEMBER_NAME_LENGTH, type MemberTotal } from "@/lib/groups/groups";
 import { createGroup, deleteGroup, updateGroup } from "./actions";
 
@@ -115,7 +114,6 @@ function GroupEditor({ editing, onClose }: { editing: Editing; onClose: () => vo
         setError(result.error);
         return;
       }
-      clearCachedGroups();
       onClose();
       router.refresh();
     });
@@ -135,7 +133,6 @@ function GroupEditor({ editing, onClose }: { editing: Editing; onClose: () => vo
         setError(result.error);
         return;
       }
-      clearCachedGroups();
       onClose();
       router.refresh();
     });

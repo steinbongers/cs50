@@ -6,7 +6,7 @@
 export type SwipeDirection = "left" | "right" | "up" | "down";
 export type ConnectionProvider = "enablebanking" | "csv";
 export type ConnectionStatus = "active" | "expiring" | "expired" | "revoked";
-export type TransactionSource = "bank" | "csv" | "cash" | "split" | "applepay";
+type TransactionSource = "bank" | "csv" | "cash" | "split" | "applepay";
 export type PreviewSetting = "always" | "when_unlocked" | "never";
 export type ShareStatus = "open" | "received" | "settled_elsewhere";
 export type CategorySystemKey = "voorgeschoten" | "contant" | "terug" | "verdeeld" | "negeer";

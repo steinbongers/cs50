@@ -39,7 +39,7 @@ function toPayload(value: unknown): Record<string, unknown> {
 
 const num = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
 
-export interface AdminData {
+interface AdminData {
   events: EventLite[];
   profiles: ProfileLite[];
   txTimings: TxTiming[];

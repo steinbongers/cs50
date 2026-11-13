@@ -26,7 +26,7 @@ export interface BankSide {
   raw_counterparty?: string | null;
 }
 
-export interface WalletMatch {
+interface WalletMatch {
   bankId: string;
   walletId: string;
 }

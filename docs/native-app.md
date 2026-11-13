@@ -153,7 +153,7 @@ Kies onder Targets **FinanceWidget**:
 
 Sinds november 2026 kan de app na elke betaling een melding sturen met de knoppen **✓ Klopt** en **Ander potje**,
 en is er een grote widget waarmee je de oudste open betaling met één tik indeelt. Achtergrond en keuzes staan in
-`docs/plan-meldingen-en-widget.md` en `docs/beslissingen.md`.
+`docs/archief/plan-meldingen-en-widget.md` en `docs/beslissingen.md`.
 
 Hiervoor moet je op vijf plekken iets doen. Doe ze in deze volgorde. Heb je het Face ID-slot en de widget hierboven
 nog niet gedaan, doe die stappen dan eerst.

@@ -3,9 +3,9 @@
  * liggen er kaartjes, dan opent de app op Swipen; is de stapel leeg, dan op Overzicht.
  * Puur, zodat het zonder server te testen is.
  */
-export type StartRoute = "/welkom" | "/onboarding" | "/swipen" | "/overzicht";
+type StartRoute = "/welkom" | "/onboarding" | "/swipen" | "/overzicht";
 
-export interface StartRouteInput {
+interface StartRouteInput {
   signedIn: boolean;
   onboardingDone: boolean;
   /** Aantal open kaartjes; `null` als de telling mislukte. */

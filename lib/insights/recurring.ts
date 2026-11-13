@@ -32,14 +32,14 @@ export interface RecurringCharge {
 }
 
 /** Zoveel van de laatste drie volle maanden moet de betaling voorkomen. */
-export const RECURRING_MIN_MONTHS = 2;
+const RECURRING_MIN_MONTHS = 2;
 /** Zoveel mag het bedrag afwijken om als "hetzelfde" te tellen. */
-export const RECURRING_TOLERANCE = 0.2;
+const RECURRING_TOLERANCE = 0.2;
 /**
  * Vaker per maand naar dezelfde ontvanger is gewoon winkelen (de supermarkt),
  * geen vaste last.
  */
-export const RECURRING_MAX_PER_MONTH = 2;
+const RECURRING_MAX_PER_MONTH = 2;
 
 function similar(amount: number, reference: number): boolean {
   return reference > 0 && Math.abs(amount - reference) <= RECURRING_TOLERANCE * reference;
@@ -134,7 +134,7 @@ export function recurringMonthlyTotal(charges: readonly RecurringCharge[]): numb
  * De eerstvolgende datum (vandaag of later) met deze dag van de maand.
  * Bestaat de dag niet in die maand (31 november), dan de laatste dag.
  */
-export function nextOccurrence(day: number, today: Date): Date {
+function nextOccurrence(day: number, today: Date): Date {
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   for (const offset of [0, 1]) {
     const last = new Date(start.getFullYear(), start.getMonth() + offset + 1, 0).getDate();

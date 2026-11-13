@@ -38,7 +38,7 @@ interface CategoryEditorProps {
 }
 
 /** De suggestie waar dit concept nog precies op lijkt, anders null. */
-export function suggestionForDraft(draft: Pick<CategoryDraft, "name">): QuickSuggestionKey | null {
+function suggestionForDraft(draft: Pick<CategoryDraft, "name">): QuickSuggestionKey | null {
   const name = draft.name.trim().toLocaleLowerCase("nl-NL");
   return QUICK_SUGGESTIONS.find((s) => s.name.toLocaleLowerCase("nl-NL") === name)?.key ?? null;
 }

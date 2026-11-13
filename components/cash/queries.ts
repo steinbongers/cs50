@@ -5,7 +5,7 @@ import { fetchAll } from "@/lib/supabase/fetch-all";
 import type { Database } from "@/lib/supabase/types";
 import { cashBuckets, cashRemaining, type CashBucket } from "@/lib/transactions/cash";
 
-export interface CashWallet {
+interface CashWallet {
   /** Per opname in het potje Contant wat er nog over is, oudste eerst. */
   buckets: CashBucket[];
   /** "Contant over". */

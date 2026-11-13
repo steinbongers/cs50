@@ -10,7 +10,7 @@
 export type CardKind = "credit" | "debit";
 export type CardChoices = Record<string, CardKind>;
 
-export const MAX_CARD_LENGTH = 60;
+const MAX_CARD_LENGTH = 60;
 export const MAX_CARDS = 12;
 
 export function cleanWalletCard(input: unknown): string | null {
@@ -62,7 +62,7 @@ export interface CardPayment {
   amount: number;
 }
 
-export interface SettlementCoverage {
+interface SettlementCoverage {
   /** Betalingen die in deze afrekening passen, oudste eerst. */
   ids: string[];
   coveredCents: number;

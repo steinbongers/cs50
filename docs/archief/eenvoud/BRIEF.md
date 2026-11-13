@@ -3,7 +3,7 @@
 Aanleiding (Stein): "ik vind de app er nu best ingewikkeld uit zien met alle cijfers etc overal. Maak het
 overzichtelijker en makkelijker, ook de uitleg erbij."
 
-Twee doorlichtingen liggen ernaast: `docs/eenvoud/ux.md` (schermen) en `docs/eenvoud/copy.md` (teksten, met
+Twee doorlichtingen liggen ernaast: `docs/archief/eenvoud/ux.md` (schermen) en `docs/archief/eenvoud/copy.md` (teksten, met
 herschrijftabel en woordenlijst). Deze BRIEF beslist waar die twee botsen of te ver gaan. Bij twijfel wint de BRIEF.
 
 ## Doel

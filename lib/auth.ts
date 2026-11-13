@@ -6,7 +6,7 @@ import { inviteCodesEnabled } from "@/lib/invites/codes";
 import { createClient } from "@/lib/supabase/server";
 import type { ProfileRow } from "@/lib/supabase/types";
 
-export interface CurrentUser {
+interface CurrentUser {
   id: string;
   email: string | null;
   /** Alleen een bevestigd adres telt voor beheerrechten. */
@@ -42,7 +42,7 @@ export async function requireUser(): Promise<CurrentUser> {
   return user;
 }
 
-export const getProfile = cache(async (userId: string): Promise<ProfileRow | null> => {
+const getProfile = cache(async (userId: string): Promise<ProfileRow | null> => {
   const supabase = await createClient();
   const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
   return data;

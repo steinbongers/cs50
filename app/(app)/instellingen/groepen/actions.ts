@@ -7,23 +7,11 @@ import { createClient } from "@/lib/supabase/server";
 // Geen refresh() hier: opslaan vanuit het verdeelpaneel mag de stapel op Swipen niet
 // herladen. De groepenpagina ververst zelf met router.refresh().
 
-export type GroupResult = { ok: true; group: ShareGroup } | { ok: false; error: string };
-export type GroupActionResult = { ok: true } | { ok: false; error: string };
+type GroupResult = { ok: true; group: ShareGroup } | { ok: false; error: string };
+type GroupActionResult = { ok: true } | { ok: false; error: string };
 
 const GENERIC_ERROR = "Opslaan lukte niet. Probeer het nog eens.";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** Je eigen groepen, op naam. */
-export async function listGroups(): Promise<ShareGroup[]> {
-  const user = await requireUser();
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("share_groups")
-    .select("id, name, members")
-    .eq("user_id", user.id)
-    .order("name");
-  return data ?? [];
-}
 
 export async function createGroup(name: string, members: string[]): Promise<GroupResult> {
   const user = await requireUser();

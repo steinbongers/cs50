@@ -3,14 +3,14 @@
  * Geen React, geen database.
  */
 
-export interface ShareLike {
+interface ShareLike {
   id: string;
   personName: string | null;
   amount: number;
   createdAt: string;
 }
 
-export interface PersonGroup<T extends ShareLike> {
+interface PersonGroup<T extends ShareLike> {
   /** Sleutel: naam in kleine letters, of "" voor delen zonder naam. */
   key: string;
   /** Weergavenaam (zoals hij het eerst is ingevuld), of null voor "Zonder naam". */
@@ -20,7 +20,7 @@ export interface PersonGroup<T extends ShareLike> {
 }
 
 /** Vanaf zoveel dagen open tonen we de leeftijd van een deel. */
-export const SHARE_AGE_VISIBLE_DAYS = 14;
+const SHARE_AGE_VISIBLE_DAYS = 14;
 
 const DAY_MS = 864e5;
 
@@ -45,7 +45,7 @@ export function groupSharesByPerson<T extends ShareLike>(shares: T[]): PersonGro
 }
 
 /** Hele dagen dat een deel openstaat. */
-export function shareAgeDays(createdAt: string, nowMs: number): number {
+function shareAgeDays(createdAt: string, nowMs: number): number {
   const created = Date.parse(createdAt);
   if (!Number.isFinite(created)) return 0;
   return Math.max(0, Math.floor((nowMs - created) / DAY_MS));

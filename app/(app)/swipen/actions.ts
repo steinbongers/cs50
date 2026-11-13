@@ -1,12 +1,7 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
-import {
-  ensureContantCategory,
-  ensureGeldTerugCategory,
-  ensureVerdeeldCategory,
-  ensureVoorgeschotenCategory,
-} from "@/lib/categories/system";
+import { ensureGeldTerugCategory, ensureVoorgeschotenCategory } from "@/lib/categories/system";
 import {
   MAX_CATEGORIES,
   MAX_CATEGORY_NAME_LENGTH,
@@ -17,91 +12,32 @@ import { DEFAULT_CATEGORY_ICON, isCategoryIcon } from "@/lib/categories/icons";
 import { isCategoryColor } from "@/lib/categories/palette";
 import { categoryKind, KIND_ERROR, type CategoryDraft } from "@/lib/categories/types";
 import { logEvent } from "@/lib/events";
-import { formatEuro, toISODate } from "@/lib/format";
-import { amsterdamToday } from "@/lib/periods";
+import { formatEuro } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { applyRules } from "@/lib/transactions/apply-rules";
-import { CASH_COUNTERPARTY, MAX_CASH_SPENDS, cashAmount, cashNote, isCashWithdrawal } from "@/lib/transactions/cash";
-import { isCreditCardSettlement } from "@/lib/transactions/credit-card";
+import { isCashWithdrawal } from "@/lib/transactions/cash";
 import { ruleKey } from "@/lib/transactions/rules";
 import { MAX_SAME_COUNTERPARTY } from "@/lib/transactions/same-counterparty";
 import { estimatedOwnShare, isValidEstimate, receivedPerExpense } from "@/lib/transactions/refunds";
-import { MAX_SPLIT_PERSONS, MIN_SPLIT_PERSONS, splitEqually } from "@/lib/transactions/split";
-import { checkSplitParts, type SplitPartInput } from "@/lib/transactions/split-parts";
+import { splitEqually } from "@/lib/transactions/split";
 import type { CategoryOption, OpenShare } from "@/lib/transactions/queries";
+import {
+  DAY_MS,
+  GENERIC_ERROR,
+  cashCandidate,
+  coachFlag,
+  isTrack,
+  isUuid,
+  isValidSplit,
+  type SplitInput,
+  type SwipeMeta,
+  type TrackInput,
+} from "./action-helpers";
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+type ActionResult = { ok: true } | { ok: false; error: string };
 
 /** Na het kiezen van een potje: de nieuwe openstaande delen (alleen bij "via mijn rekening"). */
-export type AssignResult = { ok: true; shares: OpenShare[] } | { ok: false; error: string };
-
-const GENERIC_ERROR = "Opslaan lukte niet. Probeer het nog eens.";
-
-export interface SplitInput {
-  /** Totaal aantal personen, inclusief jijzelf. */
-  persons: number;
-  /** Hoe het geld terugkomt: via je rekening (blijft open) of anders (direct afgehandeld). */
-  method: "bank" | "other";
-  /** Optionele namen van de anderen, in volgorde. */
-  names?: string[];
-}
-
-/**
- * "Ik krijg een deel terug" zonder verdelen: de hele uitgave gaat in het potje en wacht op
- * geld terug. Wat er binnenkomt gaat ervan af; is alles binnen, dan is de rest van jou.
- */
-export interface TrackInput {
-  track: true;
-}
-
-/** Extra context voor de meting: stond er een coachtip open bij deze kaart? */
-export interface SwipeMeta {
-  coach?: boolean;
-}
-
-function coachFlag(meta: unknown): boolean {
-  return typeof meta === "object" && meta !== null && (meta as SwipeMeta).coach === true;
-}
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function isUuid(value: unknown): value is string {
-  return typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value);
-}
-
-function isTrack(value: unknown): value is TrackInput {
-  return typeof value === "object" && value !== null && (value as Record<string, unknown>).track === true;
-}
-
-function isValidSplit(value: unknown): value is SplitInput {
-  if (typeof value !== "object" || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.persons === "number" &&
-    Number.isInteger(v.persons) &&
-    v.persons >= MIN_SPLIT_PERSONS &&
-    v.persons <= MAX_SPLIT_PERSONS &&
-    (v.method === "bank" || v.method === "other") &&
-    (v.names === undefined || (Array.isArray(v.names) && v.names.every((n) => typeof n === "string")))
-  );
-}
-
-/** De velden waaraan we een pinopname herkennen, uit een databaserij. */
-function cashCandidate(t: {
-  amount: number;
-  counterparty: string | null;
-  description: string | null;
-  raw_counterparty: string | null;
-  raw_description: string | null;
-}) {
-  return {
-    amount: Number(t.amount),
-    counterparty: t.counterparty,
-    description: t.description,
-    rawCounterparty: t.raw_counterparty,
-    rawDescription: t.raw_description,
-  };
-}
+type AssignResult = { ok: true; shares: OpenShare[] } | { ok: false; error: string };
 
 /**
  * Zet een transactie in een potje. Dit is de kernhandeling van de app.
@@ -414,263 +350,6 @@ export async function assignRefundFor(
   return { ok: true };
 }
 
-export interface CashSpendInput {
-  categoryId: string;
-  /** Positief bedrag in euro's. */
-  amount: number;
-}
-
-export type SplitCashResult = { ok: true; spendIds: string[] } | { ok: false; error: string };
-
-/**
- * Pinopname: waar ging het contante geld heen? Elke uitgave wordt een eigen regel zonder rekening
- * (source 'cash') in het gekozen potje, gekoppeld aan de opname. De opname zelf gaat in het
- * ingebouwde potje Contant, zodat ze niet als uitgave telt; wat er over is blijft in je portemonnee.
- * Zonder uitgaven ("Nog niet uitgegeven") blijft het hele bedrag contant.
- */
-export async function splitCash(
-  transactionId: string,
-  spends: CashSpendInput[],
-  note: string | null,
-  durationMs: number,
-  meta?: SwipeMeta,
-): Promise<SplitCashResult> {
-  const user = await requireUser();
-  if (!isUuid(transactionId) || !Array.isArray(spends) || spends.length > MAX_CASH_SPENDS) {
-    return { ok: false, error: GENERIC_ERROR };
-  }
-  const parsed: { categoryId: string; amount: number }[] = [];
-  for (const spend of spends) {
-    const amount = cashAmount(spend?.amount);
-    if (!isUuid(spend?.categoryId) || amount === null) return { ok: false, error: "Vul bedragen boven € 0 in." };
-    parsed.push({ categoryId: spend.categoryId, amount });
-  }
-  const categoryIds = [...new Set(parsed.map((s) => s.categoryId))];
-  if (categoryIds.length !== parsed.length) return { ok: false, error: GENERIC_ERROR };
-
-  const supabase = await createClient();
-
-  const { data: transaction } = await supabase
-    .from("transactions")
-    .select("id, amount, source, category_id, skipped_count, counterparty, description, raw_counterparty, raw_description")
-    .eq("id", transactionId)
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (!transaction || transaction.source === "cash" || !isCashWithdrawal(cashCandidate(transaction))) {
-    return { ok: false, error: "Dit is geen pinopname." };
-  }
-  if (transaction.category_id !== null) return { ok: false, error: "Dit kaartje zit al in een potje." };
-
-  const withdrawn = Math.abs(Number(transaction.amount));
-  const total = Math.round(parsed.reduce((sum, s) => sum + s.amount, 0) * 100) / 100;
-  if (total > withdrawn) return { ok: false, error: "Dat is meer dan je hebt opgenomen." };
-
-  if (categoryIds.length > 0) {
-    const { data: categories } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("archived", false)
-      .eq("is_income", false)
-      .is("system_key", null)
-      .in("id", categoryIds);
-    if ((categories ?? []).length !== categoryIds.length) return { ok: false, error: "Een van de potjes bestaat niet (meer)." };
-  }
-
-  let contantId: string;
-  try {
-    contantId = await ensureContantCategory(supabase, user.id);
-  } catch {
-    return { ok: false, error: GENERIC_ERROR };
-  }
-  const now = new Date().toISOString();
-
-  // Eerst de opname zelf (alleen als hij nog open is); de uitgaven pas daarna.
-  const { data: updated, error } = await supabase
-    .from("transactions")
-    .update({ category_id: contantId, categorized_at: now, own_share: null })
-    .eq("id", transactionId)
-    .eq("user_id", user.id)
-    .is("category_id", null)
-    .select("id")
-    .maybeSingle();
-  if (error || !updated) return { ok: false, error: GENERIC_ERROR };
-  await supabase.from("transaction_shares").delete().eq("transaction_id", transactionId).eq("user_id", user.id);
-
-  let spendIds: string[] = [];
-  if (parsed.length > 0) {
-    const description = cashNote(note);
-    const bookingDate = toISODate(amsterdamToday());
-    const { data: inserted, error: insertError } = await supabase
-      .from("transactions")
-      .insert(
-        parsed.map((s) => ({
-          user_id: user.id,
-          account_id: null,
-          source: "cash" as const,
-          amount: -s.amount,
-          booking_date: bookingDate,
-          counterparty: CASH_COUNTERPARTY,
-          description,
-          category_id: s.categoryId,
-          categorized_at: now,
-          cash_withdrawal_id: transactionId,
-          dedupe_hash: `cash:${crypto.randomUUID()}`,
-        })),
-      )
-      .select("id");
-    if (insertError || !inserted) {
-      // Terugdraaien: liever de opname opnieuw op de stapel dan een halve verdeling.
-      await supabase
-        .from("transactions")
-        .update({ category_id: null, categorized_at: null })
-        .eq("id", transactionId)
-        .eq("user_id", user.id);
-      return { ok: false, error: GENERIC_ERROR };
-    }
-    spendIds = inserted.map((t) => t.id);
-  }
-
-  await logEvent("swipe", {
-    transaction_id: transactionId,
-    category_id: contantId,
-    duration_ms: Math.max(0, Math.round(Number.isFinite(durationMs) ? durationMs : 0)),
-    skipped_before: transaction.skipped_count,
-    coach: coachFlag(meta),
-    flow: "cash",
-  });
-  // Alleen aantallen en of er iets overblijft; nooit bedragen of de notitie.
-  await logEvent("cash_split", {
-    spends: parsed.length,
-    kept: parsed.length === 0 ? "all" : total < withdrawn ? "some" : "none",
-  });
-
-  return { ok: true, spendIds };
-}
-
-export type SplitTransactionResult = { ok: true; partIds: string[] } | { ok: false; error: string };
-
-const SPLIT_ERRORS = {
-  count: "Verdeel over minstens twee potjes.",
-  amount: "Vul bedragen boven € 0 in.",
-  duplicate: "Elk potje maar één keer.",
-  sum: "De delen tellen niet op tot het hele bedrag.",
-} as const;
-
-/**
- * Eén afschrijving (vaak de creditcard) verdelen over meerdere potjes. Elk deel wordt een eigen
- * regel zonder rekening (source 'split') in het gekozen potje, met dezelfde datum en tegenpartij,
- * gekoppeld aan de afschrijving. De afschrijving zelf gaat in het ingebouwde potje Verdeeld, zodat
- * ze niet dubbel telt. De delen tellen in centen precies op tot het bedrag.
- */
-export async function splitTransaction(
-  parentId: string,
-  parts: SplitPartInput[],
-  durationMs: number,
-  meta?: SwipeMeta,
-): Promise<SplitTransactionResult> {
-  const user = await requireUser();
-  if (!isUuid(parentId) || !Array.isArray(parts) || !parts.every((p) => isUuid(p?.categoryId))) {
-    return { ok: false, error: GENERIC_ERROR };
-  }
-
-  const supabase = await createClient();
-  const { data: parent } = await supabase
-    .from("transactions")
-    .select(
-      "id, amount, source, category_id, skipped_count, booking_date, counterparty, description, raw_counterparty, raw_description",
-    )
-    .eq("id", parentId)
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (!parent) return { ok: false, error: GENERIC_ERROR };
-  if (parent.category_id !== null) return { ok: false, error: "Dit kaartje zit al in een potje." };
-  // Een pinopname verdeel je via Contant; contante uitgaven verdeel je niet nog eens. Een deel (source
-  // 'split') is alleen open als het de rest van een creditcard-afrekening is (card-actions.ts): die mag wel.
-  if (parent.source === "cash" || isCashWithdrawal(cashCandidate(parent))) {
-    return { ok: false, error: "Dit kaartje kun je zo niet verdelen." };
-  }
-
-  const amount = Number(parent.amount);
-  const check = checkSplitParts(amount, parts);
-  if (!check.ok) return { ok: false, error: SPLIT_ERRORS[check.reason] };
-
-  const categoryIds = check.parts.map((p) => p.categoryId);
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("archived", false)
-    .eq("is_income", false)
-    .is("system_key", null)
-    .in("id", categoryIds);
-  if ((categories ?? []).length !== categoryIds.length) return { ok: false, error: "Een van de potjes bestaat niet (meer)." };
-
-  let verdeeldId: string;
-  try {
-    verdeeldId = await ensureVerdeeldCategory(supabase, user.id);
-  } catch {
-    return { ok: false, error: GENERIC_ERROR };
-  }
-  const now = new Date().toISOString();
-
-  // Eerst de afschrijving zelf (alleen als hij nog open is); de delen pas daarna.
-  const { data: updated, error } = await supabase
-    .from("transactions")
-    .update({ category_id: verdeeldId, categorized_at: now, own_share: null, awaiting_refund: false })
-    .eq("id", parentId)
-    .eq("user_id", user.id)
-    .is("category_id", null)
-    .select("id")
-    .maybeSingle();
-  if (error || !updated) return { ok: false, error: GENERIC_ERROR };
-  await supabase.from("transaction_shares").delete().eq("transaction_id", parentId).eq("user_id", user.id);
-
-  // Elk deel krijgt het teken van de afschrijving: een uitgave blijft een uitgave.
-  const sign = amount < 0 ? -1 : 1;
-  const { data: inserted, error: insertError } = await supabase
-    .from("transactions")
-    .insert(
-      check.parts.map((p) => ({
-        user_id: user.id,
-        account_id: null,
-        source: "split" as const,
-        amount: (sign * p.cents) / 100,
-        booking_date: parent.booking_date,
-        counterparty: parent.counterparty,
-        description: p.note,
-        category_id: p.categoryId,
-        categorized_at: now,
-        split_parent_id: parentId,
-        dedupe_hash: `split:${crypto.randomUUID()}`,
-      })),
-    )
-    .select("id");
-  if (insertError || !inserted) {
-    // Terugdraaien: liever de afschrijving opnieuw op de stapel dan een halve verdeling.
-    await supabase
-      .from("transactions")
-      .update({ category_id: null, categorized_at: null })
-      .eq("id", parentId)
-      .eq("user_id", user.id);
-    return { ok: false, error: GENERIC_ERROR };
-  }
-
-  // Alleen het aantal potjes en of het een herkende creditcard was; nooit bedragen of notities.
-  await logEvent("swipe", {
-    transaction_id: parentId,
-    category_id: verdeeldId,
-    duration_ms: Math.max(0, Math.round(Number.isFinite(durationMs) ? durationMs : 0)),
-    skipped_before: parent.skipped_count,
-    coach: coachFlag(meta),
-    flow: "split_parts",
-    parts: check.parts.length,
-    credit_card: isCreditCardSettlement(cashCandidate(parent)),
-  });
-
-  return { ok: true, partIds: inserted.map((t) => t.id) };
-}
-
 /** Maakt de laatste keuze ongedaan: de transactie gaat terug naar de stapel. */
 export async function undoAssign(transactionId: string): Promise<ActionResult> {
   const user = await requireUser();
@@ -798,7 +477,7 @@ export async function assignRefund(
   return { ok: true };
 }
 
-export type AssignAlwaysResult =
+type AssignAlwaysResult =
   | { ok: true; ruleId: string; ids: string[]; replaced: boolean }
   | { ok: false; error: string };
 
@@ -903,7 +582,7 @@ export async function removeRule(ruleId: string, revertIds: string[] = []): Prom
   return { ok: true };
 }
 
-export type AssignManyResult = { ok: true; ids: string[] } | { ok: false; error: string };
+type AssignManyResult = { ok: true; ids: string[] } | { ok: false; error: string };
 
 /**
  * "Ook de andere van deze winkel": zet meerdere open kaartjes in één keer in hetzelfde potje.
@@ -1054,39 +733,4 @@ export async function createCategory(
       goalAmount: null,
     },
   };
-}
-
-/** Bewaart hoe ver de gebruiker is met de begeleide eerste kaarten. */
-export async function setCoachStep(step: number): Promise<void> {
-  const user = await requireUser();
-  const value = Math.min(Math.max(Math.round(step), 0), 9);
-  const supabase = await createClient();
-  await supabase.from("profiles").update({ coach_step: value }).eq("id", user.id);
-}
-
-/** Begeleide eerste kaarten afgerond: stand opslaan en één keer meten. */
-export async function completeCoach(stepsSeen: number): Promise<void> {
-  const user = await requireUser();
-  const steps = Math.min(Math.max(Math.round(Number(stepsSeen) || 0), 0), 9);
-  const supabase = await createClient();
-  const { data: profile } = await supabase.from("profiles").select("coach_step").eq("id", user.id).maybeSingle();
-  await supabase.from("profiles").update({ coach_step: Math.max(steps, profile?.coach_step ?? 0) }).eq("id", user.id);
-  // Alleen meten als de coach nog niet eerder als afgerond stond.
-  if ((profile?.coach_step ?? 0) < steps) await logEvent("coach_completed", { steps_seen: steps });
-}
-
-/** Registreert het einde van een ronde (alle geladen kaarten verwerkt). */
-export async function completeSession(summary: {
-  assigned: number;
-  skipped: number;
-  undone: number;
-  durationMs: number;
-}): Promise<void> {
-  await requireUser();
-  await logEvent("swipe_session_complete", {
-    assigned: Math.max(0, Math.round(summary.assigned)),
-    skipped: Math.max(0, Math.round(summary.skipped)),
-    undone: Math.max(0, Math.round(summary.undone)),
-    duration_ms: Math.max(0, Math.round(summary.durationMs)),
-  });
 }

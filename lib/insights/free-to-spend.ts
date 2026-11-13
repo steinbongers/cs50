@@ -31,7 +31,7 @@ export interface FreeToSpend {
   upcoming: UpcomingCharge[];
 }
 
-export interface FreeToSpendInput {
+interface FreeToSpendInput {
   /** Laatst bekende saldo per actieve rekening (null = niet bekend). */
   balances: readonly (number | null)[];
   recurring: readonly RecurringCharge[];

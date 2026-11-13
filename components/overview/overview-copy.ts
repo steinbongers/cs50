@@ -11,7 +11,7 @@ const MONTHS = ["januari", "februari", "maart", "april", "mei", "juni", "juli", 
 /** Binnen dit deel van het gemiddelde heet het "precies rond je gemiddelde". */
 export const AVERAGE_TOLERANCE = 0.1;
 /** Vóór deze dag van de maand zegt een vergelijking nog niets. */
-export const COMPARE_MIN_DAYS = 3;
+const COMPARE_MIN_DAYS = 3;
 
 function dayDiff(from: Date, to: Date): number {
   const a = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
@@ -47,7 +47,7 @@ export function periodSubtitle(period: Period, today: Date, isCurrent: boolean, 
   return hasSalaryDay ? `Sinds ${formatDayShort(period.start)} · ${rest}` : rest;
 }
 
-export type CompareLine =
+type CompareLine =
   | { kind: "chip"; tone: "positive" | "accent" | "neutral"; text: string; basis: string | null }
   | { kind: "note"; text: string };
 

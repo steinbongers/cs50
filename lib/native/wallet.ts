@@ -6,8 +6,8 @@ import { cleanCounterparty } from "@/lib/transactions/clean";
  * "1.234,56", soms met minteken. We lezen alleen euro's en alleen een redelijk bedrag.
  */
 
-export const MAX_WALLET_AMOUNT = 10_000;
-export const MAX_MERCHANT_LENGTH = 80;
+const MAX_WALLET_AMOUNT = 10_000;
+const MAX_MERCHANT_LENGTH = 80;
 
 /** Positief bedrag in euro's (twee decimalen), of null als het niet te lezen is. */
 export function parseWalletAmount(input: unknown): number | null {

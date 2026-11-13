@@ -28,7 +28,7 @@ const idOf = (direction: Direction, key: string) => `${direction}:${key}`;
 /** Zoveel regels per lijst, tot je "Toon alles" tikt. */
 const SHOWN = 12;
 
-export interface FixedPickerProps {
+interface FixedPickerProps {
   /** De lopende salarismaand tot nu toe (of de vorige, als de lopende net begon), per verkoper. */
   groups: MonthGroup[];
   /** Wat eerder is opgeslagen. */

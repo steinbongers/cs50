@@ -2,7 +2,7 @@
 
 Stand: 9 oktober 2026. Eigenaar: Stein.
 Dit plan is vooraf vastgelegd. Drempels en beslisregels veranderen we niet meer zodra de pilot loopt.
-Bron: `reports/Haalbaarheid potjesapp.md`. Bij een conflict over productkeuzes wint `docs/beslissingen.md`.
+Bron: `docs/onderzoek/Haalbaarheid potjesapp.md`. Bij een conflict over productkeuzes wint `docs/beslissingen.md`.
 
 ## 1. Doel
 

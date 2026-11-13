@@ -5,7 +5,7 @@
 import { toISODate } from "@/lib/format";
 import { isExpenseCategory, round2, spentPerCategory, totalSpent, type CatLite, type TxLite } from "./compute";
 
-export interface WeekReviewRow {
+interface WeekReviewRow {
   categoryId: string;
   spent: number;
   /** Uitgegeven in hetzelfde potje de week ervoor. */
@@ -14,7 +14,7 @@ export interface WeekReviewRow {
   diff: number;
 }
 
-export interface WeekReview {
+interface WeekReview {
   /** Maandag van de besproken week, "YYYY-MM-DD". */
   weekStartISO: string;
   /** Zondag van de besproken week, "YYYY-MM-DD". */
@@ -25,7 +25,7 @@ export interface WeekReview {
 }
 
 /** Zoveel potjes noemt de terugblik. */
-export const WEEK_REVIEW_TOP = 3;
+const WEEK_REVIEW_TOP = 3;
 
 /**
  * De maandag van de week waar de terugblik over gaat. Op zondag is dat deze week

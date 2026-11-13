@@ -56,14 +56,14 @@ export interface SplitPartInput {
   note?: string | null;
 }
 
-export interface ValidSplitPart {
+interface ValidSplitPart {
   categoryId: string;
   /** Positief, in hele centen. */
   cents: number;
   note: string | null;
 }
 
-export type SplitPartsCheck =
+type SplitPartsCheck =
   | { ok: true; parts: ValidSplitPart[] }
   | { ok: false; reason: "count" | "amount" | "duplicate" | "sum" };
 

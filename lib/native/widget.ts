@@ -7,7 +7,7 @@ import type { Database } from "@/lib/supabase/types";
 import { oldestOpenCard, type WidgetCard } from "./payments";
 
 /** Antwoord van GET /api/widget; de Swift-kant (FinanceWidget.swift) leest precies deze velden. */
-export interface WidgetPayload {
+interface WidgetPayload {
   open: number;
   /** Vrij te besteden tot de volgende salarisdag ("YYYY-MM-DD"), of null als dat niet te zeggen is. */
   free: { amount: number; until: string } | null;
@@ -22,7 +22,7 @@ export interface WidgetPayload {
  * Open kaartjes van één gebruiker, zoals `countOpenTransactions`, maar voor de
  * service-role-client van de widget. Die omzeilt RLS: filter daarom altijd op user_id.
  */
-export async function countOpenTransactionsFor(supabase: SupabaseClient<Database>, userId: string): Promise<number> {
+async function countOpenTransactionsFor(supabase: SupabaseClient<Database>, userId: string): Promise<number> {
   const { count, error } = await supabase
     .from("transactions")
     .select("id", { count: "exact", head: true })

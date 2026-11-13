@@ -1,7 +1,7 @@
 import type { CategoryIconKey } from "./icons";
 import type { CategoryColor } from "./palette";
 
-export interface DefaultCategory {
+interface DefaultCategory {
   /** Stabiele sleutel, o.a. voor het seed-script. */
   key: string;
   name: string;

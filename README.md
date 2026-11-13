@@ -19,13 +19,15 @@ Zonder `SUPABASE_SECRET_KEY` staat de uitnodigingscode-controle uit, zodat je lo
 
 ## Controles
 
-- `npm run typecheck` — TypeScript
-- `npm run lint` — ESLint
-- `npm test` — unittests in `tests/`: tekst opschonen, salarisperiode, verdeling, bankmapping, inzichten
-  (gemiddelde, opvallend potje), budget en spaardoel (`budget`), standaardpotjes en tegelnamen (`categories`),
-  overzichtsteksten (`overview`), zoekfilter (`search`), routekeuze van het startscherm (`start-route`) en
-  pilotcijfers met mediaan en retentie (`metrics`)
-- `npm run build` — productiebuild
+- `npm run typecheck`: TypeScript
+- `npm run lint`: ESLint
+- `npm test`: unittests in `tests/`, één bestand per onderwerp:
+  - bank: `mapping`, `import-from`, `private-key`, `clean` (tekst opschonen)
+  - kaartjes: `cash`, `credit-card`, `refunds`, `rules`, `same-counterparty`, `search`, `split`, `split-parts`, `groups`
+  - inzichten en overzicht: `budget`, `charts`, `fixed-month`, `income`, `insights`, `insight-copy`, `overview`,
+    `overview-start`, `recurring`, `savings`, `periods`, `format`, `categories`
+  - app, meldingen en beheer: `start-route`, `native`, `payment-notifications`, `push-copy`, `metrics`
+- `npm run build`: productiebuild
 
 ## Deploy naar Vercel
 
@@ -60,14 +62,14 @@ Zonder `SUPABASE_SECRET_KEY` staat de uitnodigingscode-controle uit, zodat je lo
 
 - `/` is het slimme startscherm: onboarding als die niet af is, anders `/swipen` als er kaartjes liggen en
   `/overzicht` als de stapel leeg is (redirect op de server, `lib/start-route.ts`).
-- `/swipen` — één kaartje bovenin, alle potjes als tegels (4 per rij), Later, Ongedaan maken, "Ik krijg geld
+- `/swipen`: één kaartje bovenin, alle potjes als tegels (4 per rij), Later, Ongedaan maken, "Ik krijg geld
   terug" en de tegel Terugbetaling bij inkomend geld.
-- `/overzicht` — de maand als ring en lijst, budgetstand, vergelijking met je gemiddelde, één opvallend potje,
+- `/overzicht`: de maand als ring en lijst, budgetstand, vergelijking met je gemiddelde, één opvallend potje,
   "Nog te krijgen" per persoon, en bladeren tot drie maanden terug.
-- `/potjes/[id]` — potje-detail met budget of spaardoel, kaartjes verplaatsen en notities.
-- `/transacties` — "Alle kaartjes": zoeken op tegenpartij, omschrijving en notitie, chips voor maand en potje.
-- `/instellingen` — account, salarisdag, potjes beheren, bank, meldingen, thema, export en account verwijderen.
-- `/admin` — alleen geaggregeerde pilotcijfers (noordsterren, trechter, retentie, churn).
+- `/potjes/[id]`: potje-detail met budget of spaardoel, kaartjes verplaatsen en notities.
+- `/transacties`: "Alle kaartjes", met zoeken op tegenpartij, omschrijving en notitie, chips voor maand en potje.
+- `/instellingen`: account, salarisdag, potjes beheren, bank, meldingen, thema, export en account verwijderen.
+- `/admin`: alleen geaggregeerde pilotcijfers (noordsterren, trechter, retentie, churn).
 - `/api/events/push-opened` meet welke melding geopend is (alleen de tag, via `public/sw.js`).
 
 ## Database
@@ -85,12 +87,15 @@ Transacties worden uitsluitend server-side opgehaald met een RS256-JWT (kid = ap
 IBAN's slaan we alleen gemaskeerd en gehasht op; de hash dient om overboekingen tussen eigen
 rekeningen te herkennen. Toestemming verloopt na ~90 dagen; de app waarschuwt 7 dagen vooraf.
 
-## Structuur
+## Mapindeling
 
-- `app/` — routes. `(auth)` publieke pagina's, `(app)` de app-shell met onderbalk, `onboarding/`,
-  `bank/`, `admin/`, `api/` (bankcallback, crons, export).
-- `components/` — UI-componenten (ui, categories, bank, overview, push, auth, layout).
-- `lib/` — Supabase-clients, auth (DAL), Enable Banking, bank-sync, inzichten, push, formattering.
-- `supabase/migrations/` — SQL-migraties met Row Level Security.
-- `scripts/` — seed-script en icoongenerator.
-- `docs/design.md` — design tokens; `docs/beslissingen.md` — productkeuzes.
+- `app/`: routes (App Router): `(auth)` publiek, `(app)` de app met onderbalk, `onboarding/`, `bank/`, `admin/`, `api/`.
+- `components/`: gedeelde UI-componenten, per onderwerp (ui, overview, categories, transactions, native, ...).
+- `lib/`: logica zonder UI: Supabase-clients, auth, bankkoppeling, inzichten, meldingen, iPhone-koppeling.
+- `config/`: appnaam, labels en themakleuren.
+- `public/`: iconen en de service worker (`sw.js`) voor webmeldingen.
+- `supabase/`: SQL-migraties met Row Level Security, plus `pilot-setup.sql` voor een nieuw project.
+- `ios/` en `native/`: de Capacitor-schil voor de iPhone-app (Xcode-project, widget, meldingen) en `native/www`, het wachtscherm dat de app toont tot de site geladen is.
+- `docs/`: productkeuzes, design en plannen; `docs/onderzoek/` het haalbaarheidsonderzoek, `docs/archief/` afgeronde plannen.
+- `scripts/`: seed-script, icoongenerator en de iOS-targetsetup.
+- `tests/`: unittests (Node test runner via `tsx`).

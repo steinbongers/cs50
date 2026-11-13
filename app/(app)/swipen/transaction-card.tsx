@@ -62,7 +62,7 @@ interface TransactionCardProps {
 
 export const CASH_QUESTION = "Waar heb je dit contant geld aan uitgegeven?";
 /** Onderaan een herkende creditcard-afrekening (in plaats van de omschrijving, die zegt dan weinig). */
-export const CREDIT_CARD_HINT = "Tik op Verdelen";
+const CREDIT_CARD_HINT = "Tik op Verdelen";
 
 /**
  * De kaart bovenin: datum, naam en bedrag groot, omschrijving (of je notitie) klein.

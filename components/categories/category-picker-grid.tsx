@@ -34,7 +34,7 @@ interface CategoryPickerGridProps {
 }
 
 /** Basisklassen van een tegel; gedeeld met de '+'-tegel zodat ze precies even groot zijn. */
-export const pickerTileBase =
+const pickerTileBase =
   "relative flex h-20 w-full min-w-11 flex-col items-center justify-center rounded-2xl px-1 py-1 transition active:scale-[0.96] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40";
 
 const nameClasses =

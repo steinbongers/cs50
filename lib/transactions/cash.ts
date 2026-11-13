@@ -11,7 +11,7 @@ export const CASH_NOTE_MAX = 60;
 /** Tegenpartij van een contante uitgave; er is geen bank die een naam meestuurt. */
 export const CASH_COUNTERPARTY = "Contant";
 
-export interface CashCandidate {
+interface CashCandidate {
   counterparty?: string | null;
   description?: string | null;
   rawCounterparty?: string | null;
@@ -79,7 +79,7 @@ export function isCashWithdrawal(tx: CashCandidate): boolean {
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
-export interface CashWithdrawalLite {
+interface CashWithdrawalLite {
   id: string;
   /** Negatief, zoals de bank hem stuurt. */
   amount: number;
@@ -87,7 +87,7 @@ export interface CashWithdrawalLite {
   createdAt?: string;
 }
 
-export interface CashSpendLite {
+interface CashSpendLite {
   cashWithdrawalId: string | null;
   /** Negatief: een uitgave. */
   amount: number;

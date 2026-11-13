@@ -48,7 +48,7 @@ export interface OpenShare {
   createdAt: string;
 }
 
-export const OPEN_BATCH_SIZE = 40;
+const OPEN_BATCH_SIZE = 40;
 
 /**
  * Transacties zonder potje, oudste eerst. Eerder overgeslagen kaarten komen

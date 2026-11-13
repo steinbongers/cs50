@@ -133,7 +133,7 @@ export function formatLongDate(date: Date | string): string {
 }
 
 /** Parseert "YYYY-MM-DD" als lokale datum (geen tijdzoneverschuiving). */
-export function parseISODate(value: string): Date {
+function parseISODate(value: string): Date {
   const [y, m, d] = value.split("-").map(Number);
   return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
